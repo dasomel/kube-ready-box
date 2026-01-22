@@ -34,6 +34,7 @@ build {
   # 스크립트 순차 실행
   provisioner "shell" {
     scripts = [
+      "scripts/00-vagrant-setup.sh",
       "scripts/01-base.sh",
       "scripts/02-os-tuning.sh",
       "scripts/03-os-packages.sh",
