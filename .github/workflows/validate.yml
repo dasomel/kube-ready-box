@@ -1,0 +1,68 @@
+name: Validate Packer Configuration
+
+on:
+  pull_request:
+    paths:
+      - 'packer/**'
+      - '.github/workflows/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'packer/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Packer Files
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: '1.10.0'
+
+      - name: Packer Format Check
+        working-directory: packer
+        run: |
+          packer fmt -check -diff .
+
+      - name: Packer Init
+        working-directory: packer
+        run: packer init .
+
+      - name: Validate VirtualBox AMD64
+        working-directory: packer
+        run: packer validate -only='virtualbox-iso.ubuntu-vbox-amd64' .
+
+      - name: Validate VirtualBox ARM64
+        working-directory: packer
+        run: packer validate -only='virtualbox-iso.ubuntu-vbox-arm64' .
+
+      - name: Validate VMware AMD64
+        working-directory: packer
+        run: packer validate -only='vmware-iso.ubuntu-vmware-amd64' .
+
+      - name: Validate VMware ARM64
+        working-directory: packer
+        run: packer validate -only='vmware-iso.ubuntu-vmware-arm64' .
+
+  shellcheck:
+    name: Shellcheck Scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Shellcheck
+        run: |
+          find packer/scripts -name "*.sh" -exec shellcheck {} +

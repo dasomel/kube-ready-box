@@ -1,0 +1,55 @@
+#cloud-config
+# Cloud-init configuration for Ubuntu 24.04 Cloud Image
+# Vagrant Box Build
+
+# Disable cloud-init network configuration
+network:
+  version: 2
+  ethernets:
+    default:
+      match:
+        name: en*
+      dhcp4: true
+
+# SSH configuration - enable password auth for Packer
+ssh_pwauth: true
+disable_root: false
+
+# SSH daemon configuration
+ssh:
+  emit_keys_to_console: false
+
+users:
+  - name: vagrant
+    groups: [adm, cdrom, dip, lxd, plugdev, sudo]
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    lock_passwd: false
+    # Password: vagrant (hashed with mkpasswd -m sha-512)
+    passwd: $6$rounds=4096$saltsaltsal$L20VAfNw8R1rPw/RmVZdVVwEu.k.TkQjOqCVXzaKdN0hYJ4g.sVRn/QZCO6UJ8h8Yv8IH3BPdLr9f4PJOmNY/
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+
+package_update: true
+package_upgrade: true
+package_reboot_if_required: false
+
+packages:
+  - qemu-guest-agent
+
+# Enable services
+runcmd:
+  - |
+    # Configure SSH to allow password authentication
+    sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+    sed -i 's/^#*PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+    sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+    sed -i 's/^#*ChallengeResponseAuthentication.*/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
+    systemctl enable ssh
+    systemctl restart ssh
+  - systemctl enable qemu-guest-agent || true
+  - systemctl start qemu-guest-agent || true
+  - systemctl status ssh --no-pager
+
+# Cloud-init final message
+final_message: "Cloud-init has finished. System is ready for SSH connection after $UPTIME seconds"

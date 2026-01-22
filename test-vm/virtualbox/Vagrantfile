@@ -1,0 +1,24 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "test/ubuntu-24.04-vbox"
+  config.vm.boot_timeout = 600
+
+  # Disable vbguest auto update
+  if Vagrant.has_plugin?("vagrant-vbguest")
+    config.vbguest.auto_update = false
+    config.vbguest.no_remote = true
+  end
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.gui = true
+    vb.memory = "2048"
+    vb.cpus = 2
+    vb.check_guest_additions = false
+  end
+
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  # SSH 설정 - password 인증 사용
+  config.ssh.username = "vagrant"
+  config.ssh.password = "vagrant"
+  config.ssh.insert_key = true
+end

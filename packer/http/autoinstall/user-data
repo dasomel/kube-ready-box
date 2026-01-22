@@ -1,0 +1,45 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  refresh-installer:
+    update: no
+  keyboard:
+    layout: us
+
+  identity:
+    hostname: vagrant-ubuntu
+    username: vagrant
+    password: '$6$rounds=4096$5CU3LEj/MQvbkfPb$LmKEF9pCfU8R.dA.GemgE/8GT6r9blge3grJvdsVTMFKyLEQwzEF3SGWqAzjawY/XHRpWj4fOiLBrRyxJhIRJ1'
+    # password: vagrant (hashed - verified from HashiCorp template)
+
+  ssh:
+    install-server: true
+    allow-pw: true
+
+  storage:
+    layout:
+      name: lvm
+
+  network:
+    network:
+      version: 2
+      ethernets:
+        main_if:
+          match:
+            name: "en*"
+          dhcp4: true
+
+  user-data:
+    package_upgrade: true
+    disable_root: false
+    timezone: UTC
+
+  late-commands:
+    - sed -i 's/#LogLevel INFO/LogLevel DEBUG/' /target/etc/ssh/sshd_config
+    - sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /target/etc/ssh/sshd_config
+    - sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /target/etc/ssh/sshd_config
+    - sed -i 's/^#*PubkeyAuthentication.*/PubkeyAuthentication yes/' /target/etc/ssh/sshd_config
+    - curtin in-target -- systemctl enable ssh.service
+    - echo 'vagrant ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/vagrant
+    - chmod 440 /target/etc/sudoers.d/vagrant

@@ -1,0 +1,95 @@
+kube-ready-box (dasomel/ubuntu-24.04)
+Copyright (c) 2024 dasomel
+
+Source: https://github.com/dasomel/kube-ready-box
+
+This product includes software developed by third parties.
+
+================================================================================
+Ubuntu 24.04 LTS Cloud Images
+================================================================================
+Source: https://cloud-images.ubuntu.com/
+Copyright: Canonical Ltd.
+License: Various open source licenses
+Website: https://ubuntu.com/legal/open-source-licences
+
+Ubuntu is a registered trademark of Canonical Ltd.
+This project is based on Ubuntu and is not affiliated with or endorsed by
+Canonical Ltd.
+
+================================================================================
+HashiCorp Packer
+================================================================================
+Source: https://github.com/hashicorp/packer
+Copyright: HashiCorp, Inc.
+License: BUSL-1.1 (Business Source License)
+Website: https://www.packer.io/
+
+Packer is used as a build tool for creating Vagrant boxes.
+
+================================================================================
+HashiCorp Vagrant
+================================================================================
+Source: https://github.com/hashicorp/vagrant
+Copyright: HashiCorp, Inc.
+License: BUSL-1.1 (Business Source License)
+Website: https://www.vagrantup.com/
+
+Vagrant boxes built by this project are designed to run on Vagrant.
+
+================================================================================
+Kubernetes (Documentation References)
+================================================================================
+Source: https://github.com/kubernetes/kubernetes
+Copyright: The Kubernetes Authors
+License: Apache-2.0
+Website: https://kubernetes.io/
+
+This box provides OS-level optimizations for Kubernetes installation.
+Kubernetes components are NOT included in the box.
+
+================================================================================
+containerd (Documentation References)
+================================================================================
+Source: https://github.com/containerd/containerd
+Copyright: The containerd Authors
+License: Apache-2.0
+Website: https://containerd.io/
+
+containerd is NOT included in the box. Users install it separately.
+
+================================================================================
+Open Source Packages
+================================================================================
+This box includes various open source packages from Ubuntu repositories.
+Package licenses can be found in /usr/share/doc/*/copyright within the box.
+
+Common packages and their licenses:
+- curl: MIT/X derivate license
+- gnupg: GPL-3.0
+- socat: GPL-2.0
+- conntrack: GPL-2.0
+- ipset: GPL-2.0
+- ipvsadm: GPL-2.0
+- ebtables: GPL-2.0
+- ethtool: GPL-2.0
+- sysstat: GPL-2.0
+- iotop: GPL-2.0
+
+================================================================================
+Trademark Notice
+================================================================================
+- Ubuntu is a registered trademark of Canonical Ltd.
+- Kubernetes is a registered trademark of The Linux Foundation.
+- Packer and Vagrant are trademarks of HashiCorp, Inc.
+- VMware and VMware Fusion are trademarks of VMware, Inc.
+- VirtualBox is a trademark of Oracle Corporation.
+
+All trademarks are property of their respective owners and are used here for
+identification purposes only.
+
+================================================================================
+For More Information
+================================================================================
+For the complete license text of this project, see the LICENSE file.
+For third-party package licenses within the box, see /usr/share/doc/ in the VM.
