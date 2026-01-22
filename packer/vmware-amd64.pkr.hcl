@@ -49,8 +49,8 @@ build {
 
   # Vagrant Box 생성
   post-processor "vagrant" {
-    output               = "output-vagrant/ubuntu-24.04-vmware-amd64.box"
-    compression_level    = 9
-    keep_input_artifact  = false
+    output              = "output-vagrant/ubuntu-24.04-vmware-amd64.box"
+    compression_level   = 9
+    keep_input_artifact = false
   }
 }

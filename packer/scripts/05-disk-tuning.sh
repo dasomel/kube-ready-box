@@ -9,14 +9,14 @@ echo "=== 05-disk-tuning.sh: Disk I/O Optimization ==="
 echo "Setting I/O scheduler for SSD..."
 for disk in /sys/block/sd*/queue/scheduler; do
   if [ -f "$disk" ]; then
-    echo "none" > $disk 2>/dev/null || echo "noop" > $disk 2>/dev/null || true
+    echo "none" > "$disk" 2>/dev/null || echo "noop" > "$disk" 2>/dev/null || true
     echo "Set scheduler for $disk"
   fi
 done
 
 for disk in /sys/block/nvme*/queue/scheduler; do
   if [ -f "$disk" ]; then
-    echo "none" > $disk 2>/dev/null || true
+    echo "none" > "$disk" 2>/dev/null || true
     echo "Set scheduler for $disk"
   fi
 done
@@ -25,14 +25,14 @@ done
 echo "Configuring read-ahead..."
 for disk in /sys/block/sd*/queue/read_ahead_kb; do
   if [ -f "$disk" ]; then
-    echo "256" > $disk 2>/dev/null || true
+    echo "256" > "$disk" 2>/dev/null || true
     echo "Set read-ahead for $disk"
   fi
 done
 
 for disk in /sys/block/nvme*/queue/read_ahead_kb; do
   if [ -f "$disk" ]; then
-    echo "256" > $disk 2>/dev/null || true
+    echo "256" > "$disk" 2>/dev/null || true
     echo "Set read-ahead for $disk"
   fi
 done

@@ -1,7 +1,7 @@
 source "vmware-iso" "ubuntu-vmware-arm64" {
-  iso_url          = var.iso_url_arm64
-  iso_checksum     = var.iso_checksum_arm64
-  vm_name          = "ubuntu-24.04-vmware-arm64"
+  iso_url            = var.iso_url_arm64
+  iso_checksum       = var.iso_checksum_arm64
+  vm_name            = "ubuntu-24.04-vmware-arm64"
   guest_os_type      = "arm-ubuntu-64"
   cpus               = var.cpus
   memory             = 4096
@@ -24,13 +24,13 @@ source "vmware-iso" "ubuntu-vmware-arm64" {
   ]
 
   vmx_data = {
-    "ethernet0.virtualdev"       = "vmxnet3"
-    "usb_xhci.present"           = "TRUE"
-    "firmware"                   = "efi"
-    "sata0:0.present"            = "TRUE"
-    "sata0:0.deviceType"         = "cdrom-image"
-    "RemoteDisplay.vnc.enabled"  = "TRUE"
-    "RemoteDisplay.vnc.port"     = "5900"
+    "ethernet0.virtualdev"      = "vmxnet3"
+    "usb_xhci.present"          = "TRUE"
+    "firmware"                  = "efi"
+    "sata0:0.present"           = "TRUE"
+    "sata0:0.deviceType"        = "cdrom-image"
+    "RemoteDisplay.vnc.enabled" = "TRUE"
+    "RemoteDisplay.vnc.port"    = "5900"
   }
 
   vnc_port_min = 5900
@@ -60,8 +60,8 @@ build {
 
   # Vagrant Box 생성
   post-processor "vagrant" {
-    output               = "output-vagrant/ubuntu-24.04-vmware-arm64.box"
-    compression_level    = 9
-    keep_input_artifact  = false
+    output              = "output-vagrant/ubuntu-24.04-vmware-arm64.box"
+    compression_level   = 9
+    keep_input_artifact = false
   }
 }

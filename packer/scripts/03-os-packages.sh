@@ -30,7 +30,7 @@ apt-get install -y \
 # 성능 분석 도구
 echo "Installing performance analysis tools..."
 apt-get install -y \
-  linux-tools-$(uname -r) 2>/dev/null || echo "Skipping linux-tools (kernel-specific)"
+  "linux-tools-$(uname -r)" 2>/dev/null || echo "Skipping linux-tools (kernel-specific)"
 
 # eBPF 도구 (옵션)
 echo "Installing eBPF tools (if available)..."

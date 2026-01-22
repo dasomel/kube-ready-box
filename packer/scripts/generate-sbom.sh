@@ -43,7 +43,7 @@ echo "Generating manifest..."
 cat <<EOF > "$SBOM_DIR/manifest.json"
 {
   "name": "dasomel/ubuntu-24.04",
-  "version": "$(cat /etc/vagrant-box/info.json 2>/dev/null | grep -o '"version"[^,]*' | cut -d'"' -f4 || echo "1.0.0")",
+  "version": "$(grep -o '"version"[^,]*' /etc/vagrant-box/info.json 2>/dev/null | cut -d'"' -f4 || echo "1.0.0")",
   "base_os": "Ubuntu 24.04 LTS",
   "architecture": "$(uname -m)",
   "kernel": "$(uname -r)",

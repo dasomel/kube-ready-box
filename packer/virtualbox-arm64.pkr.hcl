@@ -5,9 +5,9 @@ source "virtualbox-iso" "ubuntu-vbox-arm64" {
   skip_export = true
 
   # ISO settings
-  iso_url          = var.iso_url_arm64
-  iso_checksum     = var.iso_checksum_arm64
-  iso_interface    = "virtio"
+  iso_url       = var.iso_url_arm64
+  iso_checksum  = var.iso_checksum_arm64
+  iso_interface = "virtio"
 
   # VM settings
   vm_name              = "ubuntu-24.04-virtualbox-arm64"
