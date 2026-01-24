@@ -67,15 +67,15 @@ jobs:
 
       - name: Verify Box File
         run: |
-          ls -lh packer/ubuntu-24.04-virtualbox-amd64.box
+          ls -lh packer/output-vagrant/ubuntu-24.04-virtualbox-amd64.box
           # Validate box structure
-          tar -tzf packer/ubuntu-24.04-virtualbox-amd64.box | head -10
+          tar -tzf packer/output-vagrant/ubuntu-24.04-virtualbox-amd64.box | head -10
 
       - name: Upload Box Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ubuntu-24.04-virtualbox-amd64
-          path: packer/ubuntu-24.04-virtualbox-amd64.box
+          path: packer/output-vagrant/ubuntu-24.04-virtualbox-amd64.box
           retention-days: 7
           compression-level: 0  # Already compressed
 
