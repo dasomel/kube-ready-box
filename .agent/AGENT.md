@@ -1,5 +1,3 @@
-# kube-ready-box
-
 Ubuntu 24.04 Cloud-based multi-architecture (ARM/AMD64) optimized OS for Kubernetes installation
 
 > GitHub: https://github.com/dasomel/kube-ready-box
