@@ -24,7 +24,7 @@ cd /Users/m/Documents/IdeaProjects/kube-ready-box
 git add -A
 
 # 초기 커밋
-git commit -m "Initial release: dasomel/ubuntu-24.04 v1.0.0
+git commit -m "Initial release: dasomel/ubuntu-24.04 v0.1.0
 
 Features:
 - Ubuntu 24.04 LTS base
@@ -45,10 +45,10 @@ git remote add origin https://github.com/dasomel/kube-ready-box.git
 git push -u origin main
 
 # 릴리즈 태그 생성
-git tag -a v1.0.0 -m "Release v1.0.0"
+git tag -a v0.1.0 -m "Release v0.1.0"
 
 # 태그 푸시
-git push origin v1.0.0
+git push origin v0.1.0
 ```
 
 ---
@@ -59,17 +59,17 @@ git push origin v1.0.0
 
 ```bash
 # CHANGELOG에서 릴리즈 노트 추출
-gh release create v1.0.0 \
-  --title "v1.0.0 - Initial Release" \
-  --notes-file <(sed -n '/## \[1.0.0\]/,/## \[0.9.0\]/p' CHANGELOG.md | head -n -2)
+gh release create v0.1.0 \
+  --title "v0.1.0 - Initial Release" \
+  --notes-file <(sed -n '/## \[0.1.0\]/,/## \[0.9.0\]/p' CHANGELOG.md | head -n -2)
 ```
 
 ### 방법 2: 웹 UI
 
 1. https://github.com/dasomel/kube-ready-box/releases/new
-2. Tag: `v1.0.0`
-3. Release title: `v1.0.0 - Initial Release`
-4. Description: CHANGELOG.md의 `[1.0.0]` 섹션 복사
+2. Tag: `v0.1.0`
+3. Release title: `v0.1.0 - Initial Release`
+4. Description: CHANGELOG.md의 `[0.1.0]` 섹션 복사
 
 ---
 
@@ -124,7 +124,7 @@ vagrant up
 cd packer/output-vagrant
 
 # VMware ARM64 업로드
-vagrant cloud publish dasomel/ubuntu-24.04 1.0.0 vmware_desktop \
+vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 vmware_desktop \
   ubuntu-24.04-vmware-arm64.box \
   --architecture arm64 \
   --version-description "Initial release - K8s ready Ubuntu 24.04 LTS
@@ -143,10 +143,10 @@ See CHANGELOG: https://github.com/dasomel/kube-ready-box/blob/main/CHANGELOG.md"
   --release
 
 # VirtualBox ARM64 업로드
-vagrant cloud version provider create dasomel/ubuntu-24.04 1.0.0 virtualbox \
+vagrant cloud version provider create dasomel/ubuntu-24.04 0.1.0 virtualbox \
   --architecture arm64
 
-vagrant cloud version provider upload dasomel/ubuntu-24.04 1.0.0 virtualbox \
+vagrant cloud version provider upload dasomel/ubuntu-24.04 0.1.0 virtualbox \
   arm64 ubuntu-24.04-virtualbox-arm64.box
 
 cd ../..
@@ -169,7 +169,7 @@ https://github.com/dasomel/kube-ready-box/settings/secrets/actions
 
 ```bash
 # 태그 푸시로 자동 트리거 (이미 완료)
-# git push origin v1.0.0
+# git push origin v0.1.0
 
 # 또는 수동 트리거
 gh workflow run build-amd64.yml
@@ -241,14 +241,14 @@ https://www.reddit.com/r/vagrant/
 
 ```bash
 # Vagrant Cloud에서 버전 삭제
-vagrant cloud version delete dasomel/ubuntu-24.04 1.0.0
+vagrant cloud version delete dasomel/ubuntu-24.04 0.1.0
 
 # GitHub Release 삭제
-gh release delete v1.0.0 --yes
+gh release delete v0.1.0 --yes
 
 # GitHub 태그 삭제
-git tag -d v1.0.0
-git push origin :refs/tags/v1.0.0
+git tag -d v0.1.0
+git push origin :refs/tags/v0.1.0
 
 # Git 커밋 되돌리기 (주의!)
 git reset --hard HEAD~1
@@ -267,7 +267,7 @@ curl -s https://app.vagrantup.com/api/v1/box/dasomel/ubuntu-24.04 | jq .
 vagrant box list | grep ubuntu-24.04
 
 # GitHub Release 확인
-gh release view v1.0.0
+gh release view v0.1.0
 ```
 
 ---

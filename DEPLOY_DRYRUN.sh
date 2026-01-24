@@ -5,7 +5,7 @@
 set -e
 
 echo "=========================================="
-echo "🎯 kube-ready-box v1.0.0 배포 시뮬레이션"
+echo "🎯 kube-ready-box v0.1.0 배포 시뮬레이션"
 echo "=========================================="
 echo ""
 
@@ -42,7 +42,7 @@ echo "git add -A"
 echo ""
 echo -e "${BLUE}# 초기 커밋${NC}"
 cat <<'EOF'
-git commit -m "Initial release: dasomel/ubuntu-24.04 v1.0.0
+git commit -m "Initial release: dasomel/ubuntu-24.04 v0.1.0
 
 Features:
 - Ubuntu 24.04 LTS base
@@ -64,10 +64,10 @@ echo -e "${BLUE}# Main 브랜치로 푸시${NC}"
 echo "git push -u origin main"
 echo ""
 echo -e "${BLUE}# 릴리즈 태그 생성${NC}"
-echo "git tag -a v1.0.0 -m 'Release v1.0.0'"
+echo "git tag -a v0.1.0 -m 'Release v0.1.0'"
 echo ""
 echo -e "${BLUE}# 태그 푸시${NC}"
-echo "git push origin v1.0.0"
+echo "git push origin v0.1.0"
 echo ""
 read -p "Enter를 눌러 다음 단계로..."
 echo ""
@@ -78,16 +78,16 @@ echo "=========================================="
 echo ""
 echo -e "${BLUE}# GitHub CLI로 Release 생성${NC}"
 cat <<'EOF'
-gh release create v1.0.0 \
-  --title "v1.0.0 - Initial Release" \
-  --notes-file <(sed -n '/## \[1.0.0\]/,/## \[0.9.0\]/p' CHANGELOG.md | head -n -2)
+gh release create v0.1.0 \
+  --title "v0.1.0 - Initial Release" \
+  --notes-file <(sed -n '/## \[0.1.0\]/,/## \[0.9.0\]/p' CHANGELOG.md | head -n -2)
 EOF
 echo ""
 echo "또는 웹 UI에서:"
 echo "1. https://github.com/dasomel/kube-ready-box/releases/new"
-echo "2. Tag: v1.0.0"
-echo "3. Release title: v1.0.0 - Initial Release"
-echo "4. Description: CHANGELOG.md의 [1.0.0] 섹션 복사"
+echo "2. Tag: v0.1.0"
+echo "3. Release title: v0.1.0 - Initial Release"
+echo "4. Description: CHANGELOG.md의 [0.1.0] 섹션 복사"
 echo "5. [Publish release] 클릭"
 echo ""
 read -p "Enter를 눌러 다음 단계로..."
@@ -158,7 +158,7 @@ echo ""
 echo -e "${BLUE}# VMware ARM64 업로드 (현재 빌드됨)${NC}"
 cat <<'EOF'
 cd packer/output-vagrant
-vagrant cloud publish dasomel/ubuntu-24.04 1.0.0 vmware_desktop \
+vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 vmware_desktop \
   ubuntu-24.04-vmware-arm64.box \
   --architecture arm64 \
   --version-description "Initial release - K8s ready Ubuntu 24.04 LTS" \
@@ -167,9 +167,9 @@ EOF
 echo ""
 echo -e "${BLUE}# VirtualBox ARM64 업로드 (현재 빌드됨)${NC}"
 cat <<'EOF'
-vagrant cloud version provider create dasomel/ubuntu-24.04 1.0.0 virtualbox \
+vagrant cloud version provider create dasomel/ubuntu-24.04 0.1.0 virtualbox \
   --architecture arm64
-vagrant cloud version provider upload dasomel/ubuntu-24.04 1.0.0 virtualbox \
+vagrant cloud version provider upload dasomel/ubuntu-24.04 0.1.0 virtualbox \
   arm64 ubuntu-24.04-virtualbox-arm64.box
 EOF
 echo ""
@@ -189,7 +189,7 @@ echo "4. Value: (Vagrant Cloud Token)"
 echo "5. [Add secret] 클릭"
 echo ""
 echo -e "${BLUE}# AMD64 빌드 트리거 (태그 푸시 시 자동 실행)${NC}"
-echo "git push origin v1.0.0"
+echo "git push origin v0.1.0"
 echo ""
 echo "또는 수동 트리거:"
 echo "gh workflow run build-amd64.yml"

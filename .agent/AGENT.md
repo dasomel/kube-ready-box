@@ -699,25 +699,25 @@ echo -e "\n=== K8s Ready OS Check Complete ==="
 ### Upload 4 Boxes
 ```bash
 # VirtualBox AMD64
-vagrant cloud publish dasomel/ubuntu-24.04 1.0.0 \
+vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 \
   virtualbox ./ubuntu-24.04-virtualbox-amd64.box \
   --architecture amd64 \
   --release
 
 # VirtualBox ARM64
-vagrant cloud publish dasomel/ubuntu-24.04 1.0.0 \
+vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 \
   virtualbox ./ubuntu-24.04-virtualbox-arm64.box \
   --architecture arm64 \
   --release
 
 # VMware Fusion AMD64
-vagrant cloud publish dasomel/ubuntu-24.04 1.0.0 \
+vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 \
   vmware_desktop ./ubuntu-24.04-vmware-amd64.box \
   --architecture amd64 \
   --release
 
 # VMware Fusion ARM64
-vagrant cloud publish dasomel/ubuntu-24.04 1.0.0 \
+vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 \
   vmware_desktop ./ubuntu-24.04-vmware-arm64.box \
   --architecture arm64 \
   --release
@@ -730,7 +730,7 @@ set -e
 
 USERNAME="dasomel"
 BOX_NAME="ubuntu-24.04"
-VERSION="${1:-1.0.0}"
+VERSION="${1:-0.1.0}"
 
 BOXES=(
   "virtualbox:amd64:ubuntu-24.04-virtualbox-amd64.box"

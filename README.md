@@ -1,5 +1,3 @@
-push# kube-ready-box
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Vagrant Cloud](https://img.shields.io/badge/Vagrant-Cloud-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04)
 
@@ -112,6 +110,7 @@ vagrant ssh -c "/bin/bash /etc/vagrant-box/check-tuning.sh"
 - [Box Usage Guide](usage.md) - Detailed usage instructions
 - [K8s Post-Install](k8s-post-install.md) - containerd/kubelet tuning
 - [Packer Build Guide](packer/README.md) - Building boxes from source
+- [Vagrant Cloud Guide](VAGRANT_CLOUD.md) - Upload, manage, and delete boxes
 - [Legal & Licensing](legal.md) - OSS licenses and compliance
 - [Changelog](CHANGELOG.md) - Release notes and version history
 

@@ -33,7 +33,7 @@ cd /Users/m/Documents/IdeaProjects/kube-ready-box
 
 # 초기 커밋
 git add -A
-git commit -m "Initial release: dasomel/ubuntu-24.04 v1.0.0
+git commit -m "Initial release: dasomel/ubuntu-24.04 v0.1.0
 
 Features:
 - Ubuntu 24.04 LTS base
@@ -52,8 +52,8 @@ git remote add origin https://github.com/dasomel/kube-ready-box.git
 git push -u origin main
 
 # 릴리스 태그
-git tag -a v1.0.0 -m "Release v1.0.0"
-git push origin v1.0.0
+git tag -a v0.1.0 -m "Release v0.1.0"
+git push origin v0.1.0
 ```
 
 ## 3. Vagrant Cloud 업로드
@@ -80,16 +80,16 @@ Vagrant Cloud 웹사이트에서:
 cd packer/output-vagrant
 
 # VMware ARM64 업로드
-vagrant cloud publish dasomel/ubuntu-24.04 1.0.0 vmware_desktop \
+vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 vmware_desktop \
   ubuntu-24.04-vmware-arm64.box \
   --architecture arm64 \
   --version-description "Initial release - K8s ready Ubuntu 24.04" \
   --release
 
 # VirtualBox ARM64 업로드
-vagrant cloud version provider create dasomel/ubuntu-24.04 1.0.0 virtualbox \
+vagrant cloud version provider create dasomel/ubuntu-24.04 0.1.0 virtualbox \
   --architecture arm64
-vagrant cloud version provider upload dasomel/ubuntu-24.04 1.0.0 virtualbox \
+vagrant cloud version provider upload dasomel/ubuntu-24.04 0.1.0 virtualbox \
   arm64 ubuntu-24.04-virtualbox-arm64.box
 
 # AMD64 빌드는 GitHub Actions에서 자동 업로드
@@ -103,7 +103,7 @@ vagrant cloud version provider upload dasomel/ubuntu-24.04 1.0.0 virtualbox \
 2. AMD64 빌드 트리거:
 ```bash
 # 태그 푸시로 자동 트리거
-git push origin v1.0.0
+git push origin v0.1.0
 
 # 또는 수동 트리거
 gh workflow run build-amd64.yml
@@ -125,16 +125,16 @@ cd .. && rm -rf test-download
 ## 6. GitHub Release 생성
 
 ```bash
-# CHANGELOG에서 v1.0.0 섹션 추출하여 Release 생성
-gh release create v1.0.0 \
-  --title "v1.0.0 - Initial Release" \
-  --notes-file <(sed -n '/## \[1.0.0\]/,/## \[0.9.0\]/p' CHANGELOG.md | head -n -2)
+# CHANGELOG에서 v0.1.0 섹션 추출하여 Release 생성
+gh release create v0.1.0 \
+  --title "v0.1.0 - Initial Release" \
+  --notes-file <(sed -n '/## \[0.1.0\]/,/## \[0.9.0\]/p' CHANGELOG.md | head -n -2)
 
 # 또는 웹 UI에서 생성:
 # 1. https://github.com/dasomel/kube-ready-box/releases/new
-# 2. Tag: v1.0.0
-# 3. Release title: v1.0.0 - Initial Release
-# 4. Description: CHANGELOG.md의 v1.0.0 섹션 복사
+# 2. Tag: v0.1.0
+# 3. Release title: v0.1.0 - Initial Release
+# 4. Description: CHANGELOG.md의 v0.1.0 섹션 복사
 # 5. Attach SBOM files (box에서 추출)
 ```
 
@@ -161,9 +161,9 @@ gh release create v1.0.0 \
 
 ```bash
 # Vagrant Cloud에서 버전 삭제
-vagrant cloud version delete dasomel/ubuntu-24.04 1.0.0
+vagrant cloud version delete dasomel/ubuntu-24.04 0.1.0
 
 # GitHub 태그 삭제
-git tag -d v1.0.0
-git push origin :refs/tags/v1.0.0
+git tag -d v0.1.0
+git push origin :refs/tags/v0.1.0
 ```

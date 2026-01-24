@@ -89,7 +89,7 @@ sudo mkdir -p /etc/vagrant-box
 cat <<EOF | sudo tee /etc/vagrant-box/info.json
 {
   "name": "ubuntu-24.04",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "license": "MIT",
   "author": "dasomel",
   "homepage": "https://github.com/dasomel/ubuntu-24.04",
@@ -148,7 +148,7 @@ This box includes the following open source software:
 
 ```bash
 # Box 설명에 라이선스 포함
-vagrant cloud publish dasomel/ubuntu-24.04 1.0.0 \
+vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 \
   virtualbox ./ubuntu-24.04-virtualbox-amd64.box \
   --architecture amd64 \
   --description "$(cat <<'EOF'
@@ -376,7 +376,7 @@ trivy rootfs / --format json -o /etc/vagrant-box/vuln-report.json
   "documentNamespace": "https://github.com/dasomel/ubuntu-24.04/sbom",
   "creationInfo": {
     "created": "2024-01-01T00:00:00Z",
-    "creators": ["Tool: syft-1.0.0", "Organization: dasomel"]
+    "creators": ["Tool: syft-0.1.0", "Organization: dasomel"]
   },
   "packages": [
     {

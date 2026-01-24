@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Additional CNI plugin examples
 - Performance benchmarking results
 
-## [1.0.0] - 2025-01-23
+## [0.1.0] - 2025-01-25
 
 ### Added
 - Initial release of dasomel/ubuntu-24.04 Vagrant Box
@@ -179,18 +179,18 @@ curl -s https://raw.githubusercontent.com/dasomel/kube-ready-box/main/CHANGELOG.
 
 ## Upgrade Guide
 
-### From Beta (0.9.0) to 1.0.0
+### From Beta (0.9.0) to 0.1.0
 
 1. Remove old box:
 ```bash
 vagrant box remove dasomel/ubuntu-24.04 --box-version 0.9.0
 ```
 
-2. Update Vagrantfile (no changes required for 1.0.0)
+2. Update Vagrantfile (no changes required for 0.1.0)
 
 3. Pull new version:
 ```bash
-vagrant box add dasomel/ubuntu-24.04 --version 1.0.0
+vagrant box add dasomel/ubuntu-24.04 --version 0.1.0
 ```
 
 4. Recreate VMs:
@@ -201,6 +201,5 @@ vagrant up
 
 ---
 
-[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/dasomel/kube-ready-box/releases/tag/v1.0.0
-[0.9.0]: https://github.com/dasomel/kube-ready-box/releases/tag/v0.9.0
+[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/dasomel/kube-ready-box/releases/tag/v0.1.0

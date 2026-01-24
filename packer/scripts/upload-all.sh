@@ -10,11 +10,11 @@ set -e
 
 USERNAME="dasomel"
 BOX_NAME="ubuntu-24.04"
-VERSION="${1:-1.0.0}"
+VERSION="${1:-0.1.0}"
 
 if [ -z "$1" ]; then
   echo "Usage: $0 <version>"
-  echo "Example: $0 1.0.0"
+  echo "Example: $0 0.1.0"
   exit 1
 fi
 

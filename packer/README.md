@@ -217,8 +217,8 @@ AMD64 builds are automated via GitHub Actions:
 gh workflow run build-amd64.yml
 
 # Or push a tag
-git tag v1.0.0
-git push origin v1.0.0
+git tag v0.1.0
+git push origin v0.1.0
 ```
 
 ## License
