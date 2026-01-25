@@ -34,9 +34,6 @@ package_update: true
 package_upgrade: true
 package_reboot_if_required: false
 
-packages:
-  - qemu-guest-agent
-
 # Enable services
 runcmd:
   - |
@@ -47,8 +44,6 @@ runcmd:
     sed -i 's/^#*ChallengeResponseAuthentication.*/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
     systemctl enable ssh
     systemctl restart ssh
-  - systemctl enable qemu-guest-agent || true
-  - systemctl start qemu-guest-agent || true
   - systemctl status ssh --no-pager
 
 # Cloud-init final message

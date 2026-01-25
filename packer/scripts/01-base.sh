@@ -33,7 +33,9 @@ apt-get install -y \
   wget \
   vim \
   git \
-  net-tools
+  net-tools \
+  rsync \
+  open-vm-tools
 
 
 # 불필요한 패키지 제거

@@ -6,31 +6,30 @@ source "vmware-iso" "ubuntu-vmware-arm64" {
   cpus               = var.cpus
   memory             = 4096
   disk_size          = var.disk_size
-  disk_adapter_type  = "nvme"
+  disk_adapter_type  = "nvme"  # Keep nvme for performance, Vagrant manages networking separately
   cdrom_adapter_type = "sata"
   headless           = false
   ssh_username       = var.ssh_username
   ssh_password       = var.ssh_password
   ssh_timeout        = "30m"
   shutdown_command   = "echo '${var.ssh_password}' | sudo -S shutdown -P now"
-  http_directory     = "http/autoinstall"
+  http_directory     = "http"
 
-  boot_wait = "20s"
-  boot_command = [
-    "e<wait>",
-    "<down><down><down><end>",
-    " autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ ---",
-    "<f10>"
-  ]
+  boot_wait = "5s"
+  boot_key_interval = "5ms"
+  boot_command = ["e<wait><down><down><down><end> autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ubuntu/<f10>"]
 
   vmx_data = {
-    "ethernet0.virtualdev"      = "vmxnet3"
+    "usb_keyboard.present" = "TRUE"
+    # Removed ethernet0.virtualdev - Vagrant should manage network interfaces
     "usb_xhci.present"          = "TRUE"
     "firmware"                  = "efi"
     "sata0:0.present"           = "TRUE"
     "sata0:0.deviceType"        = "cdrom-image"
     "RemoteDisplay.vnc.enabled" = "TRUE"
     "RemoteDisplay.vnc.port"    = "5900"
+    # Use latest hardware version for better compatibility
+    "virtualhw.version"         = "21"
   }
 
   vnc_port_min = 5900

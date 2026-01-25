@@ -1,0 +1,34 @@
+#cloud-config
+autoinstall:
+  version: 1
+  identity:
+    hostname: vagrant
+    username: vagrant
+    password: '$6$rounds=4096$5CU3LEj/MQvbkfPb$LmKEF9pCfU8R.dA.GemgE/8GT6r9blge3grJvdsVTMFKyLEQwzEF3SGWqAzjawY/XHRpWj4fOiLBrRyxJhIRJ1'
+  early-commands:
+    # Stop SSH to prevent Packer from connecting too early
+    - systemctl stop ssh.service
+    - systemctl stop ssh.socket
+  ssh:
+    install-server: yes
+    allow-pw: yes
+  packages:
+    - util-linux-extra
+    - open-vm-tools
+  late-commands:
+    # Create generic netplan config that works on any platform (VMware, VirtualBox)
+    - |
+      cat > /target/etc/netplan/00-installer-config.yaml << 'NETPLAN'
+      network:
+        version: 2
+        ethernets:
+          id0:
+            match:
+              name: "en*"
+            dhcp4: true
+            dhcp-identifier: mac
+      NETPLAN
+    - sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /target/etc/ssh/sshd_config
+    - sed -i 's/^#*PubkeyAuthentication.*/PubkeyAuthentication yes/' /target/etc/ssh/sshd_config
+    - echo 'vagrant ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/vagrant
+    - chmod 440 /target/etc/sudoers.d/vagrant

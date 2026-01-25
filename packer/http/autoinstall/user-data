@@ -21,6 +21,10 @@ autoinstall:
     layout:
       name: lvm
 
+  packages:
+    - util-linux-extra
+    - open-vm-tools
+
   network:
     network:
       version: 2
