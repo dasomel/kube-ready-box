@@ -24,7 +24,7 @@ variable "ubuntu_version" {
 
 variable "box_version" {
   type    = string
-  default = "0.1.0"
+  default = "0.1.1"
 }
 
 variable "ssh_username" {

@@ -29,7 +29,7 @@ echo ""
 if vagrant cloud search dasomel/ubuntu-24.04 --json 2>/dev/null | grep -q "vmware_desktop"; then
     echo "ℹ️  VMware provider already exists, skipping..."
 else
-    vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 vmware_desktop \
+    vagrant cloud publish dasomel/ubuntu-24.04 0.1.1 vmware_desktop \
       ubuntu-24.04-vmware-arm64.box \
       --architecture arm64 \
       --version-description "Initial release - Kubernetes-ready Ubuntu 24.04 LTS
@@ -65,10 +65,10 @@ echo ""
 
 # VirtualBox provider 추가 (기존 버전에)
 # 이미 존재하면 무시
-vagrant cloud version provider create dasomel/ubuntu-24.04 0.1.0 virtualbox \
+vagrant cloud version provider create dasomel/ubuntu-24.04 0.1.1 virtualbox \
   --architecture arm64 2>/dev/null || echo "ℹ️  VirtualBox provider already exists, continuing..."
 
-vagrant cloud version provider upload dasomel/ubuntu-24.04 0.1.0 virtualbox \
+vagrant cloud version provider upload dasomel/ubuntu-24.04 0.1.1 virtualbox \
   arm64 ubuntu-24.04-virtualbox-arm64.box
 
 echo ""

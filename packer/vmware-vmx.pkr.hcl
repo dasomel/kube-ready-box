@@ -1,25 +1,7 @@
-packer {
-  required_plugins {
-    vmware = {
-      version = ">= 1.0.0"
-      source  = "github.com/hashicorp/vmware"
-    }
-  }
-}
-
 variable "source_vmx" {
   type        = string
   description = "Path to source VMX file"
-}
-
-variable "ssh_username" {
-  type    = string
-  default = "vagrant"
-}
-
-variable "ssh_password" {
-  type    = string
-  default = "vagrant"
+  default     = ""
 }
 
 source "vmware-vmx" "ubuntu-vmx" {

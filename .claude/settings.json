@@ -1,0 +1,47 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": {},
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/load-project-context.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": {
+          "tools": ["Edit", "Write"]
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/post-edit-reminder.sh \"$CLAUDE_FILE_PATH\""
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(packer init:*)",
+      "Bash(packer validate:*)",
+      "Bash(packer fmt:*)",
+      "Bash(./build.sh:*)",
+      "Bash(vagrant:*)",
+      "Bash(git:*)",
+      "Bash(gh:*)",
+      "Bash(ls:*)",
+      "Bash(shellcheck:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /*:*)",
+      "Bash(sudo:*)",
+      "Bash(curl * | bash:*)",
+      "Bash(wget * | bash:*)"
+    ]
+  }
+}

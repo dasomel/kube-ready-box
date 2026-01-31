@@ -481,7 +481,7 @@ ls -lh packer/output-vagrant/*.box | awk '{print $9, $5}'
 - [ ] 다운로드 테스트: `vagrant init dasomel/ubuntu-24.04 && vagrant up`
 - [ ] README.md의 Vagrant Cloud 링크 업데이트
 - [ ] 다운로드 통계 모니터링
-
+0.1.1
 ---
 
 ## 참고 링크

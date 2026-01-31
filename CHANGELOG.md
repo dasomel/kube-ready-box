@@ -13,6 +13,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Additional CNI plugin examples
 - Performance benchmarking results
 
+## [0.1.1] - 2025-01-27
+
+### Changed
+- Switch apt mirror to Korean servers for faster package downloads
+  - ARM64: ports.ubuntu.com → kr.ports.ubuntu.com
+  - AMD64: archive.ubuntu.com → kr.archive.ubuntu.com
+  - Significantly reduces build time and package installation time
+- Set default timezone to Asia/Seoul (KST, UTC+9)
+- Configure Korean NTP servers for time synchronization
+  - Primary: time.bora.net, time.kriss.re.kr, ntp.kornet.net
+  - Fallback: ntp.ubuntu.com
+
+### Technical Details
+- Modified: packer/scripts/01-base.sh
+- Auto-detection of architecture for appropriate mirror selection
+- Timezone configured via timedatectl
+- NTP configured via systemd-timesyncd
+
 ## [0.1.0] - 2025-01-25
 
 ### Added
