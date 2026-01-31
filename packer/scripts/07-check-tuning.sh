@@ -1,7 +1,7 @@
 #!/bin/bash
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 dasomel
-set -e
+set -euo pipefail
 
 echo "========================================"
 echo "=== K8s Node Tuning Verification ==="
@@ -44,6 +44,48 @@ ip link show | grep -E "^[0-9]+:" | awk '{print "  "$2}'
 
 echo -e "\n[9] 디스크 정보"
 df -h / | tail -n1
+
+echo -e "\n[10] 디스크 튜닝 상태"
+# I/O 스케줄러 확인
+echo "  I/O Scheduler:"
+for sched in /sys/block/sd*/queue/scheduler /sys/block/nvme*/queue/scheduler; do
+  if [ -f "$sched" ]; then
+    disk_name=$(echo "$sched" | cut -d'/' -f4)
+    current=$(cat "$sched" | grep -oP '\[\K[^\]]+' || cat "$sched")
+    echo "    $disk_name: $current"
+  fi
+done 2>/dev/null || echo "    (no block devices found)"
+
+# Read-ahead 확인
+echo "  Read-ahead:"
+for ra in /sys/block/sd*/queue/read_ahead_kb /sys/block/nvme*/queue/read_ahead_kb; do
+  if [ -f "$ra" ]; then
+    disk_name=$(echo "$ra" | cut -d'/' -f4)
+    value=$(cat "$ra")
+    echo "    $disk_name: ${value}KB"
+  fi
+done 2>/dev/null || echo "    (no block devices found)"
+
+# noatime 마운트 옵션 확인
+echo "  Mount options (noatime):"
+if grep -q "noatime" /etc/fstab; then
+  echo "    fstab: configured"
+else
+  echo "    fstab: not configured"
+fi
+if mount | grep -q "noatime"; then
+  echo "    current: enabled"
+else
+  echo "    current: not enabled"
+fi
+
+# LVM auto-extend 서비스 상태
+echo "  LVM auto-extend service:"
+if systemctl is-enabled extend-lvm.service >/dev/null 2>&1; then
+  echo "    enabled: yes"
+else
+  echo "    enabled: no"
+fi
 
 echo -e "\n========================================"
 echo "=== K8s Ready OS Check Complete ==="

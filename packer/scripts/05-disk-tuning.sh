@@ -1,7 +1,7 @@
 #!/bin/bash
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 dasomel
-set -e
+set -euo pipefail
 
 echo "=== 05-disk-tuning.sh: Disk I/O Optimization ==="
 

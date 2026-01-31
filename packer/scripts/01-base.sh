@@ -30,8 +30,9 @@ fi
 
 # 한국 시간대로 설정 (Asia/Seoul, KST UTC+9)
 echo "Setting timezone to Asia/Seoul (KST)..."
-timedatectl set-timezone Asia/Seoul
-echo "  -> Timezone: $(timedatectl show --property=Timezone --value)"
+ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
+echo "Asia/Seoul" > /etc/timezone
+echo "  -> Timezone: $(cat /etc/timezone)"
 
 # 한국 NTP 서버로 설정 (시간 동기화)
 echo "Configuring Korean NTP servers..."
@@ -41,7 +42,7 @@ cat <<EOF > /etc/systemd/timesyncd.conf.d/kr-ntp.conf
 NTP=time.bora.net time.kriss.re.kr ntp.kornet.net
 FallbackNTP=ntp.ubuntu.com
 EOF
-systemctl restart systemd-timesyncd
+systemctl restart systemd-timesyncd || true
 echo "  -> NTP servers: time.bora.net, time.kriss.re.kr, ntp.kornet.net"
 
 # 패키지 최신화

@@ -32,3 +32,6 @@ autoinstall:
     - sed -i 's/^#*PubkeyAuthentication.*/PubkeyAuthentication yes/' /target/etc/ssh/sshd_config
     - echo 'vagrant ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/vagrant
     - chmod 440 /target/etc/sudoers.d/vagrant
+    # Ensure SSH is enabled on boot
+    - curtin in-target --target=/target -- systemctl enable ssh.service
+    - curtin in-target --target=/target -- systemctl enable ssh.socket
