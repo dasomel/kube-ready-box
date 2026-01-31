@@ -122,12 +122,12 @@ jobs:
           VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
         run: |
           cd work
-          # Create provider
-          vagrant cloud provider create dasomel/ubuntu-24.04 virtualbox 0.1.1 \
+          # Create provider (correct argument order: box version provider --architecture)
+          vagrant cloud provider create dasomel/ubuntu-24.04 0.1.1 virtualbox \
             --architecture amd64 2>/dev/null || echo "Provider already exists"
 
-          # Upload box
-          vagrant cloud provider upload dasomel/ubuntu-24.04 virtualbox 0.1.1 \
+          # Upload box (correct argument order: box version provider architecture file)
+          vagrant cloud provider upload dasomel/ubuntu-24.04 0.1.1 virtualbox \
             amd64 ubuntu-24.04-virtualbox-amd64-0.1.1.box
 
       - name: Cleanup
