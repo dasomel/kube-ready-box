@@ -6,7 +6,7 @@ source "vmware-iso" "ubuntu-vmware-arm64" {
   cpus               = var.cpus
   memory             = 4096
   disk_size          = var.disk_size
-  disk_adapter_type  = "nvme"  # Keep nvme for performance, Vagrant manages networking separately
+  disk_adapter_type  = "nvme" # Keep nvme for performance, Vagrant manages networking separately
   cdrom_adapter_type = "sata"
   headless           = false
   ssh_username       = var.ssh_username
@@ -15,9 +15,9 @@ source "vmware-iso" "ubuntu-vmware-arm64" {
   shutdown_command   = "echo '${var.ssh_password}' | sudo -S shutdown -P now"
   http_directory     = "http"
 
-  boot_wait = "5s"
+  boot_wait         = "5s"
   boot_key_interval = "5ms"
-  boot_command = ["e<wait><down><down><down><end> autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ubuntu/<f10>"]
+  boot_command      = ["e<wait><down><down><down><end> autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ubuntu/<f10>"]
 
   vmx_data = {
     "usb_keyboard.present" = "TRUE"
@@ -29,7 +29,7 @@ source "vmware-iso" "ubuntu-vmware-arm64" {
     "RemoteDisplay.vnc.enabled" = "TRUE"
     "RemoteDisplay.vnc.port"    = "5900"
     # Use latest hardware version for better compatibility
-    "virtualhw.version"         = "21"
+    "virtualhw.version" = "21"
   }
 
   vnc_port_min = 5900
