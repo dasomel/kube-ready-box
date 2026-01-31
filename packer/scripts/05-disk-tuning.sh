@@ -5,6 +5,56 @@ set -e
 
 echo "=== 05-disk-tuning.sh: Disk I/O Optimization ==="
 
+#=========================================
+# LVM 자동 확장 서비스 설치
+# Vagrantfile에서 디스크 크기를 늘리면 부팅 시 자동 확장
+#=========================================
+echo "Installing LVM auto-extend service..."
+
+# LVM 디렉토리 생성
+mkdir -p /etc/lvm/archive /etc/lvm/backup
+
+# 부팅 시 LVM 확장 스크립트
+cat > /usr/local/bin/extend-lvm.sh << 'LVMSCRIPT'
+#!/bin/bash
+# Auto-extend LVM to use all available VG space
+set -e
+
+# Wait for LVM to be ready
+sleep 2
+
+# Check VG free space
+VG_FREE=$(vgs --noheadings -o vg_free --units g ubuntu-vg 2>/dev/null | tr -d ' g' | cut -d. -f1)
+
+if [ -n "$VG_FREE" ] && [ "$VG_FREE" -gt 0 ]; then
+  logger -t extend-lvm "Extending LVM by ${VG_FREE}GB..."
+  lvextend -l +100%FREE /dev/ubuntu-vg/ubuntu-lv 2>/dev/null || true
+  resize2fs /dev/ubuntu-vg/ubuntu-lv 2>/dev/null || true
+  logger -t extend-lvm "LVM extended successfully"
+fi
+LVMSCRIPT
+chmod +x /usr/local/bin/extend-lvm.sh
+
+# systemd 서비스 생성
+cat > /etc/systemd/system/extend-lvm.service << 'SVCFILE'
+[Unit]
+Description=Extend LVM to use full disk
+After=local-fs.target
+ConditionPathExists=/dev/ubuntu-vg/ubuntu-lv
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/extend-lvm.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+SVCFILE
+
+systemctl daemon-reload
+systemctl enable extend-lvm.service
+echo "  -> LVM auto-extend service installed"
+
 # I/O 스케줄러 설정 (SSD용 - none/noop)
 echo "Setting I/O scheduler for SSD..."
 for disk in /sys/block/sd*/queue/scheduler; do
