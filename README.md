@@ -13,6 +13,8 @@ Kubernetes-ready Ubuntu 24.04 LTS Vagrant Box with OS-level optimizations.
 - **Multi-Architecture**: AMD64, ARM64
 - **Multi-Provider**: VirtualBox, VMware Fusion
 - **K8s Ready**: OS tuning for Kubernetes (K8s not included)
+- **1TB Disk**: Large disk with thin provisioning (box size ~2.2GB)
+- **Auto-Extension**: Disk auto-extends on boot (partition → PV → LV → filesystem)
 
 ### Build Matrix
 
