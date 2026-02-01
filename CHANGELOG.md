@@ -12,6 +12,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Additional CNI plugin examples
 - Performance benchmarking results
 
+## [0.1.3] - 2026-02-01
+
+### Added
+- Full disk auto-extension support at boot time
+  - Automatic partition extension using growpart
+  - Automatic PV (Physical Volume) extension using pvresize
+  - Automatic LV and filesystem extension
+  - Supports both NVMe and SATA/SCSI disks
+
+### Changed
+- Default disk size increased to 1TB (thin provisioning)
+  - Actual box size remains ~2GB due to thin provisioning
+  - VM disk grows dynamically as data is written
+  - Eliminates need to resize disk after deployment
+
+### Technical Details
+- Modified: packer/scripts/05-disk-tuning.sh
+- Added: cloud-guest-utils package for growpart
+- Disk extension chain: partition → PV → LV → filesystem
+- Supported disk types: /dev/sda*, /dev/nvme0n1p*
+
 ## [0.1.2] - 2026-02-01
 
 ### Added
@@ -238,7 +259,8 @@ vagrant up
 
 ---
 
-[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/dasomel/kube-ready-box/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/dasomel/kube-ready-box/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/dasomel/kube-ready-box/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/dasomel/kube-ready-box/releases/tag/v0.1.0

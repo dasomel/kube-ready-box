@@ -50,7 +50,7 @@ variable "memory" {
 
 variable "disk_size" {
   type    = number
-  default = 20000
+  default = 1000000  # 1TB - thin provisioning, actual size depends on usage
 }
 
 variable "headless" {
