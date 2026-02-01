@@ -124,6 +124,21 @@ cd packer && ./build.sh init
    - 무료 버전에서 headless 빌드 실패
    - 해결: VMware Fusion Pro 또는 Player 필요
 
+6. **0.1.0 원본 빌드 설정 임의 수정 금지**
+   - 0.1.0에서 성공한 pkr.hcl 빌드 설정(boot_wait, boot_command, http_directory 등)을 임의로 수정하면 빌드 실패
+   - 특별한 사정이 없는 한 원본 설정 유지
+   - 수정 필요 시: `git show 327f8dc:packer/vmware-arm64.pkr.hcl` 로 원본 확인 후 신중하게 진행
+
+7. **VMware Fusion VNC/빌드 문제 시 완전 재시작 필요**
+   - VMware Fusion이 불안정하면 VNC 연결 거부, boot_command 미작동 등 발생
+   - 해결: VMware Fusion 완전 재시작 (services.sh --stop/--start 포함)
+   ```bash
+   osascript -e 'quit app "VMware Fusion"'
+   sudo /Applications/VMware\ Fusion.app/Contents/Library/services.sh --stop
+   sudo /Applications/VMware\ Fusion.app/Contents/Library/services.sh --start
+   open -a "VMware Fusion"
+   ```
+
 ### 업로드 관련
 
 6. **버전 번호 중복**

@@ -9,9 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned
 - GitHub Actions workflow for automated AMD64 builds
-- ARM64 build improvements for VirtualBox
 - Additional CNI plugin examples
 - Performance benchmarking results
+
+## [0.1.2] - 2026-02-01
+
+### Added
+- VirtualBox ARM64 provider support
+- VMware ARM64 provider support (rebuilt with stable configuration)
+
+### Changed
+- Improved VMware Fusion build stability
+  - Documented VMware Fusion restart requirement for VNC issues
+  - Original 0.1.0 boot_command configuration restored for reliability
+
+### Fixed
+- VMware ARM64 build failures caused by VNC connection issues
+- VirtualBox ARM64 box creation process
+
+### Technical Details
+- Providers: VMware Desktop (ARM64), VirtualBox (ARM64)
+- Korean locale settings maintained from 0.1.1
+- Build time: ~14 minutes per box
 
 ## [0.1.1] - 2025-01-27
 
@@ -219,5 +238,7 @@ vagrant up
 
 ---
 
-[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/dasomel/kube-ready-box/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/dasomel/kube-ready-box/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/dasomel/kube-ready-box/releases/tag/v0.1.0
