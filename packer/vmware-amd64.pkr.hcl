@@ -23,6 +23,7 @@ source "vmware-iso" "ubuntu-vmware-amd64" {
 
   vmx_data = {
     "ethernet0.virtualdev" = "vmxnet3"
+    "firmware"             = "efi"
   }
 }
 

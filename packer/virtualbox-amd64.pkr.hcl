@@ -22,6 +22,7 @@ source "virtualbox-iso" "ubuntu-vbox-amd64" {
   ]
 
   vboxmanage = [
+    ["modifyvm", "{{.Name}}", "--firmware", "efi"],
     ["modifyvm", "{{.Name}}", "--nat-localhostreachable1", "on"],
     ["modifyvm", "{{.Name}}", "--memory", "${var.memory}"],
     ["modifyvm", "{{.Name}}", "--cpus", "${var.cpus}"]
