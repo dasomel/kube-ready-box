@@ -72,6 +72,7 @@ https://github.com/dasomel/kube-ready-box
 
 ## CHANGELOG
 https://github.com/dasomel/kube-ready-box/blob/main/CHANGELOG.md" \
+        --force \
         --release \
         --short-description "K8s-ready Ubuntu 24.04 (${fs_upper}) Vagrant Box" \
     || {
