@@ -32,6 +32,7 @@ upload_box() {
     local fs=$1
     local provider=$2
     local arch=$3
+    local fs_upper=$(echo "$fs" | tr '[:lower:]' '[:upper:]')
     local box_file="ubuntu-24.04-${fs}-${provider}-${arch}.box"
     local box_path="${BOX_DIR}/${box_file}"
 
@@ -53,9 +54,9 @@ upload_box() {
     vagrant cloud publish "$box_name" "$VERSION" "$vagrant_provider" \
         "$box_path" \
         --architecture "$arch" \
-        --version-description "Kubernetes-ready Ubuntu 24.04 LTS (${fs^^} filesystem) v${VERSION}
+        --version-description "Kubernetes-ready Ubuntu 24.04 LTS (${fs_upper} filesystem) v${VERSION}
 
-## Filesystem: ${fs^^}
+## Filesystem: ${fs_upper}
 - ext4: Mature, stable, supports online shrink
 - xfs: Better for large files, parallel I/O, K8s ephemeral storage quota
 
@@ -72,7 +73,7 @@ https://github.com/dasomel/kube-ready-box
 ## CHANGELOG
 https://github.com/dasomel/kube-ready-box/blob/main/CHANGELOG.md" \
         --release \
-        --short-description "K8s-ready Ubuntu 24.04 (${fs^^}) Vagrant Box" \
+        --short-description "K8s-ready Ubuntu 24.04 (${fs_upper}) Vagrant Box" \
     || {
         echo "❌ Upload failed: ${box_file}"
         return 1
