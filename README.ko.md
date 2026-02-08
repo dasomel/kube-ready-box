@@ -1,19 +1,23 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Vagrant Cloud](https://img.shields.io/badge/Vagrant-Cloud-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04)
+[![Vagrant Cloud - ext4](https://img.shields.io/badge/Vagrant-ext4-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4)
+[![Vagrant Cloud - xfs](https://img.shields.io/badge/Vagrant-xfs-green)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs)
 
 **Languages**: [English](README.md) | [한국어](README.ko.md)
 
 OS 수준 최적화가 적용된 Kubernetes-ready Ubuntu 24.04 LTS Vagrant Box
 
-> **Vagrant Cloud**: `dasomel/ubuntu-24.04`
+> **Vagrant Cloud**:
+> - ext4: `dasomel/ubuntu-24.04-ext4`
+> - xfs: `dasomel/ubuntu-24.04-xfs`
 
 ## 주요 기능
 
 - **기본 OS**: Ubuntu 24.04 LTS Cloud Image
 - **멀티 아키텍처**: AMD64, ARM64
 - **멀티 프로바이더**: VirtualBox, VMware Fusion
+- **파일시스템 선택**: ext4 (기본) 또는 xfs
 - **K8s 준비 완료**: Kubernetes를 위한 OS 튜닝 (K8s는 미포함)
-- **1TB 디스크**: Thin provisioning으로 대용량 디스크 제공 (Box 크기 ~2.2GB)
+- **1TB 디스크**: Thin provisioning으로 대용량 디스크 제공 (ext4 ~2.2GB, xfs ~3.4GB)
 - **자동 확장**: 부팅 시 디스크 자동 확장 (파티션 → PV → LV → 파일시스템)
 
 ### 빌드 매트릭스
@@ -28,20 +32,29 @@ OS 수준 최적화가 적용된 Kubernetes-ready Ubuntu 24.04 LTS Vagrant Box
 ### 설치
 
 ```bash
-# VirtualBox (아키텍처 자동 감지)
-vagrant init dasomel/ubuntu-24.04
-vagrant up
+# ext4 (기본, 안정적, 범용)
+vagrant init dasomel/ubuntu-24.04-ext4
+vagrant up --provider=vmware_desktop
 
-# VMware Fusion
-vagrant init dasomel/ubuntu-24.04
+# xfs (K8s ephemeral storage quota 지원, 대용량 파일에 유리)
+vagrant init dasomel/ubuntu-24.04-xfs
 vagrant up --provider=vmware_desktop
 ```
+
+### 파일시스템 비교
+
+| | ext4 | xfs |
+|---|---|---|
+| **적합한 용도** | 범용 | K8s 워크로드, 대용량 파일 |
+| **K8s Quota** | 미지원 | `--local-storage-capacity-isolation` |
+| **온라인 축소** | 지원 | 미지원 |
+| **Box 크기** | ~2.2GB | ~3.4GB |
 
 ### Vagrantfile 예제
 
 ```ruby
 Vagrant.configure("2") do |config|
-  config.vm.box = "dasomel/ubuntu-24.04"
+  config.vm.box = "dasomel/ubuntu-24.04-ext4"  # 또는 "dasomel/ubuntu-24.04-xfs"
 
   config.vm.provider "virtualbox" do |vb|
     vb.memory = 4096
@@ -124,12 +137,15 @@ cd packer
 # Packer 플러그인 초기화
 ./build.sh init
 
-# 특정 Box 빌드
-./build.sh vmware-arm64      # VMware ARM64
-./build.sh virtualbox-arm64  # VirtualBox ARM64
+# ext4로 빌드 (기본값)
+./build.sh vmware-arm64
 
-# 모든 Box 빌드 (4개)
-./build.sh all
+# xfs로 빌드
+./build.sh vmware-arm64 --fs=xfs
+
+# 전체 빌드
+./build.sh all               # ext4
+./build.sh all --fs=xfs      # xfs
 ```
 
 ## 요구사항
@@ -175,6 +191,7 @@ cd packer
 
 ## 링크
 
-- [Vagrant Cloud](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04)
+- [Vagrant Cloud - ext4](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4)
+- [Vagrant Cloud - xfs](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs)
 - [GitHub Repository](https://github.com/dasomel/kube-ready-box)
 - [Issue Tracker](https://github.com/dasomel/kube-ready-box/issues)

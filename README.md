@@ -1,19 +1,23 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Vagrant Cloud](https://img.shields.io/badge/Vagrant-Cloud-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04)
+[![Vagrant Cloud - ext4](https://img.shields.io/badge/Vagrant-ext4-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4)
+[![Vagrant Cloud - xfs](https://img.shields.io/badge/Vagrant-xfs-green)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs)
 
 **Languages**: [English](README.md) | [한국어](README.ko.md)
 
 Kubernetes-ready Ubuntu 24.04 LTS Vagrant Box with OS-level optimizations.
 
-> **Vagrant Cloud**: `dasomel/ubuntu-24.04`
+> **Vagrant Cloud**:
+> - ext4: `dasomel/ubuntu-24.04-ext4`
+> - xfs: `dasomel/ubuntu-24.04-xfs`
 
 ## Features
 
 - **Base OS**: Ubuntu 24.04 LTS Cloud Image
 - **Multi-Architecture**: AMD64, ARM64
 - **Multi-Provider**: VirtualBox, VMware Fusion
+- **Filesystem Selection**: ext4 (default) or xfs
 - **K8s Ready**: OS tuning for Kubernetes (K8s not included)
-- **1TB Disk**: Large disk with thin provisioning (box size ~2.2GB)
+- **1TB Disk**: Large disk with thin provisioning (ext4 ~2.2GB, xfs ~3.4GB)
 - **Auto-Extension**: Disk auto-extends on boot (partition → PV → LV → filesystem)
 
 ### Build Matrix
@@ -28,20 +32,29 @@ Kubernetes-ready Ubuntu 24.04 LTS Vagrant Box with OS-level optimizations.
 ### Installation
 
 ```bash
-# VirtualBox (auto-detect architecture)
-vagrant init dasomel/ubuntu-24.04
-vagrant up
+# ext4 (default, stable, general purpose)
+vagrant init dasomel/ubuntu-24.04-ext4
+vagrant up --provider=vmware_desktop
 
-# VMware Fusion
-vagrant init dasomel/ubuntu-24.04
+# xfs (better for K8s ephemeral storage quota, large files)
+vagrant init dasomel/ubuntu-24.04-xfs
 vagrant up --provider=vmware_desktop
 ```
+
+### Filesystem Comparison
+
+| | ext4 | xfs |
+|---|---|---|
+| **Best for** | General purpose | K8s workloads, large files |
+| **K8s Quota** | No native support | `--local-storage-capacity-isolation` |
+| **Online Shrink** | Supported | Not supported |
+| **Box Size** | ~2.2GB | ~3.4GB |
 
 ### Vagrantfile Example
 
 ```ruby
 Vagrant.configure("2") do |config|
-  config.vm.box = "dasomel/ubuntu-24.04"
+  config.vm.box = "dasomel/ubuntu-24.04-ext4"  # or "dasomel/ubuntu-24.04-xfs"
 
   config.vm.provider "virtualbox" do |vb|
     vb.memory = 4096
@@ -124,12 +137,15 @@ cd packer
 # Initialize Packer plugins
 ./build.sh init
 
-# Build specific box
-./build.sh vmware-arm64      # VMware ARM64
-./build.sh virtualbox-arm64  # VirtualBox ARM64
+# Build with ext4 (default)
+./build.sh vmware-arm64
 
-# Build all boxes (4 boxes)
-./build.sh all
+# Build with xfs
+./build.sh vmware-arm64 --fs=xfs
+
+# Build all boxes
+./build.sh all               # ext4
+./build.sh all --fs=xfs      # xfs
 ```
 
 ## Requirements
@@ -175,6 +191,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Links
 
-- [Vagrant Cloud](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04)
+- [Vagrant Cloud - ext4](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4)
+- [Vagrant Cloud - xfs](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs)
 - [GitHub Repository](https://github.com/dasomel/kube-ready-box)
 - [Issue Tracker](https://github.com/dasomel/kube-ready-box/issues)
