@@ -26,11 +26,16 @@ autoinstall:
         grub_device: true
         match:
           size: largest
-      - id: bios-grub
+      - id: efi-partition
         type: partition
-        size: 1M
+        size: 512M
         device: disk0
-        flag: bios_grub
+        flag: boot
+        grub_device: true
+      - id: efi-fs
+        type: format
+        fstype: fat32
+        volume: efi-partition
       - id: boot-partition
         type: partition
         size: 1G
@@ -65,6 +70,10 @@ autoinstall:
         type: mount
         path: /boot
         device: boot-fs
+      - id: mount-efi
+        type: mount
+        path: /boot/efi
+        device: efi-fs
 
   packages:
     - util-linux-extra
