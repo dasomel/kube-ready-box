@@ -215,12 +215,17 @@ fi
 if [ "$ROOT_FSTYPE" = "xfs" ]; then
   echo "XFS detected: configuring prjquota for K8s ephemeral storage quota..."
 
-  # 1. fstab에 prjquota 추가
+  # 1. fstab에 prjquota 추가 (root xfs 마운트 라인)
   if grep -q "prjquota" /etc/fstab; then
     echo "  -> prjquota already in fstab"
   else
-    sed -i '/ubuntu--vg-ubuntu--lv.*xfs/ s/defaults/defaults,prjquota/' /etc/fstab
-    echo "  -> Added prjquota to fstab"
+    # fstab에서 xfs root(/) 마운트를 찾아 prjquota 추가
+    # Ubuntu autoinstall은 /dev/disk/by-id/dm-uuid-... 형식을 사용
+    if sed -i '/ \/ .*xfs/ s/defaults/defaults,prjquota/' /etc/fstab && grep -q "prjquota" /etc/fstab; then
+      echo "  -> Added prjquota to fstab"
+    else
+      echo "  -> WARNING: Could not add prjquota to fstab (grub rootflags will handle it)"
+    fi
   fi
 
   # 2. grub rootflags로 initramfs 단계부터 prjquota 적용
