@@ -38,6 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Box naming convention now includes filesystem type
   - New format: `ubuntu-24.04-{fs}-{provider}-{arch}.box`
   - Example: `ubuntu-24.04-xfs-vmware-arm64.box`
+- AMD64 templates switched to UEFI boot mode for XFS compatibility
+  - VMware AMD64: `firmware = "efi"` in vmx_data
+  - VirtualBox AMD64: `--firmware efi` in vboxmanage
 - Packer templates use dynamic `http_directory` based on filesystem variable
 - Upload script supports multi-filesystem upload (`./upload-boxes.sh [ext4|xfs|both]`)
 - GitHub Actions workflows updated with filesystem matrix (ext4/xfs)
@@ -48,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `vmware-vmx.pkr.hcl` source_vmx default changed to `/dev/null` so `packer validate .` passes without `-only`
 - XFS autoinstall uses EFI partition (fat32, flag: boot) instead of bios_grub for ARM64 compatibility
 - `upload-boxes.sh` uses `tr` instead of `${var^^}` for macOS bash 3.2 compatibility
+- Packer format alignment in `plugins.pkr.hcl` and `vmware-arm64.pkr.hcl`
+- Shellcheck SC2002 warning in `07-check-tuning.sh` (useless cat)
 
 ### Removed
 - `upgrade-amd64-box.yml` workflow (0.1.3 one-time migration, no longer needed)
@@ -58,14 +63,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `packer/build.sh` - Added `--fs` option parsing
   - `packer/*.pkr.hcl` (4 files) - Dynamic `http_directory` and output naming
   - `packer/vmware-vmx.pkr.hcl` - Fixed source_vmx default for validation
-  - `packer/scripts/05-disk-tuning.sh` - Filesystem auto-detection for resize
+  - `packer/scripts/05-disk-tuning.sh` - Filesystem auto-detection for resize, XFS prjquota
+  - `packer/scripts/07-check-tuning.sh` - Fixed shellcheck SC2002
   - `upload-boxes.sh` - Multi-filesystem upload support
   - `.github/workflows/` - Filesystem matrix for build and validate
 - New files:
   - `packer/http/autoinstall-ext4/` - ext4 autoinstall config
   - `packer/http/autoinstall-xfs/` - xfs autoinstall config (with xfsprogs)
 - XFS storage config uses explicit partition layout (EFI + boot + LVM)
-- Box sizes: ext4 ~2.2GB, xfs ~3.4GB (both thin provisioning 1TB)
+- All 4 templates use UEFI boot mode (EFI partition layout)
+- Box sizes: ext4 ~2.2GB, xfs ~2.8GB (both thin provisioning 1TB)
 
 ## [0.1.3] - 2026-02-01
 
