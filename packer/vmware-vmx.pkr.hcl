@@ -1,7 +1,7 @@
 variable "source_vmx" {
   type        = string
-  description = "Path to source VMX file"
-  default     = ""
+  description = "Path to source VMX file (required for vmware-vmx builds)"
+  default     = "/dev/null"
 }
 
 source "vmware-vmx" "ubuntu-vmx" {
