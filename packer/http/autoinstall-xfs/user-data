@@ -102,3 +102,11 @@ autoinstall:
     - curtin in-target -- systemctl enable ssh.service
     - echo 'vagrant ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/vagrant
     - chmod 440 /target/etc/sudoers.d/vagrant
+    # XFS prjquota: K8s ephemeral storage quota (--local-storage-capacity-isolation)
+    # 1. fstab: systemd remount with prjquota
+    - "sed -i '/ubuntu--vg-ubuntu--lv.*xfs/ s/defaults/defaults,prjquota/' /target/etc/fstab"
+    # 2. grub rootflags: initramfs mounts root with prjquota from the start
+    - "sed -i 's/GRUB_CMDLINE_LINUX=\"\"/GRUB_CMDLINE_LINUX=\"rootflags=prjquota\"/' /target/etc/default/grub"
+    - curtin in-target -- update-grub
+    # 3. initramfs: bake prjquota into initramfs
+    - curtin in-target -- update-initramfs -u -k all

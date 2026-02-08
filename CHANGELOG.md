@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto-detection of filesystem type in LVM auto-extend service
   - Uses `blkid` to detect ext4 vs xfs at boot time
   - Calls `resize2fs` for ext4 or `xfs_growfs` for xfs automatically
+- XFS `prjquota` mount option for Kubernetes ephemeral storage quota
+  - Enables `--local-storage-capacity-isolation` in kubelet
+  - Applied via autoinstall late-command and disk-tuning script
 - Filesystem comparison table in README
 
 ### Changed

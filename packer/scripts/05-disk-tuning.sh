@@ -184,8 +184,11 @@ for disk in /sys/block/nvme*/queue/read_ahead_kb; do
 done
 
 #=========================================
-# fstab에 noatime, nodiratime 적용
+# fstab 최적화 (noatime, prjquota)
 #=========================================
+# 파일시스템 타입 미리 감지
+ROOT_FSTYPE=$(blkid -o value -s TYPE /dev/ubuntu-vg/ubuntu-lv 2>/dev/null || echo "unknown")
+echo "Root filesystem detected: $ROOT_FSTYPE"
 echo "Applying noatime,nodiratime to /etc/fstab..."
 
 # 백업 생성
@@ -208,16 +211,52 @@ else
   fi
 fi
 
+# XFS: prjquota 설정 (K8s ephemeral storage quota 지원)
+if [ "$ROOT_FSTYPE" = "xfs" ]; then
+  echo "XFS detected: configuring prjquota for K8s ephemeral storage quota..."
+
+  # 1. fstab에 prjquota 추가
+  if grep -q "prjquota" /etc/fstab; then
+    echo "  -> prjquota already in fstab"
+  else
+    sed -i '/ubuntu--vg-ubuntu--lv.*xfs/ s/defaults/defaults,prjquota/' /etc/fstab
+    echo "  -> Added prjquota to fstab"
+  fi
+
+  # 2. grub rootflags로 initramfs 단계부터 prjquota 적용
+  if grep -q "rootflags=prjquota" /etc/default/grub; then
+    echo "  -> rootflags=prjquota already in grub"
+  else
+    sed -i 's/GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 rootflags=prjquota"/' /etc/default/grub
+    # 앞에 공백이 생길 수 있으므로 trim
+    sed -i 's/GRUB_CMDLINE_LINUX=" /GRUB_CMDLINE_LINUX="/' /etc/default/grub
+    update-grub
+    echo "  -> Added rootflags=prjquota to grub"
+  fi
+
+  # 3. initramfs 재생성 (prjquota 마운트 옵션 반영)
+  update-initramfs -u -k all
+  echo "  -> initramfs updated with prjquota"
+fi
+
 # 현재 마운트된 파일시스템에도 적용 (재부팅 없이)
 echo "Remounting filesystems with noatime..."
-mount -o remount,noatime,nodiratime / 2>/dev/null || \
-  echo "Note: Root remount may require reboot to take full effect"
+if [ "$ROOT_FSTYPE" = "xfs" ]; then
+  mount -o remount,noatime,nodiratime,prjquota / 2>/dev/null || \
+    echo "Note: Root remount may require reboot to take full effect"
+else
+  mount -o remount,noatime,nodiratime / 2>/dev/null || \
+    echo "Note: Root remount may require reboot to take full effect"
+fi
 
 echo ""
 echo "Disk I/O optimization applied:"
 echo "  - I/O scheduler: none (SSD optimized)"
 echo "  - Read-ahead: 256KB"
 echo "  - Mount options: noatime,nodiratime"
+if [ "$ROOT_FSTYPE" = "xfs" ]; then
+  echo "  - XFS prjquota: enabled (fstab + grub rootflags + initramfs)"
+fi
 echo ""
 
 echo "=== 05-disk-tuning.sh: Complete ==="
