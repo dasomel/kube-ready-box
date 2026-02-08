@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Box version (e.g., 0.1.0)'
+        description: 'Box version (e.g., 0.2.0)'
         required: false
         type: string
         default: ''
@@ -17,6 +17,15 @@ on:
           - virtualbox
           - both
         default: vmware
+      filesystem:
+        description: 'Filesystem type'
+        required: true
+        type: choice
+        options:
+          - ext4
+          - xfs
+          - both
+        default: both
       publish:
         description: 'Publish to Vagrant Cloud'
         required: false
@@ -31,11 +40,19 @@ env:
 
 jobs:
   build-vmware-arm64:
-    name: Build VMware ARM64
-    # Requires self-hosted ARM64 macOS runner
+    name: Build VMware ARM64 (${{ matrix.filesystem }})
     runs-on: [self-hosted, macOS, ARM64]
     if: inputs.provider == 'vmware' || inputs.provider == 'both'
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        filesystem:
+          - ext4
+          - xfs
+        exclude:
+          - filesystem: ${{ inputs.filesystem == 'xfs' && 'ext4' || 'none' }}
+          - filesystem: ${{ inputs.filesystem == 'ext4' && 'xfs' || 'none' }}
 
     steps:
       - name: Checkout
@@ -56,24 +73,27 @@ jobs:
 
       - name: Packer Validate
         working-directory: packer
-        run: packer validate -only='vmware-iso.ubuntu-vmware-arm64' .
+        run: |
+          packer validate -only='vmware-iso.ubuntu-vmware-arm64' \
+            -var 'filesystem=${{ matrix.filesystem }}' .
 
       - name: Packer Build
         working-directory: packer
         run: |
           packer build -only='vmware-iso.ubuntu-vmware-arm64' \
             -var 'headless=true' \
+            -var 'filesystem=${{ matrix.filesystem }}' \
             .
 
       - name: Verify Box File
         run: |
-          ls -lh packer/output-vagrant/ubuntu-24.04-vmware-arm64.box
+          ls -lh packer/output-vagrant/ubuntu-24.04-${{ matrix.filesystem }}-vmware-arm64.box
 
       - name: Upload Box Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ubuntu-24.04-vmware-arm64
-          path: packer/output-vagrant/ubuntu-24.04-vmware-arm64.box
+          name: ubuntu-24.04-${{ matrix.filesystem }}-vmware-arm64
+          path: packer/output-vagrant/ubuntu-24.04-${{ matrix.filesystem }}-vmware-arm64.box
           retention-days: 7
           compression-level: 0
 
@@ -83,11 +103,19 @@ jobs:
           rm -rf packer/output-*
 
   build-virtualbox-arm64:
-    name: Build VirtualBox ARM64
-    # Requires self-hosted ARM64 macOS runner
+    name: Build VirtualBox ARM64 (${{ matrix.filesystem }})
     runs-on: [self-hosted, macOS, ARM64]
     if: inputs.provider == 'virtualbox' || inputs.provider == 'both'
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        filesystem:
+          - ext4
+          - xfs
+        exclude:
+          - filesystem: ${{ inputs.filesystem == 'xfs' && 'ext4' || 'none' }}
+          - filesystem: ${{ inputs.filesystem == 'ext4' && 'xfs' || 'none' }}
 
     steps:
       - name: Checkout
@@ -108,24 +136,27 @@ jobs:
 
       - name: Packer Validate
         working-directory: packer
-        run: packer validate -only='virtualbox-iso.ubuntu-vbox-arm64' .
+        run: |
+          packer validate -only='virtualbox-iso.ubuntu-vbox-arm64' \
+            -var 'filesystem=${{ matrix.filesystem }}' .
 
       - name: Packer Build
         working-directory: packer
         run: |
           packer build -only='virtualbox-iso.ubuntu-vbox-arm64' \
             -var 'headless=true' \
+            -var 'filesystem=${{ matrix.filesystem }}' \
             .
 
       - name: Verify Box File
         run: |
-          ls -lh packer/output-vagrant/ubuntu-24.04-virtualbox-arm64.box
+          ls -lh packer/output-vagrant/ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-arm64.box
 
       - name: Upload Box Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ubuntu-24.04-virtualbox-arm64
-          path: packer/output-vagrant/ubuntu-24.04-virtualbox-arm64.box
+          name: ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-arm64
+          path: packer/output-vagrant/ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-arm64.box
           retention-days: 7
           compression-level: 0
 
@@ -136,13 +167,22 @@ jobs:
           VBoxManage list vms | grep -oE '"[^"]+"' | tr -d '"' | xargs -I {} VBoxManage unregistervm "{}" --delete 2>/dev/null || true
 
   publish:
-    name: Publish to Vagrant Cloud
+    name: Publish ${{ matrix.filesystem }} to Vagrant Cloud
     needs: [build-vmware-arm64, build-virtualbox-arm64]
     runs-on: ubuntu-latest
     if: |
       always() &&
       inputs.publish == true &&
       (needs.build-vmware-arm64.result == 'success' || needs.build-virtualbox-arm64.result == 'success')
+    strategy:
+      fail-fast: false
+      matrix:
+        filesystem:
+          - ext4
+          - xfs
+        exclude:
+          - filesystem: ${{ inputs.filesystem == 'xfs' && 'ext4' || 'none' }}
+          - filesystem: ${{ inputs.filesystem == 'ext4' && 'xfs' || 'none' }}
 
     environment: production
 
@@ -151,15 +191,17 @@ jobs:
         if: needs.build-vmware-arm64.result == 'success'
         uses: actions/download-artifact@v4
         with:
-          name: ubuntu-24.04-vmware-arm64
+          name: ubuntu-24.04-${{ matrix.filesystem }}-vmware-arm64
           path: ./boxes
+        continue-on-error: true
 
       - name: Download VirtualBox Box
         if: needs.build-virtualbox-arm64.result == 'success'
         uses: actions/download-artifact@v4
         with:
-          name: ubuntu-24.04-virtualbox-arm64
+          name: ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-arm64
           path: ./boxes
+        continue-on-error: true
 
       - name: Get Version
         id: version
@@ -170,6 +212,10 @@ jobs:
             echo "version=$(date +%Y.%m.%d)" >> $GITHUB_OUTPUT
           fi
 
+      - name: Get FS Upper
+        id: fs
+        run: echo "upper=$(echo '${{ matrix.filesystem }}' | tr '[:lower:]' '[:upper:]')" >> $GITHUB_OUTPUT
+
       - name: Setup Vagrant
         run: |
           wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
@@ -177,81 +223,50 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y vagrant
 
-      - name: Check if Version Exists
-        id: check_version
+      - name: Publish VMware Box
+        if: needs.build-vmware-arm64.result == 'success'
         env:
           VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
         run: |
-          if vagrant cloud search dasomel/ubuntu-24.04 --json 2>/dev/null | grep -q "\"version\":\"${{ steps.version.outputs.version }}\""; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
+          BOX_FILE="boxes/ubuntu-24.04-${{ matrix.filesystem }}-vmware-arm64.box"
+          [ ! -f "$BOX_FILE" ] && echo "Box file not found, skipping" && exit 0
 
-      - name: Publish VMware Box (New Version)
-        if: needs.build-vmware-arm64.result == 'success' && steps.check_version.outputs.exists == 'false'
-        env:
-          VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
-        run: |
-          vagrant cloud publish dasomel/ubuntu-24.04 \
+          vagrant cloud publish dasomel/ubuntu-24.04-${{ matrix.filesystem }} \
             ${{ steps.version.outputs.version }} \
             vmware_desktop \
-            boxes/ubuntu-24.04-vmware-arm64.box \
+            "$BOX_FILE" \
             --architecture arm64 \
-            --version-description "Kubernetes-ready Ubuntu 24.04 LTS
+            --force \
+            --version-description "Kubernetes-ready Ubuntu 24.04 LTS (${{ steps.fs.outputs.upper }} filesystem) v${{ steps.version.outputs.version }}
 
-## Features
-- Ubuntu 24.04 LTS with OS optimizations for K8s
-- Multi-architecture support (AMD64, ARM64)
-- Multi-provider support (VirtualBox, VMware)
-- Kernel tuning, resource limits, swap disabled
-- Disk I/O and network optimizations
+          ## Filesystem: ${{ steps.fs.outputs.upper }}
+          - ext4: Mature, stable, supports online shrink
+          - xfs: Better for large files, parallel I/O, K8s ephemeral storage quota
 
-## Documentation
-https://github.com/dasomel/kube-ready-box" \
+          ## Features
+          - Ubuntu 24.04 LTS with OS optimizations for Kubernetes
+          - Multi-architecture support (AMD64, ARM64)
+          - Multi-provider support (VirtualBox, VMware)
+          - 1TB disk with auto-extension at boot (thin provisioning)
+          - Filesystem selection: ext4 or xfs
+
+          ## Documentation
+          https://github.com/dasomel/kube-ready-box" \
             --release \
-            --short-description "Kubernetes-ready Ubuntu 24.04 LTS Vagrant Box with OS-level optimizations"
+            --short-description "K8s-ready Ubuntu 24.04 (${{ steps.fs.outputs.upper }}) Vagrant Box"
 
-      - name: Publish VirtualBox Box (New Version)
-        if: needs.build-virtualbox-arm64.result == 'success' && needs.build-vmware-arm64.result != 'success' && steps.check_version.outputs.exists == 'false'
+      - name: Add VirtualBox Provider
+        if: needs.build-virtualbox-arm64.result == 'success'
         env:
           VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
         run: |
-          vagrant cloud publish dasomel/ubuntu-24.04 \
-            ${{ steps.version.outputs.version }} \
-            virtualbox \
-            boxes/ubuntu-24.04-virtualbox-arm64.box \
-            --architecture arm64 \
-            --version-description "Kubernetes-ready Ubuntu 24.04 LTS
+          BOX_FILE="boxes/ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-arm64.box"
+          [ ! -f "$BOX_FILE" ] && echo "Box file not found, skipping" && exit 0
 
-## Features
-- Ubuntu 24.04 LTS with OS optimizations for K8s
-- Multi-architecture support (AMD64, ARM64)
-- Multi-provider support (VirtualBox, VMware)
-- Kernel tuning, resource limits, swap disabled
-- Disk I/O and network optimizations
-
-## Documentation
-https://github.com/dasomel/kube-ready-box" \
-            --release \
-            --short-description "Kubernetes-ready Ubuntu 24.04 LTS Vagrant Box with OS-level optimizations"
-
-      - name: Add VMware Provider (Existing Version)
-        if: needs.build-vmware-arm64.result == 'success' && steps.check_version.outputs.exists == 'true'
-        env:
-          VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
-        run: |
-          vagrant cloud provider create dasomel/ubuntu-24.04 ${{ steps.version.outputs.version }} vmware_desktop \
+          vagrant cloud provider create dasomel/ubuntu-24.04-${{ matrix.filesystem }} \
+            ${{ steps.version.outputs.version }} virtualbox \
             --architecture arm64 2>/dev/null || echo "Provider already exists"
-          vagrant cloud provider upload dasomel/ubuntu-24.04 ${{ steps.version.outputs.version }} vmware_desktop \
-            arm64 boxes/ubuntu-24.04-vmware-arm64.box
 
-      - name: Add VirtualBox Provider (Existing Version)
-        if: needs.build-virtualbox-arm64.result == 'success' && steps.check_version.outputs.exists == 'true'
-        env:
-          VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
-        run: |
-          vagrant cloud provider create dasomel/ubuntu-24.04 ${{ steps.version.outputs.version }} virtualbox \
-            --architecture arm64 2>/dev/null || echo "Provider already exists"
-          vagrant cloud provider upload dasomel/ubuntu-24.04 ${{ steps.version.outputs.version }} virtualbox \
-            arm64 boxes/ubuntu-24.04-virtualbox-arm64.box
+          vagrant cloud provider upload dasomel/ubuntu-24.04-${{ matrix.filesystem }} \
+            ${{ steps.version.outputs.version }} virtualbox \
+            arm64 "$BOX_FILE"

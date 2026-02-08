@@ -16,9 +16,12 @@ permissions:
 
 jobs:
   validate:
-    name: Validate Packer Files
+    name: Validate Packer Files (${{ matrix.filesystem }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      matrix:
+        filesystem: [ext4, xfs]
 
     steps:
       - name: Checkout
@@ -40,19 +43,27 @@ jobs:
 
       - name: Validate VirtualBox AMD64
         working-directory: packer
-        run: packer validate -only='virtualbox-iso.ubuntu-vbox-amd64' .
+        run: |
+          packer validate -only='virtualbox-iso.ubuntu-vbox-amd64' \
+            -var 'filesystem=${{ matrix.filesystem }}' .
 
       - name: Validate VirtualBox ARM64
         working-directory: packer
-        run: packer validate -only='virtualbox-iso.ubuntu-vbox-arm64' .
+        run: |
+          packer validate -only='virtualbox-iso.ubuntu-vbox-arm64' \
+            -var 'filesystem=${{ matrix.filesystem }}' .
 
       - name: Validate VMware AMD64
         working-directory: packer
-        run: packer validate -only='vmware-iso.ubuntu-vmware-amd64' .
+        run: |
+          packer validate -only='vmware-iso.ubuntu-vmware-amd64' \
+            -var 'filesystem=${{ matrix.filesystem }}' .
 
       - name: Validate VMware ARM64
         working-directory: packer
-        run: packer validate -only='vmware-iso.ubuntu-vmware-arm64' .
+        run: |
+          packer validate -only='vmware-iso.ubuntu-vmware-arm64' \
+            -var 'filesystem=${{ matrix.filesystem }}' .
 
   shellcheck:
     name: Shellcheck Scripts
