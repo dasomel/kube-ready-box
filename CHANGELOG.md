@@ -12,6 +12,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Additional CNI plugin examples
 - Performance benchmarking results
 
+## [0.2.0] - 2026-02-07
+
+### Added
+- **Filesystem selection**: Choose between ext4 (default) or xfs during build
+  - ext4: Mature, stable, supports online shrink, good all-around performance
+  - xfs: Better for large files, parallel I/O, Kubernetes ephemeral storage quota
+- New build option: `--fs` or `--filesystem` parameter
+  - Example: `./build.sh vmware-arm64 --fs=xfs`
+- Separate autoinstall configurations per filesystem
+  - `http/autoinstall-ext4/` - ext4 (LVM layout, Ubuntu default)
+  - `http/autoinstall-xfs/` - xfs (explicit storage config with LVM)
+- Separate Vagrant Cloud boxes for each filesystem:
+  - `dasomel/ubuntu-24.04-ext4` (default, backward compatible)
+  - `dasomel/ubuntu-24.04-xfs` (new)
+- Auto-detection of filesystem type in LVM auto-extend service
+  - Uses `blkid` to detect ext4 vs xfs at boot time
+  - Calls `resize2fs` for ext4 or `xfs_growfs` for xfs automatically
+
+### Changed
+- Box naming convention now includes filesystem type
+  - New format: `ubuntu-24.04-{fs}-{provider}-{arch}.box`
+  - Example: `ubuntu-24.04-xfs-vmware-arm64.box`
+- Packer templates use dynamic `http_directory` based on filesystem variable
+- Upload script supports multi-filesystem upload (`./upload-boxes.sh [ext4|xfs|both]`)
+- Version bump from 0.1.3 to 0.2.0 (new feature)
+
+### Technical Details
+- Modified files:
+  - `packer/plugins.pkr.hcl` - Added `filesystem` variable with validation
+  - `packer/build.sh` - Added `--fs` option parsing
+  - `packer/*.pkr.hcl` (4 files) - Dynamic `http_directory` and output naming
+  - `packer/scripts/05-disk-tuning.sh` - Filesystem auto-detection for resize
+  - `upload-boxes.sh` - Multi-filesystem upload support
+- New files:
+  - `packer/http/autoinstall-ext4/` - ext4 autoinstall config
+  - `packer/http/autoinstall-xfs/` - xfs autoinstall config (with xfsprogs)
+- XFS storage config uses explicit partition layout (bios_grub + boot + LVM)
+- Both filesystems support thin provisioning (1TB disk, ~2GB actual)
+
 ## [0.1.3] - 2026-02-01
 
 ### Added
@@ -259,7 +298,8 @@ vagrant up
 
 ---
 
-[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/dasomel/kube-ready-box/compare/v0.1.3...v0.2.0
 [0.1.3]: https://github.com/dasomel/kube-ready-box/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/dasomel/kube-ready-box/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/dasomel/kube-ready-box/compare/v0.1.0...v0.1.1

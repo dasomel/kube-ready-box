@@ -102,13 +102,28 @@ else
   log "Step 3: No free space in VG, skipping LV extension"
 fi
 
-# Step 4: Resize filesystem
-log "Step 4: Resizing filesystem..."
-if resize2fs /dev/ubuntu-vg/ubuntu-lv 2>&1; then
-  log "  -> Filesystem resized successfully"
-else
-  log "  -> Filesystem resize failed or not needed"
-fi
+# Step 4: Resize filesystem (auto-detect ext4 or xfs)
+FSTYPE=$(blkid -o value -s TYPE /dev/ubuntu-vg/ubuntu-lv 2>/dev/null || echo "unknown")
+log "Step 4: Resizing filesystem (detected: $FSTYPE)..."
+case "$FSTYPE" in
+  ext4)
+    if resize2fs /dev/ubuntu-vg/ubuntu-lv 2>&1; then
+      log "  -> ext4 filesystem resized successfully"
+    else
+      log "  -> ext4 filesystem resize failed or not needed"
+    fi
+    ;;
+  xfs)
+    if xfs_growfs / 2>&1; then
+      log "  -> xfs filesystem resized successfully"
+    else
+      log "  -> xfs filesystem resize failed or not needed"
+    fi
+    ;;
+  *)
+    log "  -> Unknown filesystem type: $FSTYPE, skipping resize"
+    ;;
+esac
 
 # Show final disk usage
 log "Disk extension complete. Current usage:"

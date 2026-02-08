@@ -24,12 +24,12 @@ source "virtualbox-iso" "ubuntu-vbox-arm64" {
   ssh_timeout  = "1h"
 
   # HTTP server for autoinstall (kept for compatibility, though we use cd_files)
-  http_directory = "http/autoinstall"
+  http_directory = "http/autoinstall-${var.filesystem}"
 
   # CD files for autoinstall - more reliable on ARM64 than boot_command typing
   cd_files = [
-    "http/autoinstall/user-data",
-    "http/autoinstall/meta-data"
+    "http/autoinstall-${var.filesystem}/user-data",
+    "http/autoinstall-${var.filesystem}/meta-data"
   ]
   cd_label = "cidata"
 
@@ -107,6 +107,7 @@ build {
   provisioner "shell-local" {
     environment_vars = [
       "VM_NAME=ubuntu-24.04-virtualbox-arm64",
+      "BOX_NAME=ubuntu-24.04-${var.filesystem}-virtualbox-arm64",
       "MEMORY=${var.memory}",
       "DISK_SIZE=${var.disk_size}",
       "VDI_SOURCE=${path.root}/output-ubuntu-vbox-arm64/ubuntu-24.04-virtualbox-arm64.vdi",
@@ -174,12 +175,12 @@ build {
 
       # Create box file
       "echo 'Creating box file...'",
-      "tar -czf \"$VM_NAME.box\" ./metadata.json ./Vagrantfile ./box.ovf ./$VM_NAME-disk001.vmdk",
+      "tar -czf \"$BOX_NAME.box\" ./metadata.json ./Vagrantfile ./box.ovf ./$VM_NAME-disk001.vmdk",
 
       # Verify box file
-      "if [ ! -f \"$VM_NAME.box\" ]; then echo 'Error: Box file was not created!' && exit 1; fi",
+      "if [ ! -f \"$BOX_NAME.box\" ]; then echo 'Error: Box file was not created!' && exit 1; fi",
       "echo '✅ Box file created successfully:'",
-      "ls -lh \"$VM_NAME.box\"",
+      "ls -lh \"$BOX_NAME.box\"",
 
       # Final cleanup
       "echo 'Performing final cleanup...'",

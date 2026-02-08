@@ -31,6 +31,7 @@ detect_platform() {
 }
 
 PLATFORM=$(detect_platform)
+FILESYSTEM="ext4"  # Default filesystem (ext4 or xfs)
 
 show_usage() {
   cat <<EOF
@@ -64,12 +65,17 @@ OPTIONS:
   clean               Remove generated box files
   help                Show this help message
 
+FILESYSTEM OPTIONS:
+  --fs=TYPE           Filesystem type: ext4 (default) or xfs
+  --filesystem=TYPE   Same as --fs
+
 EXAMPLES:
   $0 init                    # Install Packer plugins
   $0 validate                # Validate all templates
-  $0 virtualbox-amd64        # Build VirtualBox AMD64 box only
-  $0 virtualbox              # Build all VirtualBox boxes in parallel
-  $0 all                     # Build all 4 boxes in parallel
+  $0 virtualbox-amd64        # Build VirtualBox AMD64 box (ext4)
+  $0 vmware-arm64 --fs=xfs   # Build VMware ARM64 box (xfs)
+  $0 all                     # Build all 4 boxes (ext4)
+  $0 all --fs=xfs            # Build all 4 boxes (xfs)
 
 REQUIREMENTS:
   - Packer 1.8+
@@ -234,7 +240,7 @@ build_box() {
 
   # Generate log filename with datetime
   local datetime=$(date +"%Y%m%d-%H%M%S")
-  local logfile="logs/build-${provider}-${arch}-${datetime}.log"
+  local logfile="logs/build-${provider}-${arch}-${FILESYSTEM}-${datetime}.log"
 
   # Determine source name based on provider
   local source_name=""
@@ -249,8 +255,9 @@ build_box() {
 
   echo ""
   echo "=========================================="
-  echo "Building: ${provider} ${arch}"
+  echo "Building: ${provider} ${arch} (${FILESYSTEM})"
   echo "Platform: ${PLATFORM}"
+  echo "Filesystem: ${FILESYSTEM}"
   echo "Source: ${source_name}"
   echo "Log: ${logfile}"
   echo "=========================================="
@@ -259,7 +266,7 @@ build_box() {
   # Run packer build and capture exit code
   # Note: Use PIPESTATUS to get packer's exit code, not tee's
   set +e  # Temporarily disable exit on error
-  packer build -force -only="$source_name" . 2>&1 | tee "$logfile"
+  packer build -force -only="$source_name" -var "filesystem=$FILESYSTEM" . 2>&1 | tee "$logfile"
   local packer_exit_code=${PIPESTATUS[0]}
   set -e  # Re-enable exit on error
 
@@ -299,7 +306,34 @@ clean_output() {
   echo "Cleanup complete"
 }
 
-case "${1:-help}" in
+# Parse --fs/--filesystem option from any position
+ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --fs=*|--filesystem=*)
+      FILESYSTEM="${1#*=}"
+      if [[ "$FILESYSTEM" != "ext4" && "$FILESYSTEM" != "xfs" ]]; then
+        echo -e "${RED}Error: Invalid filesystem '$FILESYSTEM'. Use 'ext4' or 'xfs'.${NC}"
+        exit 1
+      fi
+      shift
+      ;;
+    --fs|--filesystem)
+      FILESYSTEM="$2"
+      if [[ -z "$FILESYSTEM" || ("$FILESYSTEM" != "ext4" && "$FILESYSTEM" != "xfs") ]]; then
+        echo -e "${RED}Error: Invalid filesystem '${FILESYSTEM:-}'. Use 'ext4' or 'xfs'.${NC}"
+        exit 1
+      fi
+      shift 2
+      ;;
+    *)
+      ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+case "${ARGS[0]:-help}" in
   init)
     init_packer
     ;;

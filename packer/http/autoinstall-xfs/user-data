@@ -1,0 +1,95 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  refresh-installer:
+    update: no
+  keyboard:
+    layout: us
+
+  identity:
+    hostname: vagrant-ubuntu
+    username: vagrant
+    password: '$6$rounds=4096$5CU3LEj/MQvbkfPb$LmKEF9pCfU8R.dA.GemgE/8GT6r9blge3grJvdsVTMFKyLEQwzEF3SGWqAzjawY/XHRpWj4fOiLBrRyxJhIRJ1'
+    # password: vagrant (hashed - verified from HashiCorp template)
+
+  ssh:
+    install-server: true
+    allow-pw: true
+
+  storage:
+    config:
+      - id: disk0
+        type: disk
+        ptable: gpt
+        preserve: false
+        grub_device: true
+        match:
+          size: largest
+      - id: bios-grub
+        type: partition
+        size: 1M
+        device: disk0
+        flag: bios_grub
+      - id: boot-partition
+        type: partition
+        size: 1G
+        device: disk0
+      - id: boot-fs
+        type: format
+        fstype: ext4
+        volume: boot-partition
+      - id: lvm-partition
+        type: partition
+        size: -1
+        device: disk0
+      - id: ubuntu-vg
+        type: lvm_volgroup
+        name: ubuntu-vg
+        devices:
+          - lvm-partition
+      - id: ubuntu-lv
+        type: lvm_partition
+        name: ubuntu-lv
+        volgroup: ubuntu-vg
+        size: 100%
+      - id: root-fs
+        type: format
+        fstype: xfs
+        volume: ubuntu-lv
+      - id: mount-root
+        type: mount
+        path: /
+        device: root-fs
+      - id: mount-boot
+        type: mount
+        path: /boot
+        device: boot-fs
+
+  packages:
+    - util-linux-extra
+    - open-vm-tools
+    - xfsprogs
+
+  network:
+    network:
+      version: 2
+      ethernets:
+        main_if:
+          match:
+            name: "en*"
+          dhcp4: true
+
+  user-data:
+    package_upgrade: true
+    disable_root: false
+    timezone: UTC
+
+  late-commands:
+    - sed -i 's/#LogLevel INFO/LogLevel DEBUG/' /target/etc/ssh/sshd_config
+    - sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /target/etc/ssh/sshd_config
+    - sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /target/etc/ssh/sshd_config
+    - sed -i 's/^#*PubkeyAuthentication.*/PubkeyAuthentication yes/' /target/etc/ssh/sshd_config
+    - curtin in-target -- systemctl enable ssh.service
+    - echo 'vagrant ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/vagrant
+    - chmod 440 /target/etc/sudoers.d/vagrant

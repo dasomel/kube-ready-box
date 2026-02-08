@@ -1,14 +1,22 @@
 #!/bin/bash
 # Vagrant Cloud Box 업로드 스크립트
+# ext4/xfs 파일시스템 지원
 # 실제 Terminal.app에서 실행하세요
 
 set -e
 
-cd "$(dirname "$0")/packer/output-vagrant"
+VERSION="0.2.0"
+BOX_DIR="$(cd "$(dirname "$0")/packer/output-vagrant" && pwd)"
+
+# 업로드할 파일시스템 선택 (기본: both)
+FS_TARGET="${1:-both}"
 
 echo "╔════════════════════════════════════════════════════════════════╗"
-echo "║           📦 Vagrant Cloud Box 업로드                          ║"
+echo "║           📦 Vagrant Cloud Box 업로드 v${VERSION}                    ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
+echo ""
+echo "Filesystem: ${FS_TARGET}"
+echo "Box directory: ${BOX_DIR}"
 echo ""
 
 # 로그인 확인
@@ -18,67 +26,97 @@ vagrant cloud auth whoami || {
     echo "실행: vagrant cloud auth login --token YOUR_TOKEN"
     exit 1
 }
-
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📤 1/2: VMware ARM64 업로드 중... (2.3GB, 시간 소요)"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# 이미 업로드된 경우 건너뛰기 (버전이 이미 릴리즈된 경우)
-if vagrant cloud search dasomel/ubuntu-24.04 --json 2>/dev/null | grep -q "vmware_desktop"; then
-    echo "ℹ️  VMware provider already exists, skipping..."
-else
-    vagrant cloud publish dasomel/ubuntu-24.04 0.1.1 vmware_desktop \
-      ubuntu-24.04-vmware-arm64.box \
-      --architecture arm64 \
-      --version-description "Initial release - Kubernetes-ready Ubuntu 24.04 LTS
+upload_box() {
+    local fs=$1
+    local provider=$2
+    local arch=$3
+    local box_file="ubuntu-24.04-${fs}-${provider}-${arch}.box"
+    local box_path="${BOX_DIR}/${box_file}"
 
-## What's New
-- Ubuntu 24.04 LTS base with cloud-init
-- Multi-architecture support (AMD64, ARM64)
-- Multi-provider support (VirtualBox, VMware)
-- Comprehensive OS optimizations for K8s workloads
-- MIT License with SBOM included
+    if [ ! -f "$box_path" ]; then
+        echo "⚠️  Box not found: ${box_file} (skipping)"
+        return 0
+    fi
+
+    local box_name="dasomel/ubuntu-24.04-${fs}"
+    local vagrant_provider="$provider"
+    [ "$provider" = "vmware" ] && vagrant_provider="vmware_desktop"
+
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "📤 Uploading: ${box_file}"
+    echo "   Box: ${box_name} v${VERSION} (${vagrant_provider}, ${arch})"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+
+    vagrant cloud publish "$box_name" "$VERSION" "$vagrant_provider" \
+        "$box_path" \
+        --architecture "$arch" \
+        --version-description "Kubernetes-ready Ubuntu 24.04 LTS (${fs^^} filesystem) v${VERSION}
+
+## Filesystem: ${fs^^}
+- ext4: Mature, stable, supports online shrink
+- xfs: Better for large files, parallel I/O, K8s ephemeral storage quota
 
 ## Features
-- Kernel tuning for network, memory, filesystem
-- Resource limits configured (file descriptors, processes, memory locks)
-- K8s prerequisites: swap disabled, kernel modules, IP forwarding
-- Disk I/O and network optimizations
-- Ubuntu 24.04 specific tuning (THP, systemd-oomd)
+- Ubuntu 24.04 LTS with OS optimizations for Kubernetes
+- Multi-architecture support (AMD64, ARM64)
+- Multi-provider support (VirtualBox, VMware)
+- 1TB disk with auto-extension at boot (thin provisioning)
+- Filesystem selection: ext4 or xfs
 
 ## Documentation
 https://github.com/dasomel/kube-ready-box
 
 ## CHANGELOG
 https://github.com/dasomel/kube-ready-box/blob/main/CHANGELOG.md" \
-      --release \
-      --short-description "Kubernetes-ready Ubuntu 24.04 LTS Vagrant Box with OS-level optimizations"
-fi
+        --release \
+        --short-description "K8s-ready Ubuntu 24.04 (${fs^^}) Vagrant Box" \
+    || {
+        echo "❌ Upload failed: ${box_file}"
+        return 1
+    }
 
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📤 2/2: VirtualBox ARM64 업로드 중... (2.3GB, 시간 소요)"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+    echo "✅ Uploaded: ${box_file}"
+    echo ""
+}
 
-# VirtualBox provider 추가 (기존 버전에)
-# 이미 존재하면 무시
-vagrant cloud version provider create dasomel/ubuntu-24.04 0.1.1 virtualbox \
-  --architecture arm64 2>/dev/null || echo "ℹ️  VirtualBox provider already exists, continuing..."
+# 업로드 실행
+uploaded=0
+failed=0
 
-vagrant cloud version provider upload dasomel/ubuntu-24.04 0.1.1 virtualbox \
-  arm64 ubuntu-24.04-virtualbox-arm64.box
+for fs in ext4 xfs; do
+    if [ "$FS_TARGET" != "both" ] && [ "$FS_TARGET" != "$fs" ]; then
+        continue
+    fi
+
+    for provider in vmware virtualbox; do
+        for arch in arm64 amd64; do
+            if upload_box "$fs" "$provider" "$arch"; then
+                ((uploaded++))
+            else
+                ((failed++))
+            fi
+        done
+    done
+done
 
 echo ""
 echo "╔════════════════════════════════════════════════════════════════╗"
-echo "║              ✅ 업로드 완료!                                   ║"
+if [ $failed -eq 0 ]; then
+    echo "║              ✅ 업로드 완료! (${uploaded} boxes)                     ║"
+else
+    echo "║              ⚠️  업로드 완료 (${uploaded} ok, ${failed} failed)              ║"
+fi
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
-echo "Vagrant Cloud: https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04"
+echo "Vagrant Cloud:"
+echo "  ext4: https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4"
+echo "  xfs:  https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs"
 echo ""
-echo "테스트:"
-echo "  vagrant init dasomel/ubuntu-24.04"
+echo "사용법:"
+echo "  vagrant init dasomel/ubuntu-24.04-ext4   # ext4 filesystem"
+echo "  vagrant init dasomel/ubuntu-24.04-xfs    # xfs filesystem"
 echo "  vagrant up --provider=vmware_desktop"
 echo ""

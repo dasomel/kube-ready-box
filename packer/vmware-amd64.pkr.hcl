@@ -11,7 +11,7 @@ source "vmware-iso" "ubuntu-vmware-amd64" {
   ssh_password     = var.ssh_password
   ssh_timeout      = "30m"
   shutdown_command = "echo '${var.ssh_password}' | sudo -S shutdown -P now"
-  http_directory   = "http/autoinstall"
+  http_directory   = "http/autoinstall-${var.filesystem}"
 
   boot_wait = "10s"
   boot_command = [
@@ -50,7 +50,7 @@ build {
 
   # Vagrant Box 생성
   post-processor "vagrant" {
-    output              = "output-vagrant/ubuntu-24.04-vmware-amd64.box"
+    output              = "output-vagrant/ubuntu-24.04-${var.filesystem}-vmware-amd64.box"
     compression_level   = 9
     keep_input_artifact = false
   }

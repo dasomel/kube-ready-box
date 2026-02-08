@@ -24,7 +24,18 @@ variable "ubuntu_version" {
 
 variable "box_version" {
   type    = string
-  default = "0.1.1"
+  default = "0.2.0"
+}
+
+variable "filesystem" {
+  type        = string
+  default     = "ext4"
+  description = "Root filesystem type: ext4 or xfs"
+
+  validation {
+    condition     = contains(["ext4", "xfs"], var.filesystem)
+    error_message = "Filesystem must be either 'ext4' or 'xfs'."
+  }
 }
 
 variable "ssh_username" {
