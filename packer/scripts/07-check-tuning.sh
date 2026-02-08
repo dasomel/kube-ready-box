@@ -51,7 +51,7 @@ echo "  I/O Scheduler:"
 for sched in /sys/block/sd*/queue/scheduler /sys/block/nvme*/queue/scheduler; do
   if [ -f "$sched" ]; then
     disk_name=$(echo "$sched" | cut -d'/' -f4)
-    current=$(cat "$sched" | grep -oP '\[\K[^\]]+' || cat "$sched")
+    current=$(grep -oP '\[\K[^\]]+' "$sched" || cat "$sched")
     echo "    $disk_name: $current"
   fi
 done 2>/dev/null || echo "    (no block devices found)"
