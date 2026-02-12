@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Version bump from 0.2.0 to 0.2.1 (package enhancement)
 
 ### Technical Details
-- Modified: `packer/scripts/03-os-packages.sh` - Added "K8s 에코시스템 도구" section
+- Modified: `packer/scripts/03-os-packages.sh` - Added "K8s echosystem tools" section
 - No template changes required (script already referenced by all 4 pkr.hcl templates)
 
 ## [0.2.0] - 2026-02-08
