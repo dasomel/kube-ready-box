@@ -85,7 +85,7 @@ REQUIREMENTS:
   - 4GB+ RAM recommended
 
 KNOWN ISSUES:
-  - VirtualBox ARM64 on Apple Silicon: boot_command scancode failures
+  - VirtualBox ARM64 on Apple Silicon: requires VirtualBox 7.2.6+ (scancode fix)
   - See README.md for detailed workarounds
 
 OUTPUT:
@@ -117,22 +117,27 @@ check_arm_build() {
     echo ""
 
     if [ "$provider" = "virtualbox" ]; then
-      echo -e "${RED}KNOWN ISSUE: VirtualBox ARM64 on Apple Silicon${NC}"
-      echo "Problem: VirtualBox ARM64 has keyboard input limitations"
-      echo "Error: 'Failed to send a scancode' during boot_command"
-      echo ""
-      echo -e "${YELLOW}This build is LIKELY TO FAIL due to VirtualBox platform limitations.${NC}"
-      echo ""
-      echo "Workarounds:"
-      echo "  1. Use Intel Mac for VirtualBox builds"
-      echo "  2. Use VMware as alternative provider"
-      echo "  3. Try manual installation instead of automated boot_command"
-      echo ""
-      read -p "Continue anyway? (y/N) " -n 1 -r
-      echo
-      if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Build cancelled by user"
-        exit 0
+      # Check VirtualBox version for ARM64 scancode compatibility
+      local vbox_version
+      vbox_version=$(VBoxManage --version 2>/dev/null | cut -d'r' -f1 || echo "0")
+      local vbox_major vbox_minor vbox_patch
+      vbox_major=$(echo "$vbox_version" | cut -d'.' -f1)
+      vbox_minor=$(echo "$vbox_version" | cut -d'.' -f2)
+      vbox_patch=$(echo "$vbox_version" | cut -d'.' -f3)
+
+      if [ "$vbox_major" -ge 7 ] && [ "$vbox_minor" -ge 2 ] && [ "$vbox_patch" -ge 6 ] 2>/dev/null; then
+        echo -e "${GREEN}VirtualBox ${vbox_version}: ARM64 scancode support confirmed${NC}"
+        echo ""
+      else
+        echo -e "${RED}WARNING: VirtualBox ${vbox_version} may have scancode issues on ARM64${NC}"
+        echo "VirtualBox 7.2.6+ is required for reliable ARM64 builds on Apple Silicon"
+        echo ""
+        read -p "Continue anyway? (y/N) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+          echo "Build cancelled by user"
+          exit 0
+        fi
       fi
     elif [ "$provider" = "vmware" ]; then
       echo -e "${YELLOW}Note: VMware ARM64 requires VMware Fusion on Apple Silicon${NC}"
@@ -199,13 +204,13 @@ show_failure_help() {
   if [ "$arch" = "arm64" ] && [ "$PLATFORM" = "arm64" ]; then
     if [ "$provider" = "virtualbox" ]; then
       echo -e "${YELLOW}VirtualBox ARM64 Known Issues:${NC}"
-      echo "  - Keyboard input (scancode) not supported"
-      echo "  - boot_command fails on Apple Silicon"
+      echo "  - VirtualBox < 7.2.6: scancode not supported on Apple Silicon"
+      echo "  - VirtualBox >= 7.2.6: scancode fixed, check other causes"
       echo ""
       echo "Solutions:"
-      echo "  1. Build on Intel Mac instead"
+      echo "  1. Update VirtualBox to 7.2.6+"
       echo "  2. Use VMware as alternative provider"
-      echo "  3. Manual VM creation with pre-built image"
+      echo "  3. Check VBoxManage --version"
       echo ""
     elif [ "$provider" = "vmware" ]; then
       echo -e "${YELLOW}VMware ARM64 Common Issues:${NC}"
@@ -383,46 +388,50 @@ case "${ARGS[0]:-help}" in
     echo "✅ All VMware builds complete"
     ;;
   all)
-    echo "Starting parallel builds for all 4 boxes..."
+    echo "Starting builds for current platform (${PLATFORM})..."
     echo ""
 
-    # Launch all builds in parallel
-    build_box virtualbox amd64 &
-    pid_vbox_amd64=$!
+    # Build only compatible targets for current platform
+    pids=()
+    labels=()
+    total=0
 
-    build_box virtualbox arm64 &
-    pid_vbox_arm64=$!
+    if [ "$PLATFORM" = "arm64" ]; then
+      build_box vmware arm64 &
+      pids+=($!); labels+=("VMware ARM64"); ((total++))
+      build_box virtualbox arm64 &
+      pids+=($!); labels+=("VirtualBox ARM64"); ((total++))
+      echo "⏭️  Skipping AMD64 builds (incompatible with ARM platform)"
+    elif [ "$PLATFORM" = "amd64" ]; then
+      build_box virtualbox amd64 &
+      pids+=($!); labels+=("VirtualBox AMD64"); ((total++))
+      build_box vmware amd64 &
+      pids+=($!); labels+=("VMware AMD64"); ((total++))
+      echo "⏭️  Skipping ARM64 builds (incompatible with AMD64 platform)"
+    fi
 
-    build_box vmware amd64 &
-    pid_vmware_amd64=$!
-
-    build_box vmware arm64 &
-    pid_vmware_arm64=$!
-
-    echo "All builds launched in parallel"
-    echo "VirtualBox AMD64: PID $pid_vbox_amd64"
-    echo "VirtualBox ARM64: PID $pid_vbox_arm64"
-    echo "VMware AMD64: PID $pid_vmware_amd64"
-    echo "VMware ARM64: PID $pid_vmware_arm64"
     echo ""
-    echo "Waiting for all builds to complete..."
+    for i in "${!pids[@]}"; do
+      echo "${labels[$i]}: PID ${pids[$i]}"
+    done
+    echo ""
+    echo "Waiting for ${total} build(s) to complete..."
     echo ""
 
     # Wait for all builds and track failures
     failed=0
-    wait $pid_vbox_amd64 || { echo "❌ VirtualBox AMD64 build failed"; ((failed++)); }
-    wait $pid_vbox_arm64 || { echo "❌ VirtualBox ARM64 build failed"; ((failed++)); }
-    wait $pid_vmware_amd64 || { echo "❌ VMware AMD64 build failed"; ((failed++)); }
-    wait $pid_vmware_arm64 || { echo "❌ VMware ARM64 build failed"; ((failed++)); }
+    for i in "${!pids[@]}"; do
+      wait "${pids[$i]}" || { echo "❌ ${labels[$i]} build failed"; ((failed++)); }
+    done
 
     echo ""
     echo "=========================================="
     if [ $failed -eq 0 ]; then
-      echo "🎉 All 4 boxes built successfully!"
+      echo "🎉 ${total} box(es) built successfully!"
       echo "=========================================="
-      ls -lh *.box
+      ls -lh output-vagrant/*.box 2>/dev/null || true
     else
-      echo "⚠️  $failed build(s) failed!"
+      echo "⚠️  $failed of ${total} build(s) failed!"
       echo "=========================================="
       echo "Check individual log files in logs/ directory"
       exit 1

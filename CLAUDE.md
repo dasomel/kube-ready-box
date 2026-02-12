@@ -243,8 +243,9 @@ Agent 4: shellcheck packer/scripts/04-k8s-prereq.sh
 ### Packer 관련
 
 4. **ARM64 빌드 시 VirtualBox boot_command 이슈**
-   - Apple Silicon에서 타이밍 문제 발생 가능
-   - 해결: `boot_wait` 값 조정 (10s → 15s)
+   - VirtualBox 7.2.4 이하: Apple Silicon에서 scancode 전송 실패
+   - VirtualBox 7.2.6+: scancode 이슈 해결됨, 정상 빌드 가능
+   - 해결: VirtualBox 7.2.6 이상으로 업데이트
 
 5. **VMware Fusion 라이선스 필요**
    - 무료 버전에서 headless 빌드 실패

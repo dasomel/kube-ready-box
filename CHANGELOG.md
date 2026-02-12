@@ -23,9 +23,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Version bump from 0.2.0 to 0.2.1 (package enhancement)
+- `build.sh` `all` command: platform-aware build (skips incompatible arch targets)
+  - ARM64 platform: builds VMware ARM64 + VirtualBox ARM64, skips AMD64
+  - AMD64 platform: builds VirtualBox AMD64 + VMware AMD64, skips ARM64
+
+### Fixed
+- VirtualBox ARM64 on Apple Silicon: boot_command scancode issue resolved with VirtualBox 7.2.6+
+  - Previous: VirtualBox 7.2.4 and below failed to send keyboard scancodes
+  - Now: VirtualBox 7.2.6 keyboard fixes enable automated builds on Apple Silicon
 
 ### Technical Details
-- Modified: `packer/scripts/03-os-packages.sh` - Added "K8s echosystem tools" section
+- Modified: `packer/scripts/03-os-packages.sh` - Added "K8s ecosystem tools" section
+- Modified: `packer/build.sh` - Platform-aware `all` command, re-enabled VirtualBox ARM64
+- Verified: VirtualBox ARM64 build success on Apple Silicon (VirtualBox 7.2.6, 9m 39s, 2.2GB)
 - No template changes required (script already referenced by all 4 pkr.hcl templates)
 
 ## [0.2.0] - 2026-02-08
