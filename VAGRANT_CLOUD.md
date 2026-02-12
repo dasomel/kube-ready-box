@@ -18,9 +18,9 @@ Vagrant Cloud에 box를 업로드, 관리, 삭제하는 방법을 설명합니�
 
 ## Box 전략
 
-**통합 Multi-Architecture Box**: `dasomel/ubuntu-24.04`
+**Filesystem-based Multi-Architecture Boxes**: `dasomel/ubuntu-24.04-ext4` / `dasomel/ubuntu-24.04-xfs`
 
-하나의 box에 모든 provider와 architecture를 포함하는 전략을 사용합니다:
+두 개의 box로 filesystem 선택과 모든 provider/architecture를 지원하는 전략을 사용합니다:
 
 | Architecture | VirtualBox | VMware Fusion |
 |--------------|------------|---------------|
@@ -28,15 +28,19 @@ Vagrant Cloud에 box를 업로드, 관리, 삭제하는 방법을 설명합니�
 | **ARM64** | ✅ 수동 업로드 | ✅ 수동 업로드 |
 
 **장점**:
-- 사용자가 `vagrant init dasomel/ubuntu-24.04` 하나로 모든 환경 지원
+- 사용자가 filesystem 선택 가능 (ext4 또는 xfs)
 - Vagrant가 자동으로 호스트 아키텍처와 provider에 맞는 box 선택
-- 단일 box 관리로 버전 관리 간소화
+- 각 box는 모든 provider/architecture 조합을 포함
 
 **사용 방법**:
 ```bash
-# 모든 환경에서 동일한 명령어
-vagrant init dasomel/ubuntu-24.04
+# ext4 filesystem
+vagrant init dasomel/ubuntu-24.04-ext4
 vagrant up  # 자동으로 적절한 provider/architecture 선택
+
+# xfs filesystem (K8s ephemeral storage quota 지원)
+vagrant init dasomel/ubuntu-24.04-xfs
+vagrant up
 ```
 
 ---
@@ -63,10 +67,10 @@ cd /Users/m/Documents/IdeaProjects/kube-ready-box/packer/output-vagrant
 ls -lh *.box
 
 # 예상 출력:
-# ubuntu-24.04-vmware-arm64.box      (2.3GB)
-# ubuntu-24.04-virtualbox-arm64.box  (2.3GB)
-# ubuntu-24.04-vmware-amd64.box      (2.3GB)
-# ubuntu-24.04-virtualbox-amd64.box  (2.3GB)
+# ubuntu-24.04-ext4-vmware-arm64.box      (2.3GB)
+# ubuntu-24.04-ext4-virtualbox-arm64.box  (2.3GB)
+# ubuntu-24.04-xfs-vmware-arm64.box       (3.4GB)
+# ubuntu-24.04-xfs-virtualbox-arm64.box   (3.4GB)
 ```
 
 ---
@@ -98,14 +102,15 @@ bash upload-boxes.sh
 ```bash
 cd packer/output-vagrant
 
-# VMware provider 업로드 (새 버전 v0.1.0 생성)
-vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 vmware_desktop \
-  ubuntu-24.04-vmware-arm64.box \
+# VMware provider 업로드 (새 버전 v0.2.1 생성, ext4)
+vagrant cloud publish dasomel/ubuntu-24.04-ext4 0.2.1 vmware_desktop \
+  ubuntu-24.04-ext4-vmware-arm64.box \
   --architecture arm64 \
-  --version-description "Initial release - Kubernetes-ready Ubuntu 24.04 LTS
+  --version-description "Filesystem selection support - Kubernetes-ready Ubuntu 24.04 LTS
 
 ## Features
 - Ubuntu 24.04 LTS with OS optimizations
+- Ext4 filesystem
 - Multi-architecture support (AMD64, ARM64)
 - Multi-provider support (VirtualBox, VMware)
 - Kubernetes prerequisites configured
@@ -113,19 +118,19 @@ vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 vmware_desktop \
 ## Documentation
 https://github.com/dasomel/kube-ready-box" \
   --release \
-  --short-description "Kubernetes-ready Ubuntu 24.04 LTS Vagrant Box"
+  --short-description "Kubernetes-ready Ubuntu 24.04 LTS Vagrant Box (ext4)"
 ```
 
 #### 기존 버전에 Provider 추가
 
 ```bash
 # 1. Provider 생성
-vagrant cloud provider create dasomel/ubuntu-24.04 0.1.0 virtualbox \
+vagrant cloud provider create dasomel/ubuntu-24.04-ext4 0.2.1 virtualbox \
   --architecture arm64
 
 # 2. Box 파일 업로드
-vagrant cloud provider upload dasomel/ubuntu-24.04 0.1.0 virtualbox \
-  arm64 ubuntu-24.04-virtualbox-arm64.box
+vagrant cloud provider upload dasomel/ubuntu-24.04-ext4 0.2.1 virtualbox \
+  arm64 ubuntu-24.04-ext4-virtualbox-arm64.box
 ```
 
 ---
@@ -199,11 +204,16 @@ AMD64 box는 GitHub Actions를 통해 자동으로 빌드 및 업로드됩니다
 bash upload-boxes.sh  # VMware/VirtualBox ARM64 업로드
 
 # 2. GitHub에 tag push (AMD64 자동 배포)
-git tag v0.1.0
-git push origin v0.1.0  # Actions가 자동으로 AMD64 추가
+git tag v0.2.1
+git push origin v0.2.1  # Actions가 자동으로 AMD64 추가
 
 # 최종 결과:
-# dasomel/ubuntu-24.04 v0.1.0
+# dasomel/ubuntu-24.04-ext4 v0.2.1
+#   - vmware_desktop (arm64) ✅
+#   - virtualbox (arm64) ✅
+#   - vmware_desktop (amd64) ✅ (추가 예정)
+#   - virtualbox (amd64) ✅
+# dasomel/ubuntu-24.04-xfs v0.2.1
 #   - vmware_desktop (arm64) ✅
 #   - virtualbox (arm64) ✅
 #   - vmware_desktop (amd64) ✅ (추가 예정)
@@ -226,13 +236,16 @@ vagrant cloud search dasomel/ubuntu-24.04 --json | python3 -m json.tool
 
 ```bash
 # Box 정보 조회
-vagrant cloud box show dasomel/ubuntu-24.04
+vagrant cloud box show dasomel/ubuntu-24.04-ext4
+vagrant cloud box show dasomel/ubuntu-24.04-xfs
 
 # Provider 목록 확인
-vagrant cloud search dasomel/ubuntu-24.04 --json | python3 -m json.tool
+vagrant cloud search dasomel/ubuntu-24.04-ext4 --json | python3 -m json.tool
+vagrant cloud search dasomel/ubuntu-24.04-xfs --json | python3 -m json.tool
 
 # 웹 브라우저에서 확인
-# https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04
+# https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4
+# https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs
 ```
 
 ---
@@ -242,32 +255,33 @@ vagrant cloud search dasomel/ubuntu-24.04 --json | python3 -m json.tool
 ### Provider 목록 조회
 
 ```bash
-vagrant cloud search dasomel/ubuntu-24.04 --json | python3 -m json.tool
+vagrant cloud search dasomel/ubuntu-24.04-ext4 --json | python3 -m json.tool
+vagrant cloud search dasomel/ubuntu-24.04-xfs --json | python3 -m json.tool
 ```
 
 ### Provider 추가
 
 ```bash
 # AMD64 아키텍처 추가 예시
-vagrant cloud provider create dasomel/ubuntu-24.04 0.1.0 vmware_desktop \
+vagrant cloud provider create dasomel/ubuntu-24.04-ext4 0.2.1 vmware_desktop \
   --architecture amd64
 
-vagrant cloud provider upload dasomel/ubuntu-24.04 0.1.0 vmware_desktop \
-  amd64 ubuntu-24.04-vmware-amd64.box
+vagrant cloud provider upload dasomel/ubuntu-24.04-ext4 0.2.1 vmware_desktop \
+  amd64 ubuntu-24.04-ext4-vmware-amd64.box
 ```
 
 ### Provider 삭제
 
 ```bash
 # 특정 provider 삭제
-vagrant cloud provider delete dasomel/ubuntu-24.04 vmware_desktop 0.1.0 arm64 --force
+vagrant cloud provider delete dasomel/ubuntu-24.04-ext4 vmware_desktop 0.2.1 arm64 --force
 
 # 예시:
 # - VMware ARM64만 삭제
-vagrant cloud provider delete dasomel/ubuntu-24.04 vmware_desktop 0.1.0 arm64 --force
+vagrant cloud provider delete dasomel/ubuntu-24.04-ext4 vmware_desktop 0.2.1 arm64 --force
 
 # - VirtualBox AMD64만 삭제
-vagrant cloud provider delete dasomel/ubuntu-24.04 virtualbox 0.1.0 amd64 --force
+vagrant cloud provider delete dasomel/ubuntu-24.04-ext4 virtualbox 0.2.1 amd64 --force
 ```
 
 ---
@@ -277,34 +291,35 @@ vagrant cloud provider delete dasomel/ubuntu-24.04 virtualbox 0.1.0 amd64 --forc
 ### 새 버전 생성
 
 ```bash
-# v1.1.0 생성 및 업로드
-vagrant cloud publish dasomel/ubuntu-24.04 1.1.0 vmware_desktop \
-  ubuntu-24.04-vmware-arm64.box \
+# v0.3.0 생성 및 업로드
+vagrant cloud publish dasomel/ubuntu-24.04-ext4 0.3.0 vmware_desktop \
+  ubuntu-24.04-ext4-vmware-arm64.box \
   --architecture arm64 \
-  --version-description "Version 1.1.0 release notes..." \
+  --version-description "Version 0.3.0 release notes..." \
   --release
 ```
 
 ### 버전 목록 조회
 
 ```bash
-vagrant cloud box show dasomel/ubuntu-24.04
+vagrant cloud box show dasomel/ubuntu-24.04-ext4
+vagrant cloud box show dasomel/ubuntu-24.04-xfs
 ```
 
 ### 버전 릴리즈/취소
 
 ```bash
 # 버전 릴리즈 (공개)
-vagrant cloud version release dasomel/ubuntu-24.04 0.1.0
+vagrant cloud version release dasomel/ubuntu-24.04-ext4 0.2.1
 
 # 버전 취소 (비공개로 전환)
-vagrant cloud version revoke dasomel/ubuntu-24.04 0.1.0
+vagrant cloud version revoke dasomel/ubuntu-24.04-ext4 0.2.1
 ```
 
 ### 버전 설명 업데이트
 
 ```bash
-vagrant cloud version update dasomel/ubuntu-24.04 0.1.0 \
+vagrant cloud version update dasomel/ubuntu-24.04-ext4 0.2.1 \
   --version-description "Updated description..."
 ```
 
@@ -318,23 +333,23 @@ vagrant cloud version update dasomel/ubuntu-24.04 0.1.0 \
 
 ```bash
 # VMware ARM64 provider만 삭제
-vagrant cloud provider delete dasomel/ubuntu-24.04 vmware_desktop 0.1.0 arm64 --force
+vagrant cloud provider delete dasomel/ubuntu-24.04-ext4 vmware_desktop 0.2.1 arm64 --force
 
 # 삭제 후 다시 업로드
-vagrant cloud provider create dasomel/ubuntu-24.04 0.1.0 vmware_desktop --architecture arm64
-vagrant cloud provider upload dasomel/ubuntu-24.04 0.1.0 vmware_desktop arm64 ubuntu-24.04-vmware-arm64.box
+vagrant cloud provider create dasomel/ubuntu-24.04-ext4 0.2.1 vmware_desktop --architecture arm64
+vagrant cloud provider upload dasomel/ubuntu-24.04-ext4 0.2.1 vmware_desktop arm64 ubuntu-24.04-ext4-vmware-arm64.box
 ```
 
 ### 2. 특정 버전 삭제
 
-**용도**: v0.1.0 전체를 삭제하고 처음부터 다시 업로드할 때
+**용도**: v0.2.1 전체를 삭제하고 처음부터 다시 업로드할 때
 
 ```bash
-# v0.1.0 전체 삭제 (모든 provider 포함)
-vagrant cloud version delete dasomel/ubuntu-24.04 0.1.0 --force
+# v0.2.1 전체 삭제 (모든 provider 포함)
+vagrant cloud version delete dasomel/ubuntu-24.04-ext4 0.2.1 --force
 
 # 삭제 확인
-vagrant cloud box show dasomel/ubuntu-24.04
+vagrant cloud box show dasomel/ubuntu-24.04-ext4
 ```
 
 **주의**: 이 명령은 해당 버전의 모든 provider (vmware_desktop, virtualbox, 모든 아키텍처)를 삭제합니다.
@@ -344,8 +359,11 @@ vagrant cloud box show dasomel/ubuntu-24.04
 **용도**: Box를 완전히 삭제하고 새로 시작할 때
 
 ```bash
-# dasomel/ubuntu-24.04 전체 삭제 (모든 버전, 모든 provider)
-vagrant cloud box delete dasomel/ubuntu-24.04 --force
+# dasomel/ubuntu-24.04-ext4 전체 삭제 (모든 버전, 모든 provider)
+vagrant cloud box delete dasomel/ubuntu-24.04-ext4 --force
+
+# dasomel/ubuntu-24.04-xfs 전체 삭제 (모든 버전, 모든 provider)
+vagrant cloud box delete dasomel/ubuntu-24.04-xfs --force
 ```
 
 **경고**: 이 명령은 복구 불가능합니다. 신중하게 사용하세요.
@@ -390,10 +408,10 @@ vagrant cloud provider create ...
 **해결**:
 ```bash
 # 1. 현재 상태 확인
-vagrant cloud search dasomel/ubuntu-24.04 --json | python3 -m json.tool
+vagrant cloud search dasomel/ubuntu-24.04-ext4 --json | python3 -m json.tool
 
 # 2. 실패한 provider 삭제
-vagrant cloud provider delete dasomel/ubuntu-24.04 PROVIDER VERSION ARCH --force
+vagrant cloud provider delete dasomel/ubuntu-24.04-ext4 PROVIDER VERSION ARCH --force
 
 # 3. 다시 업로드
 vagrant cloud provider create ...
@@ -407,10 +425,10 @@ vagrant cloud provider upload ...
 **해결**:
 ```bash
 # 버전 릴리즈
-vagrant cloud version release dasomel/ubuntu-24.04 0.1.0
+vagrant cloud version release dasomel/ubuntu-24.04-ext4 0.2.1
 
 # 릴리즈 상태 확인
-vagrant cloud box show dasomel/ubuntu-24.04
+vagrant cloud box show dasomel/ubuntu-24.04-ext4
 ```
 
 ### 5. 로그인 만료
@@ -434,13 +452,15 @@ vagrant cloud auth login --token YOUR_TOKEN
 
 ```bash
 # 간단한 정보
-vagrant cloud box show dasomel/ubuntu-24.04
+vagrant cloud box show dasomel/ubuntu-24.04-ext4
+vagrant cloud box show dasomel/ubuntu-24.04-xfs
 
 # 상세 정보 (JSON)
-vagrant cloud search dasomel/ubuntu-24.04 --json | python3 -m json.tool
+vagrant cloud search dasomel/ubuntu-24.04-ext4 --json | python3 -m json.tool
+vagrant cloud search dasomel/ubuntu-24.04-xfs --json | python3 -m json.tool
 
 # 다운로드 통계
-# 웹 브라우저: https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04/versions/0.1.0
+# 웹 브라우저: https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4/versions/0.2.1
 ```
 
 ### 로컬 테스트
@@ -448,7 +468,7 @@ vagrant cloud search dasomel/ubuntu-24.04 --json | python3 -m json.tool
 ```bash
 # Vagrant Cloud 업로드 전 로컬 테스트
 cd test-vm
-vagrant box add test/ubuntu-24.04 ../packer/output-vagrant/ubuntu-24.04-vmware-arm64.box --force
+vagrant box add test/ubuntu-24.04-ext4 ../packer/output-vagrant/ubuntu-24.04-ext4-vmware-arm64.box --force
 vagrant up
 vagrant ssh
 ```
@@ -478,16 +498,16 @@ ls -lh packer/output-vagrant/*.box | awk '{print $9, $5}'
 - [ ] Vagrant Cloud에서 provider 확인
 - [ ] Architecture 태그 확인 (arm64, amd64)
 - [ ] Version released 상태 확인
-- [ ] 다운로드 테스트: `vagrant init dasomel/ubuntu-24.04 && vagrant up`
+- [ ] 다운로드 테스트: `vagrant init dasomel/ubuntu-24.04-ext4 && vagrant up`
 - [ ] README.md의 Vagrant Cloud 링크 업데이트
 - [ ] 다운로드 통계 모니터링
-0.1.1
 ---
 
 ## 참고 링크
 
 - **Vagrant Cloud CLI 문서**: https://developer.hashicorp.com/vagrant/cloud-docs/cli
-- **Box URL**: https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04
+- **Box URL (ext4)**: https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4
+- **Box URL (xfs)**: https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs
 - **Token 관리**: https://app.vagrantup.com/settings/security
 - **프로젝트 GitHub**: https://github.com/dasomel/kube-ready-box
 
@@ -495,11 +515,12 @@ ls -lh packer/output-vagrant/*.box | awk '{print $9, $5}'
 
 ## 빠른 참조
 
-### 전체 재업로드 (v0.1.0 삭제 후 다시)
+### 전체 재업로드 (v0.2.1 삭제 후 다시)
 
 ```bash
 # 1. 기존 버전 삭제
-vagrant cloud version delete dasomel/ubuntu-24.04 0.1.0 --force
+vagrant cloud version delete dasomel/ubuntu-24.04-ext4 0.2.1 --force
+vagrant cloud version delete dasomel/ubuntu-24.04-xfs 0.2.1 --force
 
 # 2. 재업로드
 cd /Users/m/Documents/IdeaProjects/kube-ready-box
@@ -511,13 +532,13 @@ bash upload-boxes.sh
 ```bash
 cd packer/output-vagrant
 
-# VirtualBox ARM64 추가
-vagrant cloud provider create dasomel/ubuntu-24.04 0.1.0 virtualbox --architecture arm64
-vagrant cloud provider upload dasomel/ubuntu-24.04 0.1.0 virtualbox arm64 ubuntu-24.04-virtualbox-arm64.box
+# VirtualBox ARM64 추가 (ext4)
+vagrant cloud provider create dasomel/ubuntu-24.04-ext4 0.2.1 virtualbox --architecture arm64
+vagrant cloud provider upload dasomel/ubuntu-24.04-ext4 0.2.1 virtualbox arm64 ubuntu-24.04-ext4-virtualbox-arm64.box
 
-# VMware AMD64 추가
-vagrant cloud provider create dasomel/ubuntu-24.04 0.1.0 vmware_desktop --architecture amd64
-vagrant cloud provider upload dasomel/ubuntu-24.04 0.1.0 vmware_desktop amd64 ubuntu-24.04-vmware-amd64.box
+# VMware AMD64 추가 (ext4)
+vagrant cloud provider create dasomel/ubuntu-24.04-ext4 0.2.1 vmware_desktop --architecture amd64
+vagrant cloud provider upload dasomel/ubuntu-24.04-ext4 0.2.1 vmware_desktop amd64 ubuntu-24.04-ext4-vmware-amd64.box
 ```
 
 ### 로그인 상태 확인

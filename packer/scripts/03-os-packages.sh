@@ -27,6 +27,14 @@ apt-get install -y \
   tcpdump \
   nmap
 
+# K8s 에코시스템 도구
+echo "Installing Kubernetes ecosystem tools..."
+apt-get install -y \
+  jq \
+  bash-completion \
+  nfs-common \
+  sshpass
+
 # 성능 분석 도구
 echo "Installing performance analysis tools..."
 apt-get install -y \

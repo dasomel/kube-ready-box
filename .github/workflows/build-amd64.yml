@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Box version (e.g., 0.2.0)'
+        description: 'Box version (e.g., 0.2.1)'
         required: false
         type: string
         default: ''

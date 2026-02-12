@@ -5,7 +5,7 @@
 
 set -e
 
-VERSION="0.2.0"
+VERSION="0.2.1"
 BOX_DIR="$(cd "$(dirname "$0")/packer/output-vagrant" && pwd)"
 
 # 업로드할 파일시스템 선택 (기본: both)

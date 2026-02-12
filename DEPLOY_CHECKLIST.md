@@ -17,13 +17,13 @@ cd packer
 ./build.sh virtualbox-amd64  # Intel Mac
 
 # 로컬 테스트
-vagrant box add --name test/ubuntu-24.04 output-vagrant/ubuntu-24.04-*.box
+vagrant box add --name test/ubuntu-24.04-ext4 output-vagrant/ubuntu-24.04-ext4-*.box
 cd ../test-vm/vmware  # 또는 virtualbox
 vagrant up
 vagrant ssh -c "cat /etc/vagrant-box/info.txt"
 vagrant ssh -c "/bin/bash /etc/vagrant-box/check-tuning.sh"
 vagrant destroy -f
-vagrant box remove test/ubuntu-24.04
+vagrant box remove test/ubuntu-24.04-ext4
 ```
 
 ## 2. Git 커밋 및 푸시
@@ -31,29 +31,20 @@ vagrant box remove test/ubuntu-24.04
 ```bash
 cd /Users/m/Documents/IdeaProjects/kube-ready-box
 
-# 초기 커밋
+# 커밋 (버전 맞춤)
 git add -A
-git commit -m "Initial release: dasomel/ubuntu-24.04 v0.1.0
+git commit -m "Release: kube-ready-box v{VERSION}
 
-Features:
-- Ubuntu 24.04 LTS base
-- K8s-ready OS optimizations
-- Multi-architecture (AMD64/ARM64)
-- Multi-provider (VirtualBox/VMware)
-- MIT License
-- SBOM included
-- Comprehensive documentation
-- CHANGELOG.md for version tracking
+{RELEASE_NOTES}
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 
 # GitHub에 푸시
-git remote add origin https://github.com/dasomel/kube-ready-box.git
 git push -u origin main
 
 # 릴리스 태그
-git tag -a v0.1.0 -m "Release v0.1.0"
-git push origin v0.1.0
+git tag -a v{VERSION} -m "Release v{VERSION}"
+git push origin v{VERSION}
 ```
 
 ## 3. Vagrant Cloud 업로드
@@ -70,8 +61,8 @@ vagrant cloud auth login
 Vagrant Cloud 웹사이트에서:
 1. https://app.vagrantup.com/ 접속
 2. "Create a new Vagrant Box" 클릭
-3. Box name: `dasomel/ubuntu-24.04`
-4. Short description: "Kubernetes-ready Ubuntu 24.04 LTS Vagrant Box"
+3. Box name: `dasomel/ubuntu-24.04-ext4` (또는 `ubuntu-24.04-xfs`)
+4. Short description: "Kubernetes-ready Ubuntu 24.04 LTS Vagrant Box (ext4)" (또는 "(xfs)")
 5. License: MIT
 
 ### 3.3 Box 버전 업로드
@@ -79,18 +70,18 @@ Vagrant Cloud 웹사이트에서:
 ```bash
 cd packer/output-vagrant
 
-# VMware ARM64 업로드
-vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 vmware_desktop \
-  ubuntu-24.04-vmware-arm64.box \
+# VMware ARM64 업로드 (ext4 예시)
+vagrant cloud publish dasomel/ubuntu-24.04-ext4 {VERSION} vmware_desktop \
+  ubuntu-24.04-ext4-vmware-arm64.box \
   --architecture arm64 \
-  --version-description "Initial release - K8s ready Ubuntu 24.04" \
+  --version-description "{RELEASE_NOTES}" \
   --release
 
 # VirtualBox ARM64 업로드
-vagrant cloud version provider create dasomel/ubuntu-24.04 0.1.0 virtualbox \
+vagrant cloud version provider create dasomel/ubuntu-24.04-ext4 {VERSION} virtualbox \
   --architecture arm64
-vagrant cloud version provider upload dasomel/ubuntu-24.04 0.1.0 virtualbox \
-  arm64 ubuntu-24.04-virtualbox-arm64.box
+vagrant cloud version provider upload dasomel/ubuntu-24.04-ext4 {VERSION} virtualbox \
+  arm64 ubuntu-24.04-ext4-virtualbox-arm64.box
 
 # AMD64 빌드는 GitHub Actions에서 자동 업로드
 ```
@@ -103,7 +94,7 @@ vagrant cloud version provider upload dasomel/ubuntu-24.04 0.1.0 virtualbox \
 2. AMD64 빌드 트리거:
 ```bash
 # 태그 푸시로 자동 트리거
-git push origin v0.1.0
+git push origin v{VERSION}
 
 # 또는 수동 트리거
 gh workflow run build-amd64.yml
@@ -114,7 +105,7 @@ gh workflow run build-amd64.yml
 ```bash
 # Vagrant Cloud에서 다운로드 테스트
 mkdir test-download && cd test-download
-vagrant init dasomel/ubuntu-24.04
+vagrant init dasomel/ubuntu-24.04-ext4
 vagrant up --provider=vmware_desktop
 vagrant ssh -c "uname -a"
 vagrant ssh -c "cat /etc/vagrant-box/info.txt"
@@ -125,16 +116,16 @@ cd .. && rm -rf test-download
 ## 6. GitHub Release 생성
 
 ```bash
-# CHANGELOG에서 v0.1.0 섹션 추출하여 Release 생성
-gh release create v0.1.0 \
-  --title "v0.1.0 - Initial Release" \
-  --notes-file <(sed -n '/## \[0.1.0\]/,/## \[0.9.0\]/p' CHANGELOG.md | head -n -2)
+# CHANGELOG에서 버전 섹션 추출하여 Release 생성
+gh release create v{VERSION} \
+  --title "v{VERSION} - {RELEASE_TITLE}" \
+  --notes-file <(sed -n '/## \[{VERSION}\]/,/## \[/p' CHANGELOG.md | head -n -2)
 
 # 또는 웹 UI에서 생성:
 # 1. https://github.com/dasomel/kube-ready-box/releases/new
-# 2. Tag: v0.1.0
-# 3. Release title: v0.1.0 - Initial Release
-# 4. Description: CHANGELOG.md의 v0.1.0 섹션 복사
+# 2. Tag: v{VERSION}
+# 3. Release title: v{VERSION} - {RELEASE_TITLE}
+# 4. Description: CHANGELOG.md의 해당 버전 섹션 복사
 # 5. Attach SBOM files (box에서 추출)
 ```
 
@@ -161,9 +152,10 @@ gh release create v0.1.0 \
 
 ```bash
 # Vagrant Cloud에서 버전 삭제
-vagrant cloud version delete dasomel/ubuntu-24.04 0.1.0
+vagrant cloud version delete dasomel/ubuntu-24.04-ext4 {VERSION}
+vagrant cloud version delete dasomel/ubuntu-24.04-xfs {VERSION}
 
 # GitHub 태그 삭제
-git tag -d v0.1.0
-git push origin :refs/tags/v0.1.0
+git tag -d v{VERSION}
+git push origin :refs/tags/v{VERSION}
 ```

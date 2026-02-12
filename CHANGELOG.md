@@ -12,6 +12,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Additional CNI plugin examples
 - Performance benchmarking results
 
+## [0.2.1] - 2026-02-13
+
+### Added
+- Kubernetes ecosystem tools in `03-os-packages.sh`
+  - `jq`: JSON processor for kubectl output parsing
+  - `bash-completion`: Required for kubectl bash completion
+  - `nfs-common`: NFS client for NFS-based PersistentVolumes
+  - `sshpass`: Non-interactive SSH for cluster automation (Ansible)
+
+### Changed
+- Version bump from 0.2.0 to 0.2.1 (package enhancement)
+
+### Technical Details
+- Modified: `packer/scripts/03-os-packages.sh` - Added "K8s 에코시스템 도구" section
+- No template changes required (script already referenced by all 4 pkr.hcl templates)
+
 ## [0.2.0] - 2026-02-08
 
 ### Added
@@ -321,7 +337,8 @@ vagrant up
 
 ---
 
-[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/dasomel/kube-ready-box/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/dasomel/kube-ready-box/compare/v0.1.3...v0.2.0
 [0.1.3]: https://github.com/dasomel/kube-ready-box/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/dasomel/kube-ready-box/compare/v0.1.1...v0.1.2

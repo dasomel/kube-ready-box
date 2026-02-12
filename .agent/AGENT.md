@@ -32,11 +32,15 @@ Ubuntu 24.04 Cloud-based multi-architecture (ARM/AMD64) optimized OS for Kuberne
 > **Note**: Built directly with Packer based on official Ubuntu Cloud Images.
 > [Ubuntu Cloud Images](https://cloud-images.ubuntu.com/)
 
-Total 4 Box builds:
-- `dasomel/ubuntu-24.04` (virtualbox, amd64)
-- `dasomel/ubuntu-24.04` (virtualbox, arm64)
-- `dasomel/ubuntu-24.04` (vmware_desktop, amd64)
-- `dasomel/ubuntu-24.04` (vmware_desktop, arm64)
+Total 4 Box builds per filesystem type:
+- `dasomel/ubuntu-24.04-ext4` (virtualbox, amd64)
+- `dasomel/ubuntu-24.04-ext4` (virtualbox, arm64)
+- `dasomel/ubuntu-24.04-ext4` (vmware_desktop, amd64)
+- `dasomel/ubuntu-24.04-ext4` (vmware_desktop, arm64)
+- `dasomel/ubuntu-24.04-xfs` (virtualbox, amd64)
+- `dasomel/ubuntu-24.04-xfs` (virtualbox, arm64)
+- `dasomel/ubuntu-24.04-xfs` (vmware_desktop, amd64)
+- `dasomel/ubuntu-24.04-xfs` (vmware_desktop, arm64)
 
 > Vagrant Cloud manages builds for each Provider/Architecture combination under a single Box name.
 
@@ -49,9 +53,10 @@ packer/
 ├── virtualbox-arm64.pkr.hcl    # VirtualBox ARM64 (VirtualBox 7.1+)
 ├── vmware-amd64.pkr.hcl        # VMware AMD64
 ├── vmware-arm64.pkr.hcl        # VMware ARM64 (Apple Silicon)
-├── variables.pkr.hcl
+├── plugins.pkr.hcl
 ├── http/
-│   └── user-data
+│   ├── autoinstall-ext4/       # Cloud-init for ext4 filesystem
+│   └── autoinstall-xfs/        # Cloud-init for xfs filesystem
 └── scripts/
     ├── 01-base.sh           # Package updates
     ├── 02-os-tuning.sh      # OS kernel/resource tuning
@@ -61,7 +66,7 @@ packer/
     ├── 06-nic-tuning.sh     # Network optimization
     ├── 07-check-tuning.sh   # Configuration verification
     ├── 99-cleanup.sh        # Pre-deployment cleanup
-    └── 99-license-audit.sh  # License audit
+    └── 99-license-audit.sh  # License audit (runs last)
 ```
 
 ### Packer Build Provisioner Configuration
@@ -91,7 +96,12 @@ build {
 }
 ```
 
-### Cloud-Init Configuration (http/user-data)
+### Cloud-Init Configuration
+Box supports both ext4 and xfs filesystems. Cloud-init configuration is located in separate directories:
+- `http/autoinstall-ext4/` - For ext4 filesystem (default)
+- `http/autoinstall-xfs/` - For xfs filesystem with prjquota support
+
+Example configuration (http/autoinstall-ext4/user-data):
 ```yaml
 #cloud-config
 autoinstall:
@@ -123,7 +133,7 @@ source "virtualbox-iso" "ubuntu-vbox-amd64" {
   ssh_username      = "vagrant"
   ssh_password      = "vagrant"
   shutdown_command  = "sudo shutdown -P now"
-  http_directory    = "http"
+  http_directory    = "http/autoinstall-${var.filesystem}"  # Dynamic based on filesystem selection
   boot_command      = [
     "<wait>",
     "autoinstall ds=nocloud-net;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/",
@@ -145,7 +155,7 @@ source "virtualbox-iso" "ubuntu-vbox-arm64" {
   ssh_username      = "vagrant"
   ssh_password      = "vagrant"
   shutdown_command  = "sudo shutdown -P now"
-  http_directory    = "http"
+  http_directory    = "http/autoinstall-${var.filesystem}"  # Dynamic based on filesystem selection
   boot_command      = [
     "<wait>",
     "autoinstall ds=nocloud-net;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/",
@@ -167,7 +177,7 @@ source "vmware-iso" "ubuntu-vmware-amd64" {
   ssh_username      = "vagrant"
   ssh_password      = "vagrant"
   shutdown_command  = "sudo shutdown -P now"
-  http_directory    = "http"
+  http_directory    = "http/autoinstall-${var.filesystem}"  # Dynamic based on filesystem selection
   vmx_data = {
     "ethernet0.virtualdev" = "vmxnet3"
   }
@@ -187,7 +197,7 @@ source "vmware-iso" "ubuntu-vmware-arm64" {
   ssh_username      = "vagrant"
   ssh_password      = "vagrant"
   shutdown_command  = "sudo shutdown -P now"
-  http_directory    = "http"
+  http_directory    = "http/autoinstall-${var.filesystem}"  # Dynamic based on filesystem selection
   vmx_data = {
     "ethernet0.virtualdev" = "vmxnet3"
   }
@@ -196,11 +206,14 @@ source "vmware-iso" "ubuntu-vmware-arm64" {
 
 ### Build Execution
 ```bash
-# Individual builds
+# Individual builds (default: ext4)
 packer build -only=virtualbox-iso.ubuntu-vbox-amd64 .   # VirtualBox AMD64
 packer build -only=virtualbox-iso.ubuntu-vbox-arm64 .   # VirtualBox ARM64 (7.1+)
 packer build -only=vmware-iso.ubuntu-vmware-amd64 .     # VMware AMD64
 packer build -only=vmware-iso.ubuntu-vmware-arm64 .     # VMware ARM64
+
+# Build with filesystem selection
+packer build -only=vmware-iso.ubuntu-vmware-arm64 -var 'filesystem=xfs' .
 
 # Build by provider
 packer build -only='virtualbox-iso.*' .  # VirtualBox (AMD64 + ARM64)
@@ -246,7 +259,7 @@ post-processor "vagrant" {
 
 #### 5. Separate Variable Files
 ```hcl
-# variables.pkr.hcl
+# plugins.pkr.hcl
 variable "iso_url" {
   type    = string
   default = "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img"
@@ -261,6 +274,12 @@ variable "ssh_password" {
   type      = string
   default   = "vagrant"
   sensitive = true
+}
+
+variable "filesystem" {
+  type    = string
+  default = "ext4"
+  description = "Filesystem type: ext4 or xfs"
 }
 ```
 
@@ -545,6 +564,13 @@ sudo apt-get install -y \
   linux-tools-$(uname -r) \
   bpfcc-tools \
   bpftrace
+
+# K8s ecosystem tools
+sudo apt-get install -y \
+  jq \
+  bash-completion \
+  nfs-common \
+  sshpass
 ```
 
 ### Disk I/O Optimization
@@ -694,31 +720,33 @@ echo -e "\n=== K8s Ready OS Check Complete ==="
 
 ## 6. Vagrant Cloud Upload
 
-### Upload 4 Boxes
+### Upload 4 Boxes (per filesystem type)
 ```bash
-# VirtualBox AMD64
-vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 \
-  virtualbox ./ubuntu-24.04-virtualbox-amd64.box \
+# VirtualBox AMD64 (ext4)
+vagrant cloud publish dasomel/ubuntu-24.04-ext4 0.2.1 \
+  virtualbox ./ubuntu-24.04-ext4-virtualbox-amd64.box \
   --architecture amd64 \
   --release
 
-# VirtualBox ARM64
-vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 \
-  virtualbox ./ubuntu-24.04-virtualbox-arm64.box \
+# VirtualBox ARM64 (ext4)
+vagrant cloud publish dasomel/ubuntu-24.04-ext4 0.2.1 \
+  virtualbox ./ubuntu-24.04-ext4-virtualbox-arm64.box \
   --architecture arm64 \
   --release
 
-# VMware Fusion AMD64
-vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 \
-  vmware_desktop ./ubuntu-24.04-vmware-amd64.box \
+# VMware Fusion AMD64 (ext4)
+vagrant cloud publish dasomel/ubuntu-24.04-ext4 0.2.1 \
+  vmware_desktop ./ubuntu-24.04-ext4-vmware-amd64.box \
   --architecture amd64 \
   --release
 
-# VMware Fusion ARM64
-vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 \
-  vmware_desktop ./ubuntu-24.04-vmware-arm64.box \
+# VMware Fusion ARM64 (ext4)
+vagrant cloud publish dasomel/ubuntu-24.04-ext4 0.2.1 \
+  vmware_desktop ./ubuntu-24.04-ext4-vmware-arm64.box \
   --architecture arm64 \
   --release
+
+# Same pattern for xfs filesystem (dasomel/ubuntu-24.04-xfs)
 ```
 
 ### Automation Script (scripts/upload-all.sh)
@@ -727,14 +755,16 @@ vagrant cloud publish dasomel/ubuntu-24.04 0.1.0 \
 set -e
 
 USERNAME="dasomel"
-BOX_NAME="ubuntu-24.04"
-VERSION="${1:-0.1.0}"
+VERSION="${1:-0.2.1}"
+FILESYSTEM="${2:-ext4}"  # ext4 or xfs
+
+BOX_NAME="ubuntu-24.04-${FILESYSTEM}"
 
 BOXES=(
-  "virtualbox:amd64:ubuntu-24.04-virtualbox-amd64.box"
-  "virtualbox:arm64:ubuntu-24.04-virtualbox-arm64.box"
-  "vmware_desktop:amd64:ubuntu-24.04-vmware-amd64.box"
-  "vmware_desktop:arm64:ubuntu-24.04-vmware-arm64.box"
+  "virtualbox:amd64:ubuntu-24.04-${FILESYSTEM}-virtualbox-amd64.box"
+  "virtualbox:arm64:ubuntu-24.04-${FILESYSTEM}-virtualbox-arm64.box"
+  "vmware_desktop:amd64:ubuntu-24.04-${FILESYSTEM}-vmware-amd64.box"
+  "vmware_desktop:arm64:ubuntu-24.04-${FILESYSTEM}-vmware-arm64.box"
 )
 
 for box in "${BOXES[@]}"; do
@@ -746,7 +776,7 @@ for box in "${BOXES[@]}"; do
     --release
 done
 
-echo "All boxes uploaded successfully!"
+echo "All ${FILESYSTEM} boxes uploaded successfully!"
 ```
 
 ## 7. OSS License
