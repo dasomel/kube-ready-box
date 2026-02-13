@@ -12,6 +12,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Additional CNI plugin examples
 - Performance benchmarking results
 
+## [0.2.2] - 2026-02-13
+
+### Added
+- `yq` (mikefarah/yq): YAML processor for Kubernetes manifest editing
+  - Standalone Go binary, installed from GitHub releases
+  - Auto-detects architecture (amd64/arm64)
+
+### Changed
+- Version bump from 0.2.1 to 0.2.2
+
+### Fixed
+- CI: Disable KVM kernel modules before VirtualBox build on GitHub Actions
+  - `VERR_SVM_IN_USE` error resolved by unloading kvm_amd/kvm_intel modules
+
+### Technical Details
+- Modified: `packer/scripts/03-os-packages.sh` - Added yq installation
+- Modified: `.github/workflows/build-amd64.yml` - KVM disable step
+
 ## [0.2.1] - 2026-02-13
 
 ### Added
@@ -347,7 +365,8 @@ vagrant up
 
 ---
 
-[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/dasomel/kube-ready-box/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/dasomel/kube-ready-box/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/dasomel/kube-ready-box/compare/v0.1.3...v0.2.0
 [0.1.3]: https://github.com/dasomel/kube-ready-box/compare/v0.1.2...v0.1.3

@@ -35,6 +35,14 @@ apt-get install -y \
   nfs-common \
   sshpass
 
+# yq (mikefarah/yq) - YAML processor for K8s manifests
+echo "Installing yq..."
+YQ_VERSION=$(curl -sL https://api.github.com/repos/mikefarah/yq/releases/latest | jq -r '.tag_name')
+ARCH=$(dpkg --print-architecture)
+curl -sL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${ARCH}" -o /usr/local/bin/yq
+chmod +x /usr/local/bin/yq
+echo "  yq $(yq --version) installed"
+
 # 성능 분석 도구
 echo "Installing performance analysis tools..."
 apt-get install -y \
