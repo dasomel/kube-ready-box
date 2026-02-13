@@ -27,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `VERR_SVM_IN_USE` error resolved by unloading kvm_amd/kvm_intel modules
 - Replace `dstat` with `dool` (Ubuntu 24.04 dropped dstat, dool is the successor)
 - Enable `universe` repository in `01-base.sh` for monitoring tools (iotop, iftop, nload, nethogs, dool)
+- AMD64 Korean mirror: verify reachability before switching (fixes CI package-not-found)
+  - `kr.archive.ubuntu.com` doesn't serve `noble/universe` from US-based CI runners
+  - Uses `wget --spider` to test mirror before committing to it
 
 ### Technical Details
 - Modified: `packer/scripts/01-base.sh` - Enable universe repository

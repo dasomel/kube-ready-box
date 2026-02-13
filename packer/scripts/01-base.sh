@@ -22,6 +22,7 @@ echo "  -> universe enabled on all repository entries"
 cat /etc/apt/sources.list.d/ubuntu.sources | grep "^Components:"
 
 # 한국 미러로 변경 (다운로드 속도 향상)
+# CI(GitHub Actions)에서는 미국 러너이므로 한국 미러가 universe를 제공하지 못할 수 있음
 echo "Switching to Korean mirror for faster downloads..."
 ARCH=$(dpkg --print-architecture)
 if [ "$ARCH" = "arm64" ]; then
@@ -29,10 +30,15 @@ if [ "$ARCH" = "arm64" ]; then
   sed -i 's|ports.ubuntu.com|kr.ports.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources
   echo "  -> ARM64: Using kr.ports.ubuntu.com"
 elif [ "$ARCH" = "amd64" ]; then
-  # AMD64: archive.ubuntu.com -> kr.archive.ubuntu.com
-  sed -i 's|archive.ubuntu.com|kr.archive.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources
-  sed -i 's|security.ubuntu.com|kr.archive.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources
-  echo "  -> AMD64: Using kr.archive.ubuntu.com"
+  # AMD64: Verify Korean mirror serves universe before switching
+  if wget -q --spider --timeout=5 \
+    "http://kr.archive.ubuntu.com/ubuntu/dists/noble/universe/binary-amd64/Packages.gz" 2>/dev/null; then
+    sed -i 's|archive.ubuntu.com|kr.archive.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources
+    sed -i 's|security.ubuntu.com|kr.archive.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources
+    echo "  -> AMD64: Using kr.archive.ubuntu.com"
+  else
+    echo "  -> AMD64: Korean mirror unreachable or incomplete, using default mirrors"
+  fi
 fi
 
 # 한국 시간대로 설정 (Asia/Seoul, KST UTC+9)
