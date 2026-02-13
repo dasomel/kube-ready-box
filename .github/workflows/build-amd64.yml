@@ -56,6 +56,18 @@ jobs:
         with:
           version: ${{ env.PACKER_VERSION }}
 
+      - name: Disable KVM (conflicts with VirtualBox AMD-V)
+        run: |
+          # KVM occupies AMD-V/VT-x, preventing VirtualBox from using it
+          sudo modprobe -r kvm_amd kvm_intel kvm 2>/dev/null || true
+          # Verify KVM is unloaded
+          if lsmod | grep -q kvm; then
+            echo "WARNING: KVM modules still loaded"
+            lsmod | grep kvm
+          else
+            echo "KVM modules successfully unloaded"
+          fi
+
       - name: Install VirtualBox
         run: |
           # Add Oracle VirtualBox repository
@@ -64,6 +76,9 @@ jobs:
 
           sudo apt-get update
           sudo apt-get install -y virtualbox-7.0
+
+          # Reconfigure VirtualBox kernel modules (after KVM removal)
+          sudo /sbin/vboxconfig || true
 
           # Verify installation
           VBoxManage --version
