@@ -15,15 +15,11 @@ systemctl disable unattended-upgrades || true
 apt-get remove -y unattended-upgrades || true
 
 # universe 리포지토리 활성화 (iotop, iftop, nload, nethogs, dool 등)
-# add-apt-repository 대신 sed로 직접 deb822 소스 파일 수정 (더 안정적)
+# 모든 Components 라인에 universe 추가 (main + security 모두)
 echo "Enabling universe repository..."
-if grep -q "^Components:.*universe" /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null; then
-  echo "  -> universe already enabled"
-else
-  sed -i 's/^Components: main restricted$/Components: main restricted universe/' /etc/apt/sources.list.d/ubuntu.sources
-  sed -i 's/^Components: main$/Components: main universe/' /etc/apt/sources.list.d/ubuntu.sources
-  echo "  -> universe added to apt sources"
-fi
+sed -i '/^Components:/ { /universe/! s/$/ universe/ }' /etc/apt/sources.list.d/ubuntu.sources
+echo "  -> universe enabled on all repository entries"
+cat /etc/apt/sources.list.d/ubuntu.sources | grep "^Components:"
 
 # 한국 미러로 변경 (다운로드 속도 향상)
 echo "Switching to Korean mirror for faster downloads..."
