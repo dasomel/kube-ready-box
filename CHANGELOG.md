@@ -25,15 +25,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - CI: Disable KVM kernel modules before VirtualBox build on GitHub Actions
   - `VERR_SVM_IN_USE` error resolved by unloading kvm_amd/kvm_intel modules
-- Replace `dstat` with `dool` (Ubuntu 24.04 dropped dstat, dool is the successor)
-- Enable `universe` repository in `01-base.sh` for monitoring tools (iotop, iftop, nload, nethogs, dool)
-- AMD64 Korean mirror: verify reachability before switching (fixes CI package-not-found)
-  - `kr.archive.ubuntu.com` doesn't serve `noble/universe` from US-based CI runners
-  - Uses `wget --spider` to test mirror before committing to it
+- Replace `dstat` with `dool` (installed from GitHub, not in Ubuntu 24.04 repos)
+- Enable `universe` repository in `01-base.sh` for monitoring tools (iotop, iftop, nload, nethogs)
+- AMD64 Korean mirror: GeoIP-aware fallback to default mirrors
+  - `kr.archive.ubuntu.com` GeoIP redirects to `us.kr.archive.ubuntu.com` from outside Korea
+  - Auto-detects `Err:` in `apt-get update` output and reverts to default mirrors
+  - First `apt-get update` runs with default mirrors to ensure full universe index
 
 ### Technical Details
-- Modified: `packer/scripts/01-base.sh` - Enable universe repository
-- Modified: `packer/scripts/03-os-packages.sh` - Added yq, replaced dstat with dool
+- Modified: `packer/scripts/01-base.sh` - Enable universe, GeoIP-aware mirror fallback
+- Modified: `packer/scripts/03-os-packages.sh` - Added yq, dool from GitHub
 - Modified: `.github/workflows/build-amd64.yml` - KVM disable step
 
 ## [0.2.1] - 2026-02-13
