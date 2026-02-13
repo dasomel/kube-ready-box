@@ -1,9 +1,6 @@
 name: Build AMD64 Vagrant Boxes
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
       version:
@@ -124,9 +121,7 @@ jobs:
     name: Publish ${{ matrix.filesystem }} to Vagrant Cloud
     needs: build-virtualbox
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
-      (github.event_name == 'workflow_dispatch' && inputs.publish == true)
+    if: inputs.publish == true
     strategy:
       fail-fast: false
       matrix:
@@ -149,10 +144,8 @@ jobs:
       - name: Get Version
         id: version
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ inputs.version }}" ]; then
+          if [ -n "${{ inputs.version }}" ]; then
             echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event_name }}" == "push" ]; then
-            echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
           else
             echo "version=$(date +%Y.%m.%d)" >> $GITHUB_OUTPUT
           fi
