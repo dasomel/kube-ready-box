@@ -45,6 +45,10 @@ EOF
 systemctl restart systemd-timesyncd || true
 echo "  -> NTP servers: time.bora.net, time.kriss.re.kr, ntp.kornet.net"
 
+# universe 리포지토리 활성화 (iotop, iftop, nload, nethogs, dool 등)
+echo "Enabling universe repository..."
+add-apt-repository -y universe
+
 # 패키지 최신화
 echo "Updating package lists..."
 apt-get update

@@ -26,8 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI: Disable KVM kernel modules before VirtualBox build on GitHub Actions
   - `VERR_SVM_IN_USE` error resolved by unloading kvm_amd/kvm_intel modules
 - Replace `dstat` with `dool` (Ubuntu 24.04 dropped dstat, dool is the successor)
+- Enable `universe` repository in `01-base.sh` for monitoring tools (iotop, iftop, nload, nethogs, dool)
 
 ### Technical Details
+- Modified: `packer/scripts/01-base.sh` - Enable universe repository
 - Modified: `packer/scripts/03-os-packages.sh` - Added yq, replaced dstat with dool
 - Modified: `.github/workflows/build-amd64.yml` - KVM disable step
 
