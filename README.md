@@ -1,4 +1,5 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build AMD64](https://github.com/dasomel/kube-ready-box/actions/workflows/build-amd64.yml/badge.svg)](https://github.com/dasomel/kube-ready-box/actions/workflows/build-amd64.yml)
 [![Vagrant Cloud - ext4](https://img.shields.io/badge/Vagrant-ext4-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4)
 [![Vagrant Cloud - xfs](https://img.shields.io/badge/Vagrant-xfs-green)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs)
 
@@ -80,6 +81,15 @@ end
 - **K8s Prerequisites**: Swap disabled, kernel modules, IP forwarding
 - **Disk I/O**: Scheduler and read-ahead optimization
 - **Network**: TCP buffers, conntrack, ring buffers
+
+### Pre-installed Tools
+
+| Category | Tools |
+|----------|-------|
+| **K8s Ecosystem** | jq, yq, bash-completion, nfs-common, sshpass |
+| **Monitoring** | sysstat, iotop, iftop, nload, nethogs, dool |
+| **Network Diag** | ipvsadm, ipset, conntrack, ethtool, tcpdump, nmap |
+| **Performance** | linux-tools, bpfcc-tools, bpftrace |
 
 ### What's NOT Included
 

@@ -1,4 +1,5 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build AMD64](https://github.com/dasomel/kube-ready-box/actions/workflows/build-amd64.yml/badge.svg)](https://github.com/dasomel/kube-ready-box/actions/workflows/build-amd64.yml)
 [![Vagrant Cloud - ext4](https://img.shields.io/badge/Vagrant-ext4-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4)
 [![Vagrant Cloud - xfs](https://img.shields.io/badge/Vagrant-xfs-green)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs)
 
@@ -80,6 +81,15 @@ end
 - **K8s 필수 요구사항**: Swap 비활성화, 커널 모듈, IP 포워딩
 - **디스크 I/O**: 스케줄러 및 read-ahead 최적화
 - **네트워크**: TCP 버퍼, conntrack, 링 버퍼
+
+### 사전 설치된 도구
+
+| 분류 | 도구 |
+|------|------|
+| **K8s 에코시스템** | jq, yq, bash-completion, nfs-common, sshpass |
+| **모니터링** | sysstat, iotop, iftop, nload, nethogs, dool |
+| **네트워크 진단** | ipvsadm, ipset, conntrack, ethtool, tcpdump, nmap |
+| **성능 분석** | linux-tools, bpfcc-tools, bpftrace |
 
 ### 포함되지 않은 내용
 
