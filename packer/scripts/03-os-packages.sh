@@ -15,7 +15,7 @@ apt-get install -y \
   iftop \
   nload \
   nethogs \
-  dstat
+  dool
 
 # 네트워크 진단 도구
 echo "Installing network diagnostic tools..."
