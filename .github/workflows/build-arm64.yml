@@ -226,7 +226,8 @@ jobs:
       - name: Publish VMware Box
         if: needs.build-vmware-arm64.result == 'success'
         env:
-          VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
+          HCP_CLIENT_ID: ${{ secrets.HCP_CLIENT_ID }}
+          HCP_CLIENT_SECRET: ${{ secrets.HCP_CLIENT_SECRET }}
         run: |
           BOX_FILE="boxes/ubuntu-24.04-${{ matrix.filesystem }}-vmware-arm64.box"
           [ ! -f "$BOX_FILE" ] && echo "Box file not found, skipping" && exit 0
@@ -258,7 +259,8 @@ jobs:
       - name: Add VirtualBox Provider
         if: needs.build-virtualbox-arm64.result == 'success'
         env:
-          VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
+          HCP_CLIENT_ID: ${{ secrets.HCP_CLIENT_ID }}
+          HCP_CLIENT_SECRET: ${{ secrets.HCP_CLIENT_SECRET }}
         run: |
           BOX_FILE="boxes/ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-arm64.box"
           [ ! -f "$BOX_FILE" ] && echo "Box file not found, skipping" && exit 0

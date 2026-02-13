@@ -170,7 +170,8 @@ jobs:
 
       - name: Publish to Vagrant Cloud
         env:
-          VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
+          HCP_CLIENT_ID: ${{ secrets.HCP_CLIENT_ID }}
+          HCP_CLIENT_SECRET: ${{ secrets.HCP_CLIENT_SECRET }}
         run: |
           vagrant cloud publish dasomel/ubuntu-24.04-${{ matrix.filesystem }} \
             ${{ steps.version.outputs.version }} \
