@@ -21,26 +21,6 @@ sed -i '/^Components:/ { /universe/! s/$/ universe/ }' /etc/apt/sources.list.d/u
 echo "  -> universe enabled on all repository entries"
 cat /etc/apt/sources.list.d/ubuntu.sources | grep "^Components:"
 
-# 한국 미러로 변경 (다운로드 속도 향상)
-# CI(GitHub Actions)에서는 미국 러너이므로 한국 미러가 universe를 제공하지 못할 수 있음
-echo "Switching to Korean mirror for faster downloads..."
-ARCH=$(dpkg --print-architecture)
-if [ "$ARCH" = "arm64" ]; then
-  # ARM64: ports.ubuntu.com -> kr.ports.ubuntu.com
-  sed -i 's|ports.ubuntu.com|kr.ports.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources
-  echo "  -> ARM64: Using kr.ports.ubuntu.com"
-elif [ "$ARCH" = "amd64" ]; then
-  # AMD64: Verify Korean mirror serves universe before switching
-  if wget -q --spider --timeout=5 \
-    "http://kr.archive.ubuntu.com/ubuntu/dists/noble/universe/binary-amd64/Packages.gz" 2>/dev/null; then
-    sed -i 's|archive.ubuntu.com|kr.archive.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources
-    sed -i 's|security.ubuntu.com|kr.archive.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources
-    echo "  -> AMD64: Using kr.archive.ubuntu.com"
-  else
-    echo "  -> AMD64: Korean mirror unreachable or incomplete, using default mirrors"
-  fi
-fi
-
 # 한국 시간대로 설정 (Asia/Seoul, KST UTC+9)
 echo "Setting timezone to Asia/Seoul (KST)..."
 ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
@@ -58,9 +38,33 @@ EOF
 systemctl restart systemd-timesyncd || true
 echo "  -> NTP servers: time.bora.net, time.kriss.re.kr, ntp.kornet.net"
 
-# 패키지 최신화
+# 패키지 최신화 (기본 미러로 먼저 실행하여 universe 포함 전체 인덱스 확보)
 echo "Updating package lists..."
 apt-get update
+
+# 한국 미러로 변경 (다운로드 속도 향상, 후속 스크립트에서 사용)
+# kr.archive.ubuntu.com은 GeoIP DNS 사용 - 해외에서 us.kr.archive.ubuntu.com으로
+# 리다이렉트되어 noble/noble-updates/noble-backports 섹션 제공 불가
+echo "Switching to Korean mirror for faster downloads..."
+ARCH=$(dpkg --print-architecture)
+if [ "$ARCH" = "arm64" ]; then
+  sed -i 's|ports.ubuntu.com|kr.ports.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources
+  apt-get update
+  echo "  -> ARM64: Using kr.ports.ubuntu.com"
+elif [ "$ARCH" = "amd64" ]; then
+  SOURCES_BAK=$(cat /etc/apt/sources.list.d/ubuntu.sources)
+  sed -i 's|archive.ubuntu.com|kr.archive.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources
+  sed -i 's|security.ubuntu.com|kr.archive.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources
+  # apt-get update exits 0 even with Err: entries, so check output
+  APT_OUT=$(apt-get update 2>&1) || true
+  if echo "$APT_OUT" | grep -q "^Err:"; then
+    echo "  -> AMD64: Korean mirror failed (GeoIP redirect), reverting to default"
+    echo "$SOURCES_BAK" > /etc/apt/sources.list.d/ubuntu.sources
+    apt-get update
+  else
+    echo "  -> AMD64: Using kr.archive.ubuntu.com"
+  fi
+fi
 
 echo "Upgrading packages..."
 apt-get upgrade -y
