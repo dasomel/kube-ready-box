@@ -8,7 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- GitHub Actions workflow for automated AMD64 builds
 - Additional CNI plugin examples
 - Performance benchmarking results
 
@@ -21,10 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Version bump from 0.2.1 to 0.2.2
+- CI: Switch Vagrant Cloud auth from `VAGRANT_CLOUD_TOKEN` (short-lived JWT) to
+  `HCP_CLIENT_ID`/`HCP_CLIENT_SECRET` (service principal, on-demand token generation)
 
 ### Fixed
 - CI: Disable KVM kernel modules before VirtualBox build on GitHub Actions
   - `VERR_SVM_IN_USE` error resolved by unloading kvm_amd/kvm_intel modules
+- CI: Vagrant Cloud publish failure due to expired HCP JWT token
+  - HCP Vagrant Registry uses short-lived OAuth2 tokens (1 hour)
+  - Switched to HCP service principal credentials for automatic token refresh
 - Replace `dstat` with `dool` (installed from GitHub, not in Ubuntu 24.04 repos)
 - Enable `universe` repository in `01-base.sh` for monitoring tools (iotop, iftop, nload, nethogs)
 - AMD64 Korean mirror: GeoIP-aware fallback to default mirrors
@@ -35,7 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical Details
 - Modified: `packer/scripts/01-base.sh` - Enable universe, GeoIP-aware mirror fallback
 - Modified: `packer/scripts/03-os-packages.sh` - Added yq, dool from GitHub
-- Modified: `.github/workflows/build-amd64.yml` - KVM disable step
+- Modified: `.github/workflows/build-amd64.yml` - KVM disable step, HCP auth
+- Modified: `.github/workflows/build-arm64.yml` - HCP auth
+- CI verified: VirtualBox AMD64 ext4 (~20min) and xfs (~35min) build + publish success
 
 ## [0.2.1] - 2026-02-13
 
