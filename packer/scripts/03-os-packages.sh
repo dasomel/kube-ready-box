@@ -14,8 +14,13 @@ apt-get install -y \
   iotop \
   iftop \
   nload \
-  nethogs \
-  dool
+  nethogs
+
+# dool (dstat replacement) - not in Ubuntu 24.04 repos, install from GitHub
+echo "Installing dool (dstat replacement)..."
+curl -sL "https://raw.githubusercontent.com/scottchiefbaker/dool/master/dool" -o /usr/local/bin/dool
+chmod +x /usr/local/bin/dool
+echo "  dool installed: $(dool --version 2>&1 | head -1)"
 
 # 네트워크 진단 도구
 echo "Installing network diagnostic tools..."
