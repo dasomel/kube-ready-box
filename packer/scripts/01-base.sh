@@ -67,7 +67,23 @@ elif [ "$ARCH" = "amd64" ]; then
 fi
 
 echo "Upgrading packages..."
-apt-get upgrade -y
+apt-get full-upgrade -y
+
+# 보안 핵심 패키지 명시적 최신화 (CVE-2025-26465/26466 OpenSSH, CVE-2025-32462/32463 sudo, CVE-2026-23xxx 커널/AppArmor)
+echo "Ensuring critical security packages are at latest version..."
+apt-get install -y --only-upgrade \
+  linux-image-generic \
+  linux-headers-generic \
+  linux-modules-extra-generic \
+  apparmor \
+  apparmor-utils \
+  libapparmor1 \
+  sudo \
+  openssh-server \
+  openssh-client \
+  libssh-4 \
+  libssl3t64 \
+  || echo "  -> some packages were not present (skipped)"
 
 # 필수 패키지 설치
 echo "Installing essential packages..."

@@ -44,6 +44,7 @@ build {
       "scripts/06-nic-tuning.sh",
       "scripts/ubuntu2404-tuning.sh",
       "scripts/07-check-tuning.sh",
+      "scripts/08-security-check.sh",
       "scripts/license-info.sh",
       "scripts/generate-sbom.sh",
       "scripts/99-cleanup.sh"

@@ -24,7 +24,7 @@ variable "ubuntu_version" {
 
 variable "box_version" {
   type    = string
-  default = "0.2.1"
+  default = "0.2.3"
 }
 
 variable "filesystem" {

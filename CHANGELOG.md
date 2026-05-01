@@ -11,6 +11,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Additional CNI plugin examples
 - Performance benchmarking results
 
+## [0.2.3] - 2026-05-01
+
+### Security
+- Address CVE-2026-23268, CVE-2026-23269, CVE-2026-23403~23411 (Linux kernel/AppArmor:
+  unprivileged AppArmor profile load/replace/remove leading to DoS, kernel memory disclosure,
+  local privilege escalation, container escape)
+- Address CVE-2026-23144, CVE-2026-23171, CVE-2026-23204, CVE-2025-71238
+  (DAMON sysfs DoS/leak, bonding UAF, qla2xxx double-free)
+- Address CVE-2025-32462, CVE-2025-32463 (sudo chroot local privilege escalation,
+  KEV-listed 2025-09-29)
+- Address CVE-2025-26465, CVE-2025-26466 (OpenSSH VerifyHostKeyDNS server impersonation,
+  ping-handling resource exhaustion DoS)
+
+### Changed
+- `packer/scripts/01-base.sh`: switch from `apt-get upgrade` to `apt-get full-upgrade`
+  so kernel security updates that pull new dependencies are actually installed
+- `packer/scripts/01-base.sh`: explicit `--only-upgrade` of kernel/apparmor/sudo/openssh
+  metapackages immediately after the full-upgrade pass
+- `packer/plugins.pkr.hcl`: bump `box_version` default from 0.2.1 to 0.2.3
+  (also fixes the long-standing 0.2.1↔0.2.2 inconsistency)
+
+### Added
+- `packer/scripts/08-security-check.sh`: build-time security audit that records
+  versions of CVE-relevant packages, pending security updates, and AppArmor status
+  to `/var/log/kube-ready-box-security.log`
+- All four pkr.hcl templates wired to run `08-security-check.sh` after `07-check-tuning.sh`
+
 ## [0.2.2] - 2026-02-13
 
 ### Added
@@ -378,7 +405,8 @@ vagrant up
 
 ---
 
-[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/dasomel/kube-ready-box/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/dasomel/kube-ready-box/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/dasomel/kube-ready-box/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/dasomel/kube-ready-box/compare/v0.1.3...v0.2.0
