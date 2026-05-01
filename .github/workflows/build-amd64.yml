@@ -32,7 +32,9 @@ env:
 jobs:
   build-virtualbox:
     name: Build VirtualBox AMD64 (${{ matrix.filesystem }})
-    runs-on: ubuntu-latest
+    # Pinned to 22.04: ubuntu-latest (24.04) ships kernel 6.17-azure for which
+    # VirtualBox 7.0 cannot build vboxdrv via DKMS (CVE-2025/2026 v0.2.3 hit this).
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -72,10 +74,22 @@ jobs:
           echo "deb [arch=amd64] https://download.virtualbox.org/virtualbox/debian $(lsb_release -cs) contrib" | sudo tee /etc/apt/sources.list.d/virtualbox.list
 
           sudo apt-get update
+          # DKMS toolchain + matching headers required for vboxdrv build
+          sudo apt-get install -y \
+            dkms \
+            "linux-headers-$(uname -r)" \
+            build-essential
           sudo apt-get install -y virtualbox-7.0
 
-          # Reconfigure VirtualBox kernel modules (after KVM removal)
-          sudo /sbin/vboxconfig || true
+          # Reconfigure VirtualBox kernel modules (after KVM removal); fail fast if it cannot build
+          sudo /sbin/vboxconfig
+
+          # Verify vboxdrv is actually loaded — the previous CI failure swallowed this with || true
+          if ! lsmod | grep -q '^vboxdrv'; then
+            echo "ERROR: vboxdrv module did not load after vboxconfig"
+            sudo dmesg | tail -50
+            exit 1
+          fi
 
           # Verify installation
           VBoxManage --version
