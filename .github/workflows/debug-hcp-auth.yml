@@ -25,3 +25,23 @@ jobs:
             -d audience=https://api.hashicorp.cloud)
           echo "HTTP status: $status"
           jq 'if .access_token then {ok: true, expires_in, token_type} else . end' /tmp/oauth-resp.json
+
+      - name: Install Vagrant
+        run: |
+          wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt-get update -qq
+          sudo apt-get install -y vagrant
+
+      - name: Vagrant auth via HCP env vars
+        env:
+          HCP_CLIENT_ID: ${{ secrets.HCP_CLIENT_ID }}
+          HCP_CLIENT_SECRET: ${{ secrets.HCP_CLIENT_SECRET }}
+          VAGRANT_LOG: debug
+        run: |
+          echo "=== preexisting vagrant token cache ==="
+          ls -la ~/.vagrant.d/data/ 2>/dev/null || echo "(no .vagrant.d/data/)"
+          echo "=== gem versions ==="
+          ls /opt/vagrant/embedded/gems/gems/ | grep -E "(vagrant_cloud|oauth2|faraday)"
+          echo "=== vagrant cloud auth whoami ==="
+          vagrant cloud auth whoami 2>&1 | tail -50
