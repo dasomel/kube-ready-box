@@ -112,14 +112,23 @@ curl -s -X POST https://auth.idp.hashicorp.com/oauth2/token \
 
 ### 6. GitHub Secrets 갱신
 
-`--body -`로 stdin 입력을 받아 history에 평문이 남지 않도록 합니다.
+> **반드시 environment(`production`)와 repository 양쪽 모두 갱신할 것.** publish job이 `environment: production` 사용 시 environment secrets가 repo secrets를 override합니다. 한쪽만 갱신하면 stale 값으로 인증 실패 (`unauthorized: Authentication failed`).
 
 ```bash
-printf '%s' "$CID"  | gh secret set HCP_CLIENT_ID     --repo dasomel/kube-ready-box --body -
-printf '%s' "$CSEC" | gh secret set HCP_CLIENT_SECRET --repo dasomel/kube-ready-box --body -
+# production environment (publish job이 사용)
+gh secret set HCP_CLIENT_ID     --repo dasomel/kube-ready-box --env production --body "$CID"
+gh secret set HCP_CLIENT_SECRET --repo dasomel/kube-ready-box --env production --body "$CSEC"
 
-gh secret list --repo dasomel/kube-ready-box | grep HCP_
+# repository (다른 워크플로우/job에서 참조 시 대비)
+gh secret set HCP_CLIENT_ID     --repo dasomel/kube-ready-box --body "$CID"
+gh secret set HCP_CLIENT_SECRET --repo dasomel/kube-ready-box --body "$CSEC"
+
+# 검증
+gh secret list --repo dasomel/kube-ready-box --env production | grep HCP_
+gh secret list --repo dasomel/kube-ready-box                  | grep HCP_
 ```
+
+> **주의**: `gh secret set --body -`는 리터럴 문자 `"-"`를 secret 값으로 저장합니다 (string flag, stdin으로 해석되지 않음). `--body "$VAR"` 또는 stdin pipe (`echo $VAR | gh secret set NAME`) 사용.
 
 ### 7. cred 파일 삭제
 
@@ -145,13 +154,15 @@ gh run watch --repo dasomel/kube-ready-box
 |------|------|------|
 | `permission denied` (key create) | SP 자격으로 로그인됨 | `hcp auth login`으로 사람 계정 재로그인 |
 | `max service principal key quota per principal reached` | 키 ≥2개 | 오래된 키 `hcp iam sp keys delete`로 정리 |
-| `unauthorized: Authentication failed` (workflow) | GH Secret 값이 stale 또는 SP 권한 부족 | 5단계 검증 → 6단계 재주입, HCP IAM에서 역할 확인 |
+| `unauthorized: Authentication failed` (workflow) | GH Secret 값이 stale, environment secret이 repo secret을 가리고 있음, `--body -` 잘못 사용, 또는 SP 권한 부족 | 5단계 OAuth 검증 → 6단계로 **environment + repository 양쪽 갱신**, HCP IAM 역할 확인 |
+| 로컬에서는 publish 성공하는데 CI에서만 401 | publish job의 `environment: production`이 가진 stale secret이 repo secret을 가림 | `gh secret list --env production`으로 확인 → environment secret 갱신 |
 | `wrong number of arguments (given 1, expected 2)` | `vagrant_cloud-3.1.3` gem의 에러 출력 버그 | 무시. 실제 원인은 그 위/아래의 401 메시지 |
 
 ## 보안 노트
 
 - cred 파일은 발급 후 즉시 삭제 (8단계 직후).
-- `--body -` + `printf` 조합으로 secret이 shell history에 남지 않도록 함 (`set -o history; HISTFILE=/dev/null`도 권장).
+- `gh secret set`은 stdin으로 값을 받게 하여 secret이 shell history에 남지 않도록 함 (`set -o history; HISTFILE=/dev/null`도 권장).
+- `gh secret set --body -`은 **사용 금지** — `-`를 stdin으로 해석하지 않고 리터럴 `"-"`를 secret으로 설정함. CI에서 `unauthorized: Authentication failed.`로 나타나며 진단이 어려움.
 - 키 회전 시 항상 **새 키 발급 → GH Secret 갱신 → 검증 → 오래된 키 삭제** 순서가 안전 (롤백 가능).
 - 다만 HCP는 SP당 최대 2개 quota이므로 본 문서는 quota 부족 시 **오래된 키를 먼저 삭제**하는 흐름을 따름. 활성 워크로드가 없는지 반드시 확인.
 
