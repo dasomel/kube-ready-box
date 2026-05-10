@@ -1,0 +1,27 @@
+name: Debug HCP Auth (TEMP)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify HCP secret transport
+        env:
+          HCP_CLIENT_ID: ${{ secrets.HCP_CLIENT_ID }}
+          HCP_CLIENT_SECRET: ${{ secrets.HCP_CLIENT_SECRET }}
+        run: |
+          echo "CID length: ${#HCP_CLIENT_ID}"
+          echo "CSEC length: ${#HCP_CLIENT_SECRET}"
+          echo "CID sha256 prefix: $(printf '%s' "$HCP_CLIENT_ID" | sha256sum | cut -c1-12)"
+          echo "CSEC sha256 prefix: $(printf '%s' "$HCP_CLIENT_SECRET" | sha256sum | cut -c1-12)"
+          echo "---OAuth direct call---"
+          status=$(curl -s -o /tmp/oauth-resp.json -w "%{http_code}" -X POST \
+            https://auth.idp.hashicorp.com/oauth2/token \
+            -d grant_type=client_credentials \
+            -d client_id="$HCP_CLIENT_ID" \
+            -d client_secret="$HCP_CLIENT_SECRET" \
+            -d audience=https://api.hashicorp.cloud)
+          echo "HTTP status: $status"
+          jq 'if .access_token then {ok: true, expires_in, token_type} else . end' /tmp/oauth-resp.json
