@@ -44,4 +44,11 @@ jobs:
           echo "=== gem versions ==="
           ls /opt/vagrant/embedded/gems/gems/ | grep -E "(vagrant_cloud|oauth2|faraday)"
           echo "=== vagrant cloud auth whoami ==="
-          vagrant cloud auth whoami 2>&1 | tail -50
+          vagrant cloud auth whoami 2>&1 | tail -10
+          echo "=== dummy box publish (reproduces CI publish path) ==="
+          printf 'dummy' > /tmp/dummy.box
+          BOX="dasomel/test-debug-$(date +%s)"
+          vagrant cloud publish "$BOX" 0.0.1 virtualbox /tmp/dummy.box \
+            --architecture amd64 --force --release \
+            --version-description "debug" \
+            --short-description "debug" 2>&1 | tail -40
