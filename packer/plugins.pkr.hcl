@@ -71,7 +71,7 @@ variable "headless" {
 
 variable "iso_url_amd64" {
   type    = string
-  default = "https://releases.ubuntu.com/24.04/ubuntu-24.04.3-live-server-amd64.iso"
+  default = "https://mirrors.edge.kernel.org/ubuntu-releases/24.04/ubuntu-24.04.3-live-server-amd64.iso"
 }
 
 variable "iso_url_arm64" {
