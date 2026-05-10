@@ -132,11 +132,13 @@ vagrant ssh -c "/bin/bash /etc/vagrant-box/check-tuning.sh"
 
 ## Documentation
 
-- [Box Usage Guide](usage.md) - Detailed usage instructions
-- [K8s Post-Install](k8s-post-install.md) - containerd/kubelet tuning
+- [Box Usage Guide](docs/usage.md) - Detailed usage instructions
+- [K8s Post-Install](docs/k8s-post-install.md) - containerd/kubelet tuning
 - [Packer Build Guide](packer/README.md) - Building boxes from source
-- [Vagrant Cloud Guide](VAGRANT_CLOUD.md) - Upload, manage, and delete boxes
-- [Legal & Licensing](legal.md) - OSS licenses and compliance
+- [Vagrant Cloud Guide](docs/VAGRANT_CLOUD.md) - Upload, manage, and delete boxes
+- [HCP Credentials Setup](docs/hcp-credentials.md) - Rotate HCP service principal keys
+- [Deploy Checklist](docs/DEPLOY_CHECKLIST.md) - Pre-release verification
+- [Legal & Licensing](docs/legal.md) - OSS licenses and compliance
 - [Changelog](CHANGELOG.md) - Release notes and version history
 
 ## Building from Source

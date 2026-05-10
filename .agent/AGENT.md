@@ -781,7 +781,7 @@ echo "All ${FILESYSTEM} boxes uploaded successfully!"
 
 ## 7. OSS License
 
-> See [legal.md](legal.md) for details
+> See [legal.md](../docs/legal.md) for details
 
 ### Summary
 
@@ -805,7 +805,7 @@ project/
 
 ## 8. Recommended Settings After K8s Installation
 
-> See [k8s-post-install.md](k8s-post-install.md) for details
+> See [k8s-post-install.md](../docs/k8s-post-install.md) for details
 
 Recommended settings to apply after installing K8s:
 

@@ -9,7 +9,7 @@
 ## 컨텍스트
 
 - 프로젝트: Kube Ready Box (Kubernetes-ready Vagrant Box)
-- 관련 문서: CLAUDE.md, usage.md
+- 관련 문서: CLAUDE.md, docs/usage.md
 - 현재 상태: [현재 상황 설명]
 
 ## 작업 목록

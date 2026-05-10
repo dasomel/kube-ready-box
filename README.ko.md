@@ -132,11 +132,13 @@ vagrant ssh -c "/bin/bash /etc/vagrant-box/check-tuning.sh"
 
 ## 문서
 
-- [Box 사용 가이드](usage.md) - 상세 사용 방법
-- [K8s 설치 후 설정](k8s-post-install.md) - containerd/kubelet 튜닝
+- [Box 사용 가이드](docs/usage.md) - 상세 사용 방법
+- [K8s 설치 후 설정](docs/k8s-post-install.md) - containerd/kubelet 튜닝
 - [Packer 빌드 가이드](packer/README.md) - 소스에서 Box 빌드하기
-- [Vagrant Cloud 가이드](VAGRANT_CLOUD.md) - Box 업로드, 관리, 삭제 방법
-- [법적 고지 및 라이선스](legal.md) - OSS 라이선스 및 컴플라이언스
+- [Vagrant Cloud 가이드](docs/VAGRANT_CLOUD.md) - Box 업로드, 관리, 삭제 방법
+- [HCP 자격증명 설정](docs/hcp-credentials.md) - HCP 서비스 프린시펄 키 회전
+- [배포 체크리스트](docs/DEPLOY_CHECKLIST.md) - 릴리스 전 검증
+- [법적 고지 및 라이선스](docs/legal.md) - OSS 라이선스 및 컴플라이언스
 - [변경 이력](CHANGELOG.md) - 릴리즈 노트 및 버전 히스토리
 
 ## 소스에서 빌드하기

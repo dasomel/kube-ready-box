@@ -339,5 +339,5 @@ Agent 4: shellcheck packer/scripts/04-k8s-prereq.sh
 
 - [AGENT.md](.agent/AGENT.md) - 상세 기술 가이드
 - [SECURITY.md](.agent/SECURITY.md) - 보안 지침
-- [usage.md](usage.md) - Box 사용 가이드
-- [k8s-post-install.md](k8s-post-install.md) - K8s 설치 후 설정
+- [usage.md](docs/usage.md) - Box 사용 가이드
+- [k8s-post-install.md](docs/k8s-post-install.md) - K8s 설치 후 설정
