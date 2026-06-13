@@ -5,7 +5,7 @@ set -e
 
 #=========================================
 # Vagrant Box Build Script
-# dasomel/ubuntu-24.04
+# dasomel/ubuntu-{24.04,26.04}
 #=========================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -32,12 +32,14 @@ detect_platform() {
 
 PLATFORM=$(detect_platform)
 FILESYSTEM="ext4"  # Default filesystem (ext4 or xfs)
+UBUNTU_VERSION="${UBUNTU_VERSION:-24.04}"  # Default Ubuntu version (24.04 or 26.04)
 
 show_usage() {
   cat <<EOF
 Usage: $0 [OPTIONS]
 
-Build dasomel/ubuntu-24.04 Vagrant boxes for multiple architectures and providers.
+Build dasomel/ubuntu-<VERSION> Vagrant boxes for multiple architectures and providers.
+  Default Ubuntu version: 24.04 (also supports 26.04).
 
 PLATFORM COMPATIBILITY:
   Current Platform: ${PLATFORM} ($(uname -m))
@@ -69,13 +71,18 @@ FILESYSTEM OPTIONS:
   --fs=TYPE           Filesystem type: ext4 (default) or xfs
   --filesystem=TYPE   Same as --fs
 
+UBUNTU VERSION:
+  --version=VER       Ubuntu version: 24.04 (default) or 26.04
+                      Can also set UBUNTU_VERSION env var.
+
 EXAMPLES:
-  $0 init                    # Install Packer plugins
-  $0 validate                # Validate all templates
-  $0 virtualbox-amd64        # Build VirtualBox AMD64 box (ext4)
-  $0 vmware-arm64 --fs=xfs   # Build VMware ARM64 box (xfs)
-  $0 all                     # Build all 4 boxes (ext4)
-  $0 all --fs=xfs            # Build all 4 boxes (xfs)
+  $0 init                           # Install Packer plugins
+  $0 validate                       # Validate all templates (24.04)
+  $0 validate --version=26.04       # Validate all templates (26.04)
+  $0 virtualbox-amd64               # Build VirtualBox AMD64 box (24.04, ext4)
+  $0 vmware-arm64 --fs=xfs          # Build VMware ARM64 box (24.04, xfs)
+  $0 all --version=26.04            # Build all boxes (26.04, ext4)
+  $0 all --fs=xfs --version=26.04   # Build all boxes (26.04, xfs)
 
 REQUIREMENTS:
   - Packer 1.8+
@@ -101,8 +108,8 @@ init_packer() {
 }
 
 validate_templates() {
-  echo "=== Validating Packer Templates ==="
-  packer validate .
+  echo "=== Validating Packer Templates (Ubuntu ${UBUNTU_VERSION}) ==="
+  packer validate -var "ubuntu_version=${UBUNTU_VERSION}" .
   echo "All templates are valid"
 }
 
@@ -260,8 +267,9 @@ build_box() {
 
   echo ""
   echo "=========================================="
-  echo "Building: ${provider} ${arch} (${FILESYSTEM})"
+  echo "Building: ${provider} ${arch} (Ubuntu ${UBUNTU_VERSION}, ${FILESYSTEM})"
   echo "Platform: ${PLATFORM}"
+  echo "Ubuntu: ${UBUNTU_VERSION}"
   echo "Filesystem: ${FILESYSTEM}"
   echo "Source: ${source_name}"
   echo "Log: ${logfile}"
@@ -271,7 +279,7 @@ build_box() {
   # Run packer build and capture exit code
   # Note: Use PIPESTATUS to get packer's exit code, not tee's
   set +e  # Temporarily disable exit on error
-  packer build -force -only="$source_name" -var "filesystem=$FILESYSTEM" . 2>&1 | tee "$logfile"
+  packer build -force -only="$source_name" -var "filesystem=$FILESYSTEM" -var "ubuntu_version=${UBUNTU_VERSION}" . 2>&1 | tee "$logfile"
   local packer_exit_code=${PIPESTATUS[0]}
   set -e  # Re-enable exit on error
 
@@ -311,7 +319,7 @@ clean_output() {
   echo "Cleanup complete"
 }
 
-# Parse --fs/--filesystem option from any position
+# Parse --fs/--filesystem and --version options from any position
 ARGS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -327,6 +335,22 @@ while [[ $# -gt 0 ]]; do
       FILESYSTEM="$2"
       if [[ -z "$FILESYSTEM" || ("$FILESYSTEM" != "ext4" && "$FILESYSTEM" != "xfs") ]]; then
         echo -e "${RED}Error: Invalid filesystem '${FILESYSTEM:-}'. Use 'ext4' or 'xfs'.${NC}"
+        exit 1
+      fi
+      shift 2
+      ;;
+    --version=*)
+      UBUNTU_VERSION="${1#*=}"
+      if [[ "$UBUNTU_VERSION" != "24.04" && "$UBUNTU_VERSION" != "26.04" ]]; then
+        echo -e "${RED}Error: Invalid Ubuntu version '$UBUNTU_VERSION'. Use '24.04' or '26.04'.${NC}"
+        exit 1
+      fi
+      shift
+      ;;
+    --version)
+      UBUNTU_VERSION="$2"
+      if [[ -z "$UBUNTU_VERSION" || ("$UBUNTU_VERSION" != "24.04" && "$UBUNTU_VERSION" != "26.04") ]]; then
+        echo -e "${RED}Error: Invalid Ubuntu version '${UBUNTU_VERSION:-}'. Use '24.04' or '26.04'.${NC}"
         exit 1
       fi
       shift 2

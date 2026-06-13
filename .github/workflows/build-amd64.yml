@@ -8,6 +8,14 @@ on:
         required: false
         type: string
         default: ''
+      ubuntu_version:
+        description: 'Ubuntu version to build'
+        required: false
+        type: choice
+        options:
+          - '24.04'
+          - '26.04'
+        default: '24.04'
       filesystem:
         description: 'Filesystem type'
         required: true
@@ -28,6 +36,7 @@ permissions:
 
 env:
   PACKER_VERSION: '1.10.0'
+  UBUNTU_VERSION: ${{ github.event.inputs.ubuntu_version || '24.04' }}
 
 jobs:
   build-virtualbox:
@@ -102,7 +111,8 @@ jobs:
         working-directory: packer
         run: |
           packer validate -only='virtualbox-iso.ubuntu-vbox-amd64' \
-            -var 'filesystem=${{ matrix.filesystem }}' .
+            -var 'filesystem=${{ matrix.filesystem }}' \
+            -var 'ubuntu_version=${{ env.UBUNTU_VERSION }}' .
 
       - name: Packer Build
         working-directory: packer
@@ -110,18 +120,19 @@ jobs:
           packer build -only='virtualbox-iso.ubuntu-vbox-amd64' \
             -var 'headless=true' \
             -var 'filesystem=${{ matrix.filesystem }}' \
+            -var 'ubuntu_version=${{ env.UBUNTU_VERSION }}' \
             .
 
       - name: Verify Box File
         run: |
-          ls -lh packer/output-vagrant/ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-amd64.box
-          tar -tzf packer/output-vagrant/ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-amd64.box | head -10
+          ls -lh packer/output-vagrant/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-amd64.box
+          tar -tzf packer/output-vagrant/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-amd64.box | head -10
 
       - name: Upload Box Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-amd64
-          path: packer/output-vagrant/ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-amd64.box
+          name: ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-amd64
+          path: packer/output-vagrant/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-amd64.box
           retention-days: 7
           compression-level: 0
 
@@ -152,7 +163,7 @@ jobs:
       - name: Download Box Artifact
         uses: actions/download-artifact@v4
         with:
-          name: ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-amd64
+          name: ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-amd64
           path: ./boxes
 
       - name: Get Version
@@ -180,20 +191,20 @@ jobs:
           HCP_CLIENT_ID: ${{ secrets.HCP_CLIENT_ID }}
           HCP_CLIENT_SECRET: ${{ secrets.HCP_CLIENT_SECRET }}
         run: |
-          vagrant cloud publish dasomel/ubuntu-24.04-${{ matrix.filesystem }} \
+          vagrant cloud publish dasomel/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }} \
             ${{ steps.version.outputs.version }} \
             virtualbox \
-            boxes/ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-amd64.box \
+            boxes/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-amd64.box \
             --architecture amd64 \
             --force \
-            --version-description "Kubernetes-ready Ubuntu 24.04 LTS (${{ steps.fs.outputs.upper }} filesystem) v${{ steps.version.outputs.version }}
+            --version-description "Kubernetes-ready Ubuntu ${{ env.UBUNTU_VERSION }} LTS (${{ steps.fs.outputs.upper }} filesystem) v${{ steps.version.outputs.version }}
 
           ## Filesystem: ${{ steps.fs.outputs.upper }}
           - ext4: Mature, stable, supports online shrink
           - xfs: Better for large files, parallel I/O, K8s ephemeral storage quota
 
           ## Features
-          - Ubuntu 24.04 LTS with OS optimizations for Kubernetes
+          - Ubuntu ${{ env.UBUNTU_VERSION }} LTS with OS optimizations for Kubernetes
           - Multi-architecture support (AMD64, ARM64)
           - Multi-provider support (VirtualBox, VMware)
           - 1TB disk with auto-extension at boot (thin provisioning)
@@ -202,4 +213,4 @@ jobs:
           ## Documentation
           https://github.com/dasomel/kube-ready-box" \
             --release \
-            --short-description "K8s-ready Ubuntu 24.04 (${{ steps.fs.outputs.upper }}) Vagrant Box"
+            --short-description "K8s-ready Ubuntu ${{ env.UBUNTU_VERSION }} (${{ steps.fs.outputs.upper }}) Vagrant Box"

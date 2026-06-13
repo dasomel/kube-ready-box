@@ -8,6 +8,14 @@ on:
         required: false
         type: string
         default: ''
+      ubuntu_version:
+        description: 'Ubuntu version to build'
+        required: false
+        type: choice
+        options:
+          - '24.04'
+          - '26.04'
+        default: '24.04'
       provider:
         description: 'Provider to build'
         required: true
@@ -37,6 +45,7 @@ permissions:
 
 env:
   PACKER_VERSION: '1.10.0'
+  UBUNTU_VERSION: ${{ github.event.inputs.ubuntu_version || '24.04' }}
 
 jobs:
   build-vmware-arm64:
@@ -75,7 +84,8 @@ jobs:
         working-directory: packer
         run: |
           packer validate -only='vmware-iso.ubuntu-vmware-arm64' \
-            -var 'filesystem=${{ matrix.filesystem }}' .
+            -var 'filesystem=${{ matrix.filesystem }}' \
+            -var 'ubuntu_version=${{ env.UBUNTU_VERSION }}' .
 
       - name: Packer Build
         working-directory: packer
@@ -83,17 +93,18 @@ jobs:
           packer build -only='vmware-iso.ubuntu-vmware-arm64' \
             -var 'headless=true' \
             -var 'filesystem=${{ matrix.filesystem }}' \
+            -var 'ubuntu_version=${{ env.UBUNTU_VERSION }}' \
             .
 
       - name: Verify Box File
         run: |
-          ls -lh packer/output-vagrant/ubuntu-24.04-${{ matrix.filesystem }}-vmware-arm64.box
+          ls -lh packer/output-vagrant/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-vmware-arm64.box
 
       - name: Upload Box Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ubuntu-24.04-${{ matrix.filesystem }}-vmware-arm64
-          path: packer/output-vagrant/ubuntu-24.04-${{ matrix.filesystem }}-vmware-arm64.box
+          name: ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-vmware-arm64
+          path: packer/output-vagrant/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-vmware-arm64.box
           retention-days: 7
           compression-level: 0
 
@@ -138,25 +149,38 @@ jobs:
         working-directory: packer
         run: |
           packer validate -only='virtualbox-iso.ubuntu-vbox-arm64' \
-            -var 'filesystem=${{ matrix.filesystem }}' .
+            -var 'filesystem=${{ matrix.filesystem }}' \
+            -var 'ubuntu_version=${{ env.UBUNTU_VERSION }}' .
 
       - name: Packer Build
         working-directory: packer
+        # VirtualBox on ARM64 (macOS Silicon) cannot export to OVF, so a custom shell-local
+        # post-processor builds the .box and unregisters the VM. packer's built-in cleanup
+        # then exits non-zero ("Could not find a registered machine") even though a valid
+        # .box was produced. Tolerate that here; the "Verify Box File" step is the real gate.
         run: |
           packer build -only='virtualbox-iso.ubuntu-vbox-arm64' \
             -var 'headless=true' \
             -var 'filesystem=${{ matrix.filesystem }}' \
-            .
+            -var 'ubuntu_version=${{ env.UBUNTU_VERSION }}' \
+            . || echo "::warning::packer exited non-zero (known VBox ARM64 cleanup quirk); verifying box on disk next"
 
       - name: Verify Box File
         run: |
-          ls -lh packer/output-vagrant/ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-arm64.box
+          BOX="packer/output-vagrant/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-arm64.box"
+          if [ ! -f "$BOX" ]; then
+            echo "::error::Box file not found: $BOX (build truly failed)"; exit 1
+          fi
+          ls -lh "$BOX"
+          # Integrity: must be a valid gzip tar (catches truncation/partial export)
+          tar -tzf "$BOX" >/dev/null || { echo "::error::Box archive is corrupt: $BOX"; exit 1; }
+          echo "Box verified OK: $BOX"
 
       - name: Upload Box Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-arm64
-          path: packer/output-vagrant/ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-arm64.box
+          name: ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-arm64
+          path: packer/output-vagrant/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-arm64.box
           retention-days: 7
           compression-level: 0
 
@@ -191,7 +215,7 @@ jobs:
         if: needs.build-vmware-arm64.result == 'success'
         uses: actions/download-artifact@v4
         with:
-          name: ubuntu-24.04-${{ matrix.filesystem }}-vmware-arm64
+          name: ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-vmware-arm64
           path: ./boxes
         continue-on-error: true
 
@@ -199,7 +223,7 @@ jobs:
         if: needs.build-virtualbox-arm64.result == 'success'
         uses: actions/download-artifact@v4
         with:
-          name: ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-arm64
+          name: ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-arm64
           path: ./boxes
         continue-on-error: true
 
@@ -229,23 +253,23 @@ jobs:
           HCP_CLIENT_ID: ${{ secrets.HCP_CLIENT_ID }}
           HCP_CLIENT_SECRET: ${{ secrets.HCP_CLIENT_SECRET }}
         run: |
-          BOX_FILE="boxes/ubuntu-24.04-${{ matrix.filesystem }}-vmware-arm64.box"
+          BOX_FILE="boxes/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-vmware-arm64.box"
           [ ! -f "$BOX_FILE" ] && echo "Box file not found, skipping" && exit 0
 
-          vagrant cloud publish dasomel/ubuntu-24.04-${{ matrix.filesystem }} \
+          vagrant cloud publish dasomel/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }} \
             ${{ steps.version.outputs.version }} \
             vmware_desktop \
             "$BOX_FILE" \
             --architecture arm64 \
             --force \
-            --version-description "Kubernetes-ready Ubuntu 24.04 LTS (${{ steps.fs.outputs.upper }} filesystem) v${{ steps.version.outputs.version }}
+            --version-description "Kubernetes-ready Ubuntu ${{ env.UBUNTU_VERSION }} LTS (${{ steps.fs.outputs.upper }} filesystem) v${{ steps.version.outputs.version }}
 
           ## Filesystem: ${{ steps.fs.outputs.upper }}
           - ext4: Mature, stable, supports online shrink
           - xfs: Better for large files, parallel I/O, K8s ephemeral storage quota
 
           ## Features
-          - Ubuntu 24.04 LTS with OS optimizations for Kubernetes
+          - Ubuntu ${{ env.UBUNTU_VERSION }} LTS with OS optimizations for Kubernetes
           - Multi-architecture support (AMD64, ARM64)
           - Multi-provider support (VirtualBox, VMware)
           - 1TB disk with auto-extension at boot (thin provisioning)
@@ -254,7 +278,7 @@ jobs:
           ## Documentation
           https://github.com/dasomel/kube-ready-box" \
             --release \
-            --short-description "K8s-ready Ubuntu 24.04 (${{ steps.fs.outputs.upper }}) Vagrant Box"
+            --short-description "K8s-ready Ubuntu ${{ env.UBUNTU_VERSION }} (${{ steps.fs.outputs.upper }}) Vagrant Box"
 
       - name: Add VirtualBox Provider
         if: needs.build-virtualbox-arm64.result == 'success'
@@ -262,13 +286,13 @@ jobs:
           HCP_CLIENT_ID: ${{ secrets.HCP_CLIENT_ID }}
           HCP_CLIENT_SECRET: ${{ secrets.HCP_CLIENT_SECRET }}
         run: |
-          BOX_FILE="boxes/ubuntu-24.04-${{ matrix.filesystem }}-virtualbox-arm64.box"
+          BOX_FILE="boxes/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-arm64.box"
           [ ! -f "$BOX_FILE" ] && echo "Box file not found, skipping" && exit 0
 
-          vagrant cloud provider create dasomel/ubuntu-24.04-${{ matrix.filesystem }} \
+          vagrant cloud provider create dasomel/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }} \
             ${{ steps.version.outputs.version }} virtualbox \
             --architecture arm64 2>/dev/null || echo "Provider already exists"
 
-          vagrant cloud provider upload dasomel/ubuntu-24.04-${{ matrix.filesystem }} \
+          vagrant cloud provider upload dasomel/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }} \
             ${{ steps.version.outputs.version }} virtualbox \
             arm64 "$BOX_FILE"

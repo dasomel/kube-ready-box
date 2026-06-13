@@ -4,14 +4,14 @@
 
 ## Quick Overview
 
-Kubernetes-ready Ubuntu 24.04 Vagrant Box 빌드 프로젝트. Packer를 사용해 VirtualBox/VMware용 multi-arch(AMD64/ARM64) OS 이미지 생성.
+Kubernetes-ready Ubuntu 24.04 / 26.04 Vagrant Box 빌드 프로젝트. Packer를 사용해 VirtualBox/VMware용 multi-arch(AMD64/ARM64) OS 이미지 생성.
 
 ## Core Flows
 
 | Flow | Entry Point | Key Files |
 |------|-------------|-----------|
 | Box Build | `packer/build.sh` | `packer/*.pkr.hcl`, `packer/scripts/` |
-| OS Tuning | `packer/scripts/02-os-tuning.sh` | `packer/scripts/ubuntu2404-tuning.sh` |
+| OS Tuning | `packer/scripts/02-os-tuning.sh` | `packer/scripts/ubuntu-tuning.sh` |
 | K8s Prereq | `packer/scripts/04-k8s-prereq.sh` | swap, modules, sysctl |
 | Vagrant Cloud | `upload-boxes.sh` | `packer/scripts/upload-all.sh` |
 | CI/CD | `.github/workflows/` | `build-amd64.yml`, `build-arm64.yml` |

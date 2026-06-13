@@ -1,15 +1,20 @@
 #!/bin/bash
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 dasomel
+#
+# LEGACY: This script is superseded by the root upload-boxes.sh which supports
+# version-parameterized builds (--version flag, UBUNTU_VERSION env var),
+# multi-filesystem upload, and HCP auth. Use upload-boxes.sh for all new work.
+#
 set -e
 
 #=========================================
-# Vagrant Cloud Upload Script
-# dasomel/ubuntu-24.04
+# Vagrant Cloud Upload Script (legacy)
 #=========================================
 
 USERNAME="dasomel"
-BOX_NAME="ubuntu-24.04"
+UBUNTU_VERSION="${UBUNTU_VERSION:-24.04}"
+BOX_NAME="ubuntu-${UBUNTU_VERSION}"
 VERSION="${1:-0.1.0}"
 
 if [ -z "$1" ]; then
@@ -19,10 +24,10 @@ if [ -z "$1" ]; then
 fi
 
 # Check if boxes exist
-for box in ubuntu-24.04-virtualbox-amd64.box \
-           ubuntu-24.04-virtualbox-arm64.box \
-           ubuntu-24.04-vmware-amd64.box \
-           ubuntu-24.04-vmware-arm64.box; do
+for box in "${BOX_NAME}-virtualbox-amd64.box" \
+           "${BOX_NAME}-virtualbox-arm64.box" \
+           "${BOX_NAME}-vmware-amd64.box" \
+           "${BOX_NAME}-vmware-arm64.box"; do
   if [ ! -f "../$box" ]; then
     echo "Error: Box file not found: $box"
     echo "Please run './build.sh all' first"
@@ -31,14 +36,14 @@ for box in ubuntu-24.04-virtualbox-amd64.box \
 done
 
 echo "=========================================="
-echo "Uploading dasomel/ubuntu-24.04 v${VERSION}"
+echo "Uploading dasomel/${BOX_NAME} v${VERSION}"
 echo "=========================================="
 
 BOXES=(
-  "virtualbox:amd64:ubuntu-24.04-virtualbox-amd64.box"
-  "virtualbox:arm64:ubuntu-24.04-virtualbox-arm64.box"
-  "vmware_desktop:amd64:ubuntu-24.04-vmware-amd64.box"
-  "vmware_desktop:arm64:ubuntu-24.04-vmware-arm64.box"
+  "virtualbox:amd64:${BOX_NAME}-virtualbox-amd64.box"
+  "virtualbox:arm64:${BOX_NAME}-virtualbox-arm64.box"
+  "vmware_desktop:amd64:${BOX_NAME}-vmware-amd64.box"
+  "vmware_desktop:arm64:${BOX_NAME}-vmware-arm64.box"
 )
 
 for box in "${BOXES[@]}"; do

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Ubuntu 26.04 LTS (Resolute Raccoon, kernel Linux 7.0) coexist support
+  - Version-parameterized Packer templates (`var.ubuntu_version`, default 24.04)
+  - `build.sh --version=26.04` and `UBUNTU_VERSION=26.04 ./upload-boxes.sh`
+  - GitHub Actions `workflow_dispatch` `ubuntu_version` input
+  - Runtime-detected SBOM and license metadata (no hardcoded version)
+
+### Changed
+- ubuntu-tuning.sh: 버전 자동 감지(/etc/os-release) + 분기 구조 추가, EEVDF(커널 6.6+)에서 sysctl→debugfs 이동된 무효 CFS 스케줄러 튜너블(kernel.sched_min/wakeup_granularity_ns) 제거
+- 02-os-tuning.sh: vm.max_map_count=1048576 추가 (K8s 권장, Ubuntu 26.04 systemd 기본값과 정렬 — 낮은 값으로 기본 다운그레이드 방지)
+- `packer/scripts/ubuntu2404-tuning.sh` renamed to `ubuntu-tuning.sh`
+- `packer/scripts/generate-sbom.sh`: version derived from `/etc/os-release` at runtime
+- `packer/scripts/license-info.sh`: all version strings derived from `/etc/os-release`
+- `packer/scripts/upload-all.sh`: marked legacy, minimally parameterized via `UBUNTU_VERSION`
+- Documentation (README, CLAUDE.md) updated for dual-version support
+
 ### Planned
 - Additional CNI plugin examples
 - Performance benchmarking results

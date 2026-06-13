@@ -11,7 +11,7 @@ echo ""
 
 # Show quick overview from CLAUDE.md
 if [ -f "$CLAUDE_MD" ]; then
-    echo "[Project] Kubernetes-ready Ubuntu 24.04 Vagrant Box"
+    echo "[Project] Kubernetes-ready Ubuntu 24.04 / 26.04 Vagrant Box"
     echo "[Tech] Packer + VirtualBox/VMware + Bash"
     echo ""
 fi

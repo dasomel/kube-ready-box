@@ -1,19 +1,21 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build AMD64](https://github.com/dasomel/kube-ready-box/actions/workflows/build-amd64.yml/badge.svg)](https://github.com/dasomel/kube-ready-box/actions/workflows/build-amd64.yml)
-[![Vagrant Cloud - ext4](https://img.shields.io/badge/Vagrant-ext4-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4)
-[![Vagrant Cloud - xfs](https://img.shields.io/badge/Vagrant-xfs-green)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs)
+[![Vagrant Cloud - 24.04 ext4](https://img.shields.io/badge/Vagrant-24.04--ext4-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4)
+[![Vagrant Cloud - 24.04 xfs](https://img.shields.io/badge/Vagrant-24.04--xfs-green)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs)
+[![Vagrant Cloud - 26.04 ext4](https://img.shields.io/badge/Vagrant-26.04--ext4-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-26.04-ext4)
+[![Vagrant Cloud - 26.04 xfs](https://img.shields.io/badge/Vagrant-26.04--xfs-green)](https://app.vagrantup.com/dasomel/boxes/ubuntu-26.04-xfs)
 
 **Languages**: [English](README.md) | [한국어](README.ko.md)
 
-OS 수준 최적화가 적용된 Kubernetes-ready Ubuntu 24.04 LTS Vagrant Box
+OS 수준 최적화가 적용된 Kubernetes-ready Ubuntu Vagrant Box. **24.04 LTS** (Noble Numbat, 기본값)과 **26.04 LTS** (Resolute Raccoon, 커널 Linux 7.0) 지원.
 
 > **Vagrant Cloud**:
-> - ext4: `dasomel/ubuntu-24.04-ext4`
-> - xfs: `dasomel/ubuntu-24.04-xfs`
+> - 24.04 ext4: `dasomel/ubuntu-24.04-ext4` / xfs: `dasomel/ubuntu-24.04-xfs`
+> - 26.04 ext4: `dasomel/ubuntu-26.04-ext4` / xfs: `dasomel/ubuntu-26.04-xfs`
 
 ## 주요 기능
 
-- **기본 OS**: Ubuntu 24.04 LTS Cloud Image
+- **기본 OS**: Ubuntu 24.04 LTS 또는 26.04 LTS Cloud Image
 - **멀티 아키텍처**: AMD64, ARM64
 - **멀티 프로바이더**: VirtualBox, VMware Fusion
 - **파일시스템 선택**: ext4 (기본) 또는 xfs
@@ -33,12 +35,16 @@ OS 수준 최적화가 적용된 Kubernetes-ready Ubuntu 24.04 LTS Vagrant Box
 ### 설치
 
 ```bash
-# ext4 (기본, 안정적, 범용)
+# 24.04 ext4 (기본, 안정적, 범용)
 vagrant init dasomel/ubuntu-24.04-ext4
 vagrant up --provider=vmware_desktop
 
-# xfs (K8s ephemeral storage quota 지원, 대용량 파일에 유리)
+# 24.04 xfs (K8s ephemeral storage quota 지원, 대용량 파일에 유리)
 vagrant init dasomel/ubuntu-24.04-xfs
+vagrant up --provider=vmware_desktop
+
+# 26.04 (Resolute Raccoon, 커널 Linux 7.0)
+vagrant init dasomel/ubuntu-26.04-ext4
 vagrant up --provider=vmware_desktop
 ```
 
@@ -55,7 +61,9 @@ vagrant up --provider=vmware_desktop
 
 ```ruby
 Vagrant.configure("2") do |config|
-  config.vm.box = "dasomel/ubuntu-24.04-ext4"  # 또는 "dasomel/ubuntu-24.04-xfs"
+  # 24.04: "dasomel/ubuntu-24.04-ext4" 또는 "dasomel/ubuntu-24.04-xfs"
+  # 26.04: "dasomel/ubuntu-26.04-ext4" 또는 "dasomel/ubuntu-26.04-xfs"
+  config.vm.box = "dasomel/ubuntu-24.04-ext4"
 
   config.vm.provider "virtualbox" do |vb|
     vb.memory = 4096
@@ -149,16 +157,23 @@ cd packer
 # Packer 플러그인 초기화
 ./build.sh init
 
-# ext4로 빌드 (기본값)
+# 24.04 빌드 (기본값)
 ./build.sh vmware-arm64
-
-# xfs로 빌드
 ./build.sh vmware-arm64 --fs=xfs
 
+# 26.04 빌드
+./build.sh vmware-arm64 --version=26.04
+./build.sh vmware-arm64 --version=26.04 --fs=xfs
+
 # 전체 빌드
-./build.sh all               # ext4
-./build.sh all --fs=xfs      # xfs
+./build.sh all                         # 24.04 ext4
+./build.sh all --version=26.04         # 26.04 ext4
+
+# 업로드 (루트 스크립트)
+UBUNTU_VERSION=26.04 ./upload-boxes.sh # 26.04 업로드
 ```
+
+> **CI**: GitHub Actions `workflow_dispatch`의 `ubuntu_version` input으로 24.04 또는 26.04를 선택할 수 있습니다.
 
 ## 요구사항
 
@@ -183,7 +198,7 @@ cd packer
 
 | 컴포넌트 | 라이선스 |
 |-----------|---------|
-| Ubuntu 24.04 | [Various](https://ubuntu.com/legal/open-source-licences) |
+| Ubuntu 24.04 / 26.04 | [Various](https://ubuntu.com/legal/open-source-licences) |
 | Kubernetes | Apache 2.0 |
 | containerd | Apache 2.0 |
 
@@ -203,7 +218,9 @@ cd packer
 
 ## 링크
 
-- [Vagrant Cloud - ext4](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4)
-- [Vagrant Cloud - xfs](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs)
+- [Vagrant Cloud - 24.04 ext4](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4)
+- [Vagrant Cloud - 24.04 xfs](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs)
+- [Vagrant Cloud - 26.04 ext4](https://app.vagrantup.com/dasomel/boxes/ubuntu-26.04-ext4)
+- [Vagrant Cloud - 26.04 xfs](https://app.vagrantup.com/dasomel/boxes/ubuntu-26.04-xfs)
 - [GitHub Repository](https://github.com/dasomel/kube-ready-box)
 - [Issue Tracker](https://github.com/dasomel/kube-ready-box/issues)

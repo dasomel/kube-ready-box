@@ -7,6 +7,9 @@
 
 set -e
 
+# Detect Ubuntu version at runtime
+UBUNTU_VER="$(. /etc/os-release && echo "$VERSION_ID")"
+
 echo "=== generate-sbom.sh: Generating SBOM ==="
 
 SBOM_DIR="/etc/vagrant-box"
@@ -42,9 +45,9 @@ dpkg-query -W -f='${Package}\t${Version}\n' > "$SBOM_DIR/packages.txt"
 echo "Generating manifest..."
 cat <<EOF > "$SBOM_DIR/manifest.json"
 {
-  "name": "dasomel/ubuntu-24.04",
+  "name": "dasomel/ubuntu-${UBUNTU_VER}",
   "version": "$(grep -o '"version"[^,]*' /etc/vagrant-box/info.json 2>/dev/null | cut -d'"' -f4 || echo "0.1.0")",
-  "base_os": "Ubuntu 24.04 LTS",
+  "base_os": "Ubuntu ${UBUNTU_VER} LTS",
   "architecture": "$(uname -m)",
   "kernel": "$(uname -r)",
   "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
