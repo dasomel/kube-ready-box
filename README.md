@@ -184,7 +184,7 @@ UBUNTU_VERSION=26.04 ./upload-boxes.sh # 26.04 upload
 
 ### For Building from Source
 
-- Packer 1.8+
+- Packer 1.10+
 - VirtualBox 7.1+ / VMware Fusion
 - 20GB+ disk space per box
 

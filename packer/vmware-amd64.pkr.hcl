@@ -1,17 +1,18 @@
 source "vmware-iso" "ubuntu-vmware-amd64" {
-  iso_url          = local.iso_url_amd64
-  iso_checksum     = local.iso_checksum_amd64
-  vm_name          = "ubuntu-${var.ubuntu_version}-vmware-amd64"
-  guest_os_type    = "ubuntu-64"
-  cpus             = var.cpus
-  memory           = var.memory
-  disk_size        = var.disk_size
-  headless         = var.headless
-  ssh_username     = var.ssh_username
-  ssh_password     = var.ssh_password
-  ssh_timeout      = "30m"
-  shutdown_command = "echo '${var.ssh_password}' | sudo -S shutdown -P now"
-  http_directory   = "http/autoinstall-${var.filesystem}"
+  iso_url              = local.iso_url_amd64
+  iso_checksum         = local.iso_checksum_amd64
+  vm_name              = "ubuntu-${var.ubuntu_version}-vmware-amd64"
+  guest_os_type        = "ubuntu-64"
+  network_adapter_type = "vmxnet3"
+  cpus                 = var.cpus
+  memory               = var.memory
+  disk_size            = var.disk_size
+  headless             = var.headless
+  ssh_username         = var.ssh_username
+  ssh_password         = var.ssh_password
+  ssh_timeout          = "30m"
+  shutdown_command     = "echo '${var.ssh_password}' | sudo -S shutdown -P now"
+  http_directory       = "http/autoinstall-${var.filesystem}"
 
   boot_wait = "10s"
   boot_command = [

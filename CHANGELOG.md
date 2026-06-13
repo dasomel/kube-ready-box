@@ -21,6 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `packer/scripts/generate-sbom.sh`: version derived from `/etc/os-release` at runtime
 - `packer/scripts/license-info.sh`: all version strings derived from `/etc/os-release`
 - `packer/scripts/upload-all.sh`: marked legacy, minimally parameterized via `UBUNTU_VERSION`
+
+### Fixed
+- CI: pin Packer to 1.15.4 (validate.yml was 1.10.0; build workflows `PACKER_VERSION` 1.10.0 → 1.15.4)
+- VMware templates: add required `network_adapter_type = "vmxnet3"` (newer packer-plugin-vmware requires it; was failing `packer validate` in CI)
+- CI shellcheck: run with `--severity=warning` and add `.shellcheckrc` (disable SC1091 for runtime `/etc/os-release` sourcing)
+- `plugins.pkr.hcl`: add `ubuntu_version` validation (24.04/26.04), bump `required_version` to `>= 1.10.0`
+- `upload-boxes.sh`: validate `UBUNTU_VERSION` (24.04/26.04)
 - Documentation (README, CLAUDE.md) updated for dual-version support
 
 ### Planned

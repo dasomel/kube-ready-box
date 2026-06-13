@@ -35,7 +35,7 @@ permissions:
   contents: read
 
 env:
-  PACKER_VERSION: '1.10.0'
+  PACKER_VERSION: '1.15.4'
   UBUNTU_VERSION: ${{ github.event.inputs.ubuntu_version || '24.04' }}
 
 jobs:

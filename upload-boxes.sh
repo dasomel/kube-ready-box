@@ -22,6 +22,15 @@ for arg in "$@"; do
   esac
 done
 
+# Validate Ubuntu version (mirror build.sh allowlist)
+case "$UBUNTU_VERSION" in
+  24.04 | 26.04) ;;
+  *)
+    echo "Error: invalid UBUNTU_VERSION '${UBUNTU_VERSION}' (use 24.04 or 26.04)" >&2
+    exit 1
+    ;;
+esac
+
 echo "╔════════════════════════════════════════════════════════════════╗"
 echo "║           📦 Vagrant Cloud Box 업로드 v${VERSION}                    ║"
 echo "╚════════════════════════════════════════════════════════════════╝"

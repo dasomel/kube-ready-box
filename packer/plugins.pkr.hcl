@@ -1,5 +1,5 @@
 packer {
-  required_version = ">= 1.8.0"
+  required_version = ">= 1.10.0"
 
   required_plugins {
     virtualbox = {
@@ -20,6 +20,11 @@ packer {
 variable "ubuntu_version" {
   type    = string
   default = "24.04"
+
+  validation {
+    condition     = contains(["24.04", "26.04"], var.ubuntu_version)
+    error_message = "Ubuntu version must be either '24.04' or '26.04'."
+  }
 }
 
 variable "box_version" {
