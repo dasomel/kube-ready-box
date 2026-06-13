@@ -1,7 +1,63 @@
 # K8s 설치 후 권장 설정
 
-> **참고**: 이 문서는 `dasomel/ubuntu-24.04` Box에 K8s를 설치한 후 적용하는 권장 설정입니다.
+> **참고**: 이 문서는 `dasomel/ubuntu-24.04` / `dasomel/ubuntu-26.04` Box에 K8s를 설치한 후 적용하는 권장 설정입니다.
 > Box 자체에는 포함되지 않으며, K8s 설치 후 필요에 따라 적용합니다.
+
+## 0. cgroup v2 (필수 전제)
+
+> [K8s cgroup v2 문서](https://kubernetes.io/docs/concepts/architecture/cgroups/) 참고.
+> kubelet과 컨테이너 런타임의 cgroup 드라이버가 일치하지 않으면 kubelet이 기동 실패합니다.
+
+### 버전별 cgroup 상황
+
+| Box | cgroup | 비고 |
+|-----|--------|------|
+| Ubuntu 24.04 | v2 unified (기본) | v1 잔존하나 기본 비활성 |
+| **Ubuntu 26.04** | **v2 전용** | systemd 259에서 **cgroup v1 완전 제거** → v1 워크로드 동작 불가 |
+
+26.04는 cgroup v1을 지원하지 않으므로, v1을 강제하던 구형 런타임/설정은 동작하지 않습니다.
+또한 26.04는 강화된 cgroup 마운트 옵션(`nsdelegate`, `memory_recursiveprot`, `memory_hugetlb_accounting`)을 기본 제공합니다.
+
+### 확인
+
+```bash
+# cgroup2fs 여야 함 (cgroup v2 unified)
+stat -fc %T /sys/fs/cgroup
+# 출력: cgroup2fs
+
+# v2 컨트롤러 확인
+cat /sys/fs/cgroup/cgroup.controllers
+```
+
+### systemd cgroup 드라이버 정렬 (필수)
+
+cgroup v2에서는 **kubelet과 containerd 모두 `systemd` 드라이버**를 사용해야 합니다.
+
+```bash
+# containerd: SystemdCgroup = true (아래 1. containerd 섹션에서 설정)
+sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+sudo systemctl restart containerd
+```
+
+```yaml
+# kubelet: /var/lib/kubelet/config.yaml (또는 kubeadm KubeletConfiguration)
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+cgroupDriver: systemd
+```
+
+> kubeadm v1.22+ 는 `cgroupDriver` 미지정 시 `systemd`를 기본값으로 사용합니다. 명시 권장.
+
+### 드라이버 불일치 진단
+
+```bash
+# kubelet이 cgroup 드라이버 불일치로 기동 실패할 때
+journalctl -u kubelet -n 50 --no-pager | grep -i cgroup
+# containerd 현재 드라이버 확인
+sudo containerd config dump | grep -i SystemdCgroup
+```
+
+---
 
 ## 1. containerd 최적화
 
