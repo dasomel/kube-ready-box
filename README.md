@@ -1,19 +1,21 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build AMD64](https://github.com/dasomel/kube-ready-box/actions/workflows/build-amd64.yml/badge.svg)](https://github.com/dasomel/kube-ready-box/actions/workflows/build-amd64.yml)
-[![Vagrant Cloud - ext4](https://img.shields.io/badge/Vagrant-ext4-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4)
-[![Vagrant Cloud - xfs](https://img.shields.io/badge/Vagrant-xfs-green)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs)
+[![Vagrant Cloud - 24.04 ext4](https://img.shields.io/badge/Vagrant-24.04--ext4-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4)
+[![Vagrant Cloud - 24.04 xfs](https://img.shields.io/badge/Vagrant-24.04--xfs-green)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs)
+[![Vagrant Cloud - 26.04 ext4](https://img.shields.io/badge/Vagrant-26.04--ext4-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-26.04-ext4)
+[![Vagrant Cloud - 26.04 xfs](https://img.shields.io/badge/Vagrant-26.04--xfs-green)](https://app.vagrantup.com/dasomel/boxes/ubuntu-26.04-xfs)
 
 **Languages**: [English](README.md) | [한국어](README.ko.md)
 
-Kubernetes-ready Ubuntu 24.04 LTS Vagrant Box with OS-level optimizations.
+Kubernetes-ready Ubuntu Vagrant Box with OS-level optimizations. Supports **24.04 LTS** (Noble Numbat, default) and **26.04 LTS** (Resolute Raccoon, kernel Linux 7.0).
 
 > **Vagrant Cloud**:
-> - ext4: `dasomel/ubuntu-24.04-ext4`
-> - xfs: `dasomel/ubuntu-24.04-xfs`
+> - 24.04 ext4: `dasomel/ubuntu-24.04-ext4` / xfs: `dasomel/ubuntu-24.04-xfs`
+> - 26.04 ext4: `dasomel/ubuntu-26.04-ext4` / xfs: `dasomel/ubuntu-26.04-xfs`
 
 ## Features
 
-- **Base OS**: Ubuntu 24.04 LTS Cloud Image
+- **Base OS**: Ubuntu 24.04 LTS or 26.04 LTS Cloud Image
 - **Multi-Architecture**: AMD64, ARM64
 - **Multi-Provider**: VirtualBox, VMware Fusion
 - **Filesystem Selection**: ext4 (default) or xfs
@@ -33,12 +35,16 @@ Kubernetes-ready Ubuntu 24.04 LTS Vagrant Box with OS-level optimizations.
 ### Installation
 
 ```bash
-# ext4 (default, stable, general purpose)
+# 24.04 ext4 (default, stable, general purpose)
 vagrant init dasomel/ubuntu-24.04-ext4
 vagrant up --provider=vmware_desktop
 
-# xfs (better for K8s ephemeral storage quota, large files)
+# 24.04 xfs (better for K8s ephemeral storage quota, large files)
 vagrant init dasomel/ubuntu-24.04-xfs
+vagrant up --provider=vmware_desktop
+
+# 26.04 (Resolute Raccoon, kernel Linux 7.0)
+vagrant init dasomel/ubuntu-26.04-ext4
 vagrant up --provider=vmware_desktop
 ```
 
@@ -55,7 +61,9 @@ vagrant up --provider=vmware_desktop
 
 ```ruby
 Vagrant.configure("2") do |config|
-  config.vm.box = "dasomel/ubuntu-24.04-ext4"  # or "dasomel/ubuntu-24.04-xfs"
+  # 24.04: "dasomel/ubuntu-24.04-ext4" or "dasomel/ubuntu-24.04-xfs"
+  # 26.04: "dasomel/ubuntu-26.04-ext4" or "dasomel/ubuntu-26.04-xfs"
+  config.vm.box = "dasomel/ubuntu-24.04-ext4"
 
   config.vm.provider "virtualbox" do |vb|
     vb.memory = 4096
@@ -149,16 +157,23 @@ cd packer
 # Initialize Packer plugins
 ./build.sh init
 
-# Build with ext4 (default)
+# Build 24.04 (default)
 ./build.sh vmware-arm64
-
-# Build with xfs
 ./build.sh vmware-arm64 --fs=xfs
 
+# Build 26.04
+./build.sh vmware-arm64 --version=26.04
+./build.sh vmware-arm64 --version=26.04 --fs=xfs
+
 # Build all boxes
-./build.sh all               # ext4
-./build.sh all --fs=xfs      # xfs
+./build.sh all                         # 24.04 ext4
+./build.sh all --version=26.04         # 26.04 ext4
+
+# Upload (root script)
+UBUNTU_VERSION=26.04 ./upload-boxes.sh # 26.04 upload
 ```
+
+> **CI**: Use the `ubuntu_version` input in the GitHub Actions `workflow_dispatch` trigger to select 24.04 or 26.04.
 
 ## Requirements
 
@@ -169,7 +184,7 @@ cd packer
 
 ### For Building from Source
 
-- Packer 1.8+
+- Packer 1.10+
 - VirtualBox 7.1+ / VMware Fusion
 - 20GB+ disk space per box
 
@@ -183,7 +198,7 @@ This box includes software from various open source projects. See [NOTICE](NOTIC
 
 | Component | License |
 |-----------|---------|
-| Ubuntu 24.04 | [Various](https://ubuntu.com/legal/open-source-licences) |
+| Ubuntu 24.04 / 26.04 | [Various](https://ubuntu.com/legal/open-source-licences) |
 | Kubernetes | Apache 2.0 |
 | containerd | Apache 2.0 |
 
@@ -203,7 +218,9 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Links
 
-- [Vagrant Cloud - ext4](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4)
-- [Vagrant Cloud - xfs](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs)
+- [Vagrant Cloud - 24.04 ext4](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4)
+- [Vagrant Cloud - 24.04 xfs](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs)
+- [Vagrant Cloud - 26.04 ext4](https://app.vagrantup.com/dasomel/boxes/ubuntu-26.04-ext4)
+- [Vagrant Cloud - 26.04 xfs](https://app.vagrantup.com/dasomel/boxes/ubuntu-26.04-xfs)
 - [GitHub Repository](https://github.com/dasomel/kube-ready-box)
 - [Issue Tracker](https://github.com/dasomel/kube-ready-box/issues)

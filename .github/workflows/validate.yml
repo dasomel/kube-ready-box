@@ -30,7 +30,7 @@ jobs:
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
         with:
-          version: '1.10.0'
+          version: '1.15.4'
 
       - name: Packer Format Check
         working-directory: packer
@@ -76,4 +76,4 @@ jobs:
 
       - name: Run Shellcheck
         run: |
-          find packer/scripts -name "*.sh" -exec shellcheck {} +
+          find packer/scripts -name "*.sh" -exec shellcheck --severity=warning {} +

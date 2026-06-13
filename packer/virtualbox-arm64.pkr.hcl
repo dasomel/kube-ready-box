@@ -5,12 +5,12 @@ source "virtualbox-iso" "ubuntu-vbox-arm64" {
   skip_export = true
 
   # ISO settings
-  iso_url       = var.iso_url_arm64
-  iso_checksum  = var.iso_checksum_arm64
+  iso_url       = local.iso_url_arm64
+  iso_checksum  = local.iso_checksum_arm64
   iso_interface = "virtio"
 
   # VM settings
-  vm_name              = "ubuntu-24.04-virtualbox-arm64"
+  vm_name              = "ubuntu-${var.ubuntu_version}-virtualbox-arm64"
   guest_os_type        = "Ubuntu_arm64"
   cpus                 = var.cpus
   memory               = var.memory
@@ -93,7 +93,7 @@ build {
       "scripts/04-k8s-prereq.sh",
       "scripts/05-disk-tuning.sh",
       "scripts/06-nic-tuning.sh",
-      "scripts/ubuntu2404-tuning.sh",
+      "scripts/ubuntu-tuning.sh",
       "scripts/07-check-tuning.sh",
       "scripts/08-security-check.sh",
       "scripts/license-info.sh",
@@ -107,11 +107,11 @@ build {
   # This is required because VirtualBox on macOS Silicon cannot export to OVF
   provisioner "shell-local" {
     environment_vars = [
-      "VM_NAME=ubuntu-24.04-virtualbox-arm64",
-      "BOX_NAME=ubuntu-24.04-${var.filesystem}-virtualbox-arm64",
+      "VM_NAME=ubuntu-${var.ubuntu_version}-virtualbox-arm64",
+      "BOX_NAME=ubuntu-${var.ubuntu_version}-${var.filesystem}-virtualbox-arm64",
       "MEMORY=${var.memory}",
       "DISK_SIZE=${var.disk_size}",
-      "VDI_SOURCE=${path.root}/output-ubuntu-vbox-arm64/ubuntu-24.04-virtualbox-arm64.vdi",
+      "VDI_SOURCE=${path.root}/output-ubuntu-vbox-arm64/ubuntu-${var.ubuntu_version}-virtualbox-arm64.vdi",
       "OUTPUT_DIR=${path.root}/output-vagrant",
       "TEMPLATE_PATH=${path.root}/templates/ovf.tpl",
       "METADATA_PATH=${path.root}/templates/metadata.tpl",
@@ -126,7 +126,7 @@ build {
       "METADATA_PATH=\"$PACKER_DIR/templates/metadata.tpl\"",
       "VAGRANTFILE_PATH=\"$PACKER_DIR/templates/vagrantfile.tpl\"",
       "OUTPUT_DIR=\"$PACKER_DIR/output-vagrant\"",
-      "VDI_SOURCE=\"$PACKER_DIR/output-ubuntu-vbox-arm64/ubuntu-24.04-virtualbox-arm64.vdi\"",
+      "VDI_SOURCE=\"$PACKER_DIR/output-ubuntu-vbox-arm64/ubuntu-${var.ubuntu_version}-virtualbox-arm64.vdi\"",
 
       # Initial cleanup of any existing output directory and disks
       "echo 'Cleaning up previous files...'",

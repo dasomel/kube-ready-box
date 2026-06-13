@@ -1,2 +1,2 @@
-instance-id: ubuntu-24.04-vagrant
-local-hostname: ubuntu-2404
+instance-id: ubuntu-vagrant
+local-hostname: ubuntu

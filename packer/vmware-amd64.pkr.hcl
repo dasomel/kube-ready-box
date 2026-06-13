@@ -1,17 +1,18 @@
 source "vmware-iso" "ubuntu-vmware-amd64" {
-  iso_url          = var.iso_url_amd64
-  iso_checksum     = var.iso_checksum_amd64
-  vm_name          = "ubuntu-24.04-vmware-amd64"
-  guest_os_type    = "ubuntu-64"
-  cpus             = var.cpus
-  memory           = var.memory
-  disk_size        = var.disk_size
-  headless         = var.headless
-  ssh_username     = var.ssh_username
-  ssh_password     = var.ssh_password
-  ssh_timeout      = "30m"
-  shutdown_command = "echo '${var.ssh_password}' | sudo -S shutdown -P now"
-  http_directory   = "http/autoinstall-${var.filesystem}"
+  iso_url              = local.iso_url_amd64
+  iso_checksum         = local.iso_checksum_amd64
+  vm_name              = "ubuntu-${var.ubuntu_version}-vmware-amd64"
+  guest_os_type        = "ubuntu-64"
+  network_adapter_type = "vmxnet3"
+  cpus                 = var.cpus
+  memory               = var.memory
+  disk_size            = var.disk_size
+  headless             = var.headless
+  ssh_username         = var.ssh_username
+  ssh_password         = var.ssh_password
+  ssh_timeout          = "30m"
+  shutdown_command     = "echo '${var.ssh_password}' | sudo -S shutdown -P now"
+  http_directory       = "http/autoinstall-${var.filesystem}"
 
   boot_wait = "10s"
   boot_command = [
@@ -40,7 +41,7 @@ build {
       "scripts/04-k8s-prereq.sh",
       "scripts/05-disk-tuning.sh",
       "scripts/06-nic-tuning.sh",
-      "scripts/ubuntu2404-tuning.sh",
+      "scripts/ubuntu-tuning.sh",
       "scripts/07-check-tuning.sh",
       "scripts/08-security-check.sh",
       "scripts/license-info.sh",
@@ -52,7 +53,7 @@ build {
 
   # Vagrant Box 생성
   post-processor "vagrant" {
-    output              = "output-vagrant/ubuntu-24.04-${var.filesystem}-vmware-amd64.box"
+    output              = "output-vagrant/ubuntu-${var.ubuntu_version}-${var.filesystem}-vmware-amd64.box"
     compression_level   = 9
     keep_input_artifact = false
   }

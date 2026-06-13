@@ -5,21 +5,24 @@ set -e
 
 echo "=== license-info.sh: Installing License Information ==="
 
+# Detect Ubuntu version at runtime
+UBUNTU_VER="$(. /etc/os-release && echo "$VERSION_ID")"
+
 # Box 정보 파일 생성
 mkdir -p /etc/vagrant-box
 
-cat <<'EOF' > /etc/vagrant-box/info.txt
+cat <<EOF > /etc/vagrant-box/info.txt
 ===============================================
-  dasomel/ubuntu-24.04 Vagrant Box
+  dasomel/ubuntu-${UBUNTU_VER} Vagrant Box
 ===============================================
 
-Box Name:     dasomel/ubuntu-24.04
-Base OS:      Ubuntu 24.04 LTS (Cloud Image)
+Box Name:     dasomel/ubuntu-${UBUNTU_VER}
+Base OS:      Ubuntu ${UBUNTU_VER} LTS (Cloud Image)
 Purpose:      Kubernetes-ready optimized OS
 License:      MIT License
 
 Source:       https://github.com/dasomel/kube-ready-box
-Box URL:      https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04
+Box URL:      https://app.vagrantup.com/dasomel/boxes/ubuntu-${UBUNTU_VER}
 
 ===============================================
   Pre-installed Optimizations
@@ -71,7 +74,7 @@ DEALINGS IN THE SOFTWARE.
   Third-Party Components
 ===============================================
 
-Ubuntu 24.04 LTS: https://ubuntu.com/
+Ubuntu ${UBUNTU_VER} LTS: https://ubuntu.com/
   License: Various (see /usr/share/doc/*/copyright)
 
 For complete SBOM and dependency information, visit:
@@ -84,20 +87,21 @@ To view this information again: cat /etc/vagrant-box/info.txt
 EOF
 
 # motd 설정 (로그인 시 표시)
-cat <<'EOF' > /etc/update-motd.d/99-vagrant-box-info
+cat > /etc/update-motd.d/99-vagrant-box-info <<'SCRIPT'
 #!/bin/sh
-cat <<'MOTD'
+_VER="$(. /etc/os-release && echo "$VERSION_ID")"
+cat <<MOTD
 
 ╔══════════════════════════════════════════════╗
-║   dasomel/ubuntu-24.04 - K8s Ready OS        ║
-║   Ubuntu 24.04 LTS + K8s Optimizations       ║
+║   dasomel/ubuntu-${_VER} - K8s Ready OS        ║
+║   Ubuntu ${_VER} LTS + K8s Optimizations       ║
 ╚══════════════════════════════════════════════╝
 
 📦 Box Info: cat /etc/vagrant-box/info.txt
 📚 K8s Setup Guide: https://kubernetes.io/docs/setup/
 
 MOTD
-EOF
+SCRIPT
 
 chmod +x /etc/update-motd.d/99-vagrant-box-info
 

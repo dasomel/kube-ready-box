@@ -1,0 +1,2 @@
+# /etc/os-release is sourced at runtime inside the built VM; not resolvable at lint time.
+disable=SC1091

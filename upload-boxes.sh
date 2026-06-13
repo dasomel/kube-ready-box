@@ -5,16 +5,37 @@
 
 set -e
 
-VERSION="0.2.3"
+VERSION="0.2.3"                            # Box semver (Vagrant Cloud release)
+UBUNTU_VERSION="${UBUNTU_VERSION:-24.04}"  # Ubuntu version (24.04 or 26.04)
 BOX_DIR="$(cd "$(dirname "$0")/packer/output-vagrant" && pwd)"
 
-# 업로드할 파일시스템 선택 (기본: both)
-FS_TARGET="${1:-both}"
+# Parse arguments
+FS_TARGET="both"
+for arg in "$@"; do
+  case "$arg" in
+    --version=*)
+      UBUNTU_VERSION="${arg#*=}"
+      ;;
+    ext4|xfs|both)
+      FS_TARGET="$arg"
+      ;;
+  esac
+done
+
+# Validate Ubuntu version (mirror build.sh allowlist)
+case "$UBUNTU_VERSION" in
+  24.04 | 26.04) ;;
+  *)
+    echo "Error: invalid UBUNTU_VERSION '${UBUNTU_VERSION}' (use 24.04 or 26.04)" >&2
+    exit 1
+    ;;
+esac
 
 echo "╔════════════════════════════════════════════════════════════════╗"
 echo "║           📦 Vagrant Cloud Box 업로드 v${VERSION}                    ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
+echo "Ubuntu: ${UBUNTU_VERSION}"
 echo "Filesystem: ${FS_TARGET}"
 echo "Box directory: ${BOX_DIR}"
 echo ""
@@ -33,7 +54,7 @@ upload_box() {
     local provider=$2
     local arch=$3
     local fs_upper=$(echo "$fs" | tr '[:lower:]' '[:upper:]')
-    local box_file="ubuntu-24.04-${fs}-${provider}-${arch}.box"
+    local box_file="ubuntu-${UBUNTU_VERSION}-${fs}-${provider}-${arch}.box"
     local box_path="${BOX_DIR}/${box_file}"
 
     if [ ! -f "$box_path" ]; then
@@ -41,7 +62,7 @@ upload_box() {
         return 0
     fi
 
-    local box_name="dasomel/ubuntu-24.04-${fs}"
+    local box_name="dasomel/ubuntu-${UBUNTU_VERSION}-${fs}"
     local vagrant_provider="$provider"
     [ "$provider" = "vmware" ] && vagrant_provider="vmware_desktop"
 
@@ -54,14 +75,14 @@ upload_box() {
     vagrant cloud publish "$box_name" "$VERSION" "$vagrant_provider" \
         "$box_path" \
         --architecture "$arch" \
-        --version-description "Kubernetes-ready Ubuntu 24.04 LTS (${fs_upper} filesystem) v${VERSION}
+        --version-description "Kubernetes-ready Ubuntu ${UBUNTU_VERSION} LTS (${fs_upper} filesystem) v${VERSION}
 
 ## Filesystem: ${fs_upper}
 - ext4: Mature, stable, supports online shrink
 - xfs: Better for large files, parallel I/O, K8s ephemeral storage quota
 
 ## Features
-- Ubuntu 24.04 LTS with OS optimizations for Kubernetes
+- Ubuntu ${UBUNTU_VERSION} LTS with OS optimizations for Kubernetes
 - Multi-architecture support (AMD64, ARM64)
 - Multi-provider support (VirtualBox, VMware)
 - 1TB disk with auto-extension at boot (thin provisioning)
@@ -74,7 +95,7 @@ https://github.com/dasomel/kube-ready-box
 https://github.com/dasomel/kube-ready-box/blob/main/CHANGELOG.md" \
         --force \
         --release \
-        --short-description "K8s-ready Ubuntu 24.04 (${fs_upper}) Vagrant Box" \
+        --short-description "K8s-ready Ubuntu ${UBUNTU_VERSION} (${fs_upper}) Vagrant Box" \
     || {
         echo "❌ Upload failed: ${box_file}"
         return 1
@@ -114,11 +135,11 @@ fi
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
 echo "Vagrant Cloud:"
-echo "  ext4: https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4"
-echo "  xfs:  https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs"
+echo "  ext4: https://app.vagrantup.com/dasomel/boxes/ubuntu-${UBUNTU_VERSION}-ext4"
+echo "  xfs:  https://app.vagrantup.com/dasomel/boxes/ubuntu-${UBUNTU_VERSION}-xfs"
 echo ""
 echo "사용법:"
-echo "  vagrant init dasomel/ubuntu-24.04-ext4   # ext4 filesystem"
-echo "  vagrant init dasomel/ubuntu-24.04-xfs    # xfs filesystem"
+echo "  vagrant init dasomel/ubuntu-${UBUNTU_VERSION}-ext4   # ext4 filesystem"
+echo "  vagrant init dasomel/ubuntu-${UBUNTU_VERSION}-xfs    # xfs filesystem"
 echo "  vagrant up --provider=vmware_desktop"
 echo ""
