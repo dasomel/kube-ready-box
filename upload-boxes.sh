@@ -5,7 +5,7 @@
 
 set -e
 
-VERSION="0.2.3"                            # Box semver (Vagrant Cloud release)
+VERSION="${VERSION:-0.2.3}"                            # Box semver (Vagrant Cloud release)
 UBUNTU_VERSION="${UBUNTU_VERSION:-24.04}"  # Ubuntu version (24.04 or 26.04)
 BOX_DIR="$(cd "$(dirname "$0")/packer/output-vagrant" && pwd)"
 
@@ -40,13 +40,12 @@ echo "Filesystem: ${FS_TARGET}"
 echo "Box directory: ${BOX_DIR}"
 echo ""
 
-# 로그인 확인
+# 로그인 확인 (service 토큰은 whoami/account 조회가 실패할 수 있으므로 경고만;
+# 실제 인증 유효성은 'vagrant cloud publish'(org 명시)에서 판정한다)
 echo "로그인 상태 확인..."
-vagrant cloud auth whoami || {
-    echo "❌ 로그인되어 있지 않습니다!"
-    echo "실행: vagrant cloud auth login --token YOUR_TOKEN"
-    exit 1
-}
+if ! vagrant cloud auth whoami 2>/dev/null; then
+    echo "⚠️  whoami 확인 실패 — service 토큰은 정상일 수 있음. publish 단계에서 실제 인증을 확인합니다."
+fi
 echo ""
 
 upload_box() {
