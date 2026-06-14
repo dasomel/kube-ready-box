@@ -13,6 +13,19 @@ Kubernetes-ready Ubuntu Vagrant Box with OS-level optimizations. Supports **24.0
 > - 24.04 ext4: `dasomel/ubuntu-24.04-ext4` / xfs: `dasomel/ubuntu-24.04-xfs`
 > - 26.04 ext4: `dasomel/ubuntu-26.04-ext4` / xfs: `dasomel/ubuntu-26.04-xfs`
 
+## 24.04 vs 26.04
+
+| | 24.04 LTS (Noble Numbat) | 26.04 LTS (Resolute Raccoon) |
+|---|---|---|
+| Kernel | 6.8 | **7.0** |
+| init / cgroup | systemd 255, cgroup v2 default | systemd 259, **cgroup v1 removed (v2-only)** |
+| Container runtime | containerd 1.7 | containerd 2.2 / runc 1.4 |
+| Crypto | TLS 1.2+ | **Post-quantum default** (OpenSSL 3.5 / OpenSSH 10.2) |
+| Core utilities | GNU coreutils, sudo | partial Rust rewrite (uutils, sudo-rs) |
+| Choose when | Maximum stability (**default**) | Latest LTS, kernel 7.0 features |
+
+> **K8s note**: 26.04 is cgroup v2-only — set `SystemdCgroup=true` for kubelet/containerd (see [K8s Post-Install](docs/k8s-post-install.md)). Both lines are tuned identically for Kubernetes. Full comparison: [migration notes](docs/ubuntu-2604-migration/24-04-vs-26-04-comparison.md).
+
 ## Features
 
 - **Base OS**: Ubuntu 24.04 LTS or 26.04 LTS Cloud Image

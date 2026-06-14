@@ -13,6 +13,19 @@ OS 수준 최적화가 적용된 Kubernetes-ready Ubuntu Vagrant Box. **24.04 LT
 > - 24.04 ext4: `dasomel/ubuntu-24.04-ext4` / xfs: `dasomel/ubuntu-24.04-xfs`
 > - 26.04 ext4: `dasomel/ubuntu-26.04-ext4` / xfs: `dasomel/ubuntu-26.04-xfs`
 
+## 24.04 vs 26.04
+
+| | 24.04 LTS (Noble Numbat) | 26.04 LTS (Resolute Raccoon) |
+|---|---|---|
+| 커널 | 6.8 | **7.0** |
+| init / cgroup | systemd 255, cgroup v2 기본 | systemd 259, **cgroup v1 제거 (v2 전용)** |
+| 컨테이너 런타임 | containerd 1.7 | containerd 2.2 / runc 1.4 |
+| 암호화 | TLS 1.2+ | **양자내성(PQC) 기본** (OpenSSL 3.5 / OpenSSH 10.2) |
+| 핵심 유틸 | GNU coreutils, sudo | 일부 Rust 재작성 (uutils, sudo-rs) |
+| 선택 기준 | 최대 안정성 (**기본값**) | 최신 LTS, 커널 7.0 기능 |
+
+> **K8s 참고**: 26.04는 cgroup v2 전용 — kubelet/containerd에 `SystemdCgroup=true` 필요([K8s 설치 후 설정](docs/k8s-post-install.md)). 두 라인 모두 동일하게 K8s 튜닝됨. 상세 비교: [마이그레이션 노트](docs/ubuntu-2604-migration/24-04-vs-26-04-comparison.md).
+
 ## 주요 기능
 
 - **기본 OS**: Ubuntu 24.04 LTS 또는 26.04 LTS Cloud Image
