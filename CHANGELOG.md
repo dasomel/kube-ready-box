@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-18
+
 ### Added
 - Ubuntu 26.04 LTS (Resolute Raccoon, kernel Linux 7.0) coexist support
   - Version-parameterized Packer templates (`var.ubuntu_version`, default 24.04)
@@ -21,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `packer/scripts/generate-sbom.sh`: version derived from `/etc/os-release` at runtime
 - `packer/scripts/license-info.sh`: all version strings derived from `/etc/os-release`
 - `packer/scripts/upload-all.sh`: marked legacy, minimally parameterized via `UBUNTU_VERSION`
+- `packer/scripts/01-base.sh`: unattended-upgrades 제거를 `apt-get remove` → `apt-get purge`로 변경 (logind InhibitDelayMaxSec=30 drop-in까지 완전 제거)
+- `packer/scripts/01-base.sh`: needrestart 제거 추가 (Qualys 로컬 권한 상승 CVE 5건: CVE-2024-48990~48992, CVE-2024-10224, CVE-2024-11003)
+- `packer/scripts/03-os-packages.sh`: K8s 에코시스템 도구에 `apparmor-utils` 추가 (K8s 공식 보안 체크리스트)
+- `packer/scripts/04-k8s-prereq.sh`: CSI 스토리지 전제조건 추가 (Longhorn V1 엔진 요구사항 — `open-iscsi`, `cryptsetup`, `dmsetup`, `iscsi_tcp` 모듈 자동 로드 + `iscsid` 활성화)
+- `packer/scripts/04-k8s-prereq.sh`: bpffs(`/sys/fs/bpf`) 영구 마운트 추가 (Cilium eBPF 리소스 유지용)
+- `packer/scripts/01-base.sh`: systemd-timesyncd → chrony 전환 (Ubuntu 25.10+/26.04 기본 데몬 정렬, K8s/etcd 권장), 한국 NTP 서버(time.bora.net 등)를 `/etc/chrony/sources.d/kr-ntp.sources`로 이관
+- `packer/scripts/03-os-packages.sh`: auditd 설치 추가 (CIS 벤치마크 대응, 기본 비활성화 — EKS/GKE/AKS 노드 이미지 관행, I/O 오버헤드 방지 설정 포함)
+- `docs/k8s-post-install.md`: "노드 운영 주의사항" 섹션 추가 (unattended-upgrades/ufw/crictl/Longhorn 안내), multipath-tools/OpenEBS/chrony/auditd 안내 확장
 
 ### Fixed
 - CI: pin Packer to 1.15.4 (validate.yml was 1.10.0; build workflows `PACKER_VERSION` 1.10.0 → 1.15.4)

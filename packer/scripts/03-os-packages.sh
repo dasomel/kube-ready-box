@@ -38,7 +38,8 @@ apt-get install -y \
   jq \
   bash-completion \
   nfs-common \
-  sshpass
+  sshpass \
+  apparmor-utils
 
 # yq (mikefarah/yq) - YAML processor for K8s manifests
 echo "Installing yq..."
@@ -58,5 +59,14 @@ echo "Installing eBPF tools (if available)..."
 apt-get install -y \
   bpfcc-tools \
   bpftrace 2>/dev/null || echo "eBPF tools not available, skipping"
+
+# auditd (CIS 벤치마크 대응 — 설치하되 기본 비활성화, EKS/GKE/AKS 노드 이미지 관행. I/O 오버헤드 방지 설정 포함)
+echo "Installing auditd (installed but disabled by default)..."
+apt-get install -y auditd
+sed -i 's/^max_log_file = .*/max_log_file = 50/' /etc/audit/auditd.conf
+sed -i 's/^max_log_file_action = .*/max_log_file_action = ROTATE/' /etc/audit/auditd.conf
+sed -i 's/^disk_full_action = .*/disk_full_action = SUSPEND/' /etc/audit/auditd.conf
+systemctl disable --now auditd 2>/dev/null || true
+echo "  -> auditd installed but disabled (활성화: systemctl enable --now auditd)"
 
 echo "=== 03-os-packages.sh: Complete ==="

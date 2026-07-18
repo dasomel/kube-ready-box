@@ -53,12 +53,33 @@ apt-get install -y \
   ipvsadm \
   ebtables
 
+# CSI 스토리지 전제조건 (Longhorn V1 엔진 하드 요구사항)
+echo "Installing CSI storage prerequisites..."
+apt-get install -y open-iscsi cryptsetup dmsetup
+
+# Longhorn: iscsid 시작 전에 iscsi_tcp 모듈 로드 필요
+echo "Configuring iscsi_tcp kernel module..."
+cat <<EOF > /etc/modules-load.d/iscsi.conf
+iscsi_tcp
+EOF
+modprobe iscsi_tcp
+systemctl enable iscsid
+
+# bpffs 영구 마운트 (Cilium eBPF 리소스 유지용, 선택적 — Cilium은 없으면 자동 마운트)
+echo "Configuring persistent bpffs mount..."
+if ! grep -q '/sys/fs/bpf' /etc/fstab; then
+  echo 'bpffs /sys/fs/bpf bpf defaults 0 0' >> /etc/fstab
+fi
+
 # apt 키링 디렉토리 준비 (K8s 저장소 추가용)
 echo "Preparing keyrings directory..."
 mkdir -p /etc/apt/keyrings
 
 echo ""
 echo "=== K8s Prerequisites Configured ==="
+echo "  - Swap 비활성화, 커널 모듈(overlay/br_netfilter), 네트워크 sysctl"
+echo "  - CSI 스토리지 전제조건 (open-iscsi, cryptsetup, dmsetup, iscsi_tcp)"
+echo "  - bpffs 영구 마운트 (/sys/fs/bpf)"
 echo "다음 단계에서 사용자가 직접 설치:"
 echo "  1. 컨테이너 런타임 (containerd, CRI-O 등)"
 echo "  2. kubeadm, kubelet, kubectl"

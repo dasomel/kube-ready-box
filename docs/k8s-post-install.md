@@ -373,6 +373,100 @@ echo -e "\n=== Check Complete ==="
 
 ---
 
+## 7. 노드 운영 주의사항
+
+> Box 프로비저닝 시 K8s 운영을 위해 제거/제외/사전 구성된 항목과 그 이유입니다.
+
+### unattended-upgrades
+
+Box에서 **제거됨** (`apt-get purge`). 재설치하거나 활성화할 경우, 이 패키지가 설치하는
+logind drop-in 설정(`InhibitDelayMaxSec=30`)이 kubelet의
+[Graceful Node Shutdown](https://kubernetes.io/docs/concepts/architecture/nodes/#graceful-node-shutdown)
+(`shutdownGracePeriod` 가 30초를 초과하는 설정)을 깨뜨릴 수 있습니다
+([kubernetes/kubernetes#102818](https://github.com/kubernetes/kubernetes/issues/102818)).
+
+재활성화가 필요하다면 반드시 아래와 같이 drop-in을 재정의하세요:
+
+```bash
+# /etc/systemd/logind.conf.d/99-k8s-override.conf
+sudo mkdir -p /etc/systemd/logind.conf.d
+cat <<EOF | sudo tee /etc/systemd/logind.conf.d/99-k8s-override.conf
+[Login]
+InhibitDelayMaxSec=90
+EOF
+sudo systemctl restart systemd-logind
+```
+
+### ufw / firewalld
+
+**활성화 금지.** Calico 등 CNI가 관리하는 iptables 규칙과 충돌하여 Pod 간 통신 및
+NetworkPolicy가 정상 동작하지 않을 수 있습니다 (Tigera 공식 요구사항). 노드 방화벽이
+필요하면 CNI가 관리하지 않는 범위에서 raw iptables/nftables 규칙으로 직접 구성하세요.
+
+### crictl 등 CRI 도구
+
+Box에는 **포함되지 않음**. `crictl`(cri-tools)은 K8s 마이너 버전과 정확히 일치하는
+버전을 설치해야 하므로, 설치할 K8s 버전이 확정된 이후 사용자가 직접 설치합니다.
+
+```bash
+# 예: K8s v1.31 사용 시
+VERSION="v1.31.0"
+ARCH=$(dpkg --print-architecture)   # amd64 / arm64
+curl -LO "https://github.com/kubernetes-sigs/cri-tools/releases/download/${VERSION}/crictl-${VERSION}-linux-${ARCH}.tar.gz"
+sudo tar zxvf "crictl-${VERSION}-linux-${ARCH}.tar.gz" -C /usr/local/bin
+```
+
+### Longhorn 스토리지
+
+Longhorn(V1 엔진) CSI 전제조건은 Box에 **사전 구성되어 있습니다**:
+`open-iscsi`, `iscsi_tcp` 커널 모듈(자동 로드 + `iscsid` 활성화), `nfs-common`, `cryptsetup`/`dmsetup`
+(볼륨 암호화/LUKS2 및 V2 엔진용). 별도 노드 준비 없이 Longhorn 설치를 진행할 수 있습니다.
+
+### 시간 동기화 (chrony)
+
+Box는 **chrony + 한국 NTP 서버**(time.bora.net, time.kriss.re.kr, ntp.kornet.net, ntp.ubuntu.com)로
+사전 구성되어 있습니다. Ubuntu 26.04부터 chrony가 OS 기본 NTP 데몬이며, etcd는 노드 간 clock skew에
+민감하므로 chrony 사용이 권장됩니다. 상태 확인:
+
+```bash
+chronyc sources -v
+```
+
+### multipath-tools
+
+Box에는 **미설치**되어 있습니다. `multipathd`가 Longhorn 볼륨을 가로채 mount 실패를 유발할 수 있습니다
+([Longhorn KB](https://longhorn.io/kb/troubleshooting-volume-mount-problems/)). multipath가 꼭
+필요한 환경이라면 설치 후 `/etc/multipath.conf`에 blacklist를 추가하세요:
+
+```
+blacklist {
+    devnode "^sd[a-z0-9]+"
+}
+```
+
+### OpenEBS 사용 시
+
+Box에는 **포함되지 않은** 전제조건입니다. 사용하는 스토리지 엔진에 따라 직접 설치가 필요합니다:
+
+- LocalPV-LVM: `lvm2`
+- Mayastor(Replicated Storage): `nvme-cli`, `nvme-tcp`/`nvme-fabrics` 커널 모듈, HugePages 2GiB(2MiB x 1024)
+
+특정 스택 전용 요구사항이라 Box에는 포함되지 않았습니다.
+
+### auditd
+
+Box에 **설치되어 있으나 기본 비활성화** 상태입니다 (관리형 K8s 노드 이미지 관행). CIS 벤치마크 대응이
+필요하면 아래로 활성화하세요:
+
+```bash
+sudo systemctl enable --now auditd
+```
+
+I/O 제한 설정(`max_log_file=50`, `max_log_file_action=ROTATE`, `disk_full_action=SUSPEND`)이
+사전 적용되어 있습니다.
+
+---
+
 ## 참고 자료
 
 - [Kubernetes 공식 문서](https://kubernetes.io/docs/)

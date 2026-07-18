@@ -12,7 +12,12 @@ cloud-init status --wait || true
 echo "Disabling unattended-upgrades..."
 systemctl stop unattended-upgrades || true
 systemctl disable unattended-upgrades || true
-apt-get remove -y unattended-upgrades || true
+apt-get purge -y unattended-upgrades || true
+
+# needrestart 제거 (Qualys 로컬 권한 상승 CVE 5건: CVE-2024-48990~48992, 2024-10224, 2024-11003)
+# Ubuntu Server 기본 설치 패키지 - 공격 표면 축소 및 apt 인터랙티브 프롬프트 방지
+echo "Removing needrestart (LPE CVEs, defense-in-depth)..."
+apt-get purge -y needrestart || true
 
 # universe 리포지토리 활성화 (iotop, iftop, nload, nethogs, dool 등)
 # 모든 Components 라인에 universe 추가 (main + security 모두)
@@ -26,17 +31,6 @@ echo "Setting timezone to Asia/Seoul (KST)..."
 ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 echo "Asia/Seoul" > /etc/timezone
 echo "  -> Timezone: $(cat /etc/timezone)"
-
-# 한국 NTP 서버로 설정 (시간 동기화)
-echo "Configuring Korean NTP servers..."
-mkdir -p /etc/systemd/timesyncd.conf.d
-cat <<EOF > /etc/systemd/timesyncd.conf.d/kr-ntp.conf
-[Time]
-NTP=time.bora.net time.kriss.re.kr ntp.kornet.net
-FallbackNTP=ntp.ubuntu.com
-EOF
-systemctl restart systemd-timesyncd || true
-echo "  -> NTP servers: time.bora.net, time.kriss.re.kr, ntp.kornet.net"
 
 # 패키지 최신화 (기본 미러로 먼저 실행하여 universe 포함 전체 인덱스 확보)
 echo "Updating package lists..."
@@ -99,8 +93,22 @@ apt-get install -y \
   git \
   net-tools \
   rsync \
-  open-vm-tools
+  open-vm-tools \
+  chrony
 
+# 한국 NTP 서버 설정 (chrony — Ubuntu 25.10+/26.04 기본 데몬, K8s/etcd 권장. timesyncd 대체)
+echo "Configuring Korean NTP servers (chrony)..."
+mkdir -p /etc/chrony/sources.d
+cat <<EOF > /etc/chrony/sources.d/kr-ntp.sources
+server time.bora.net iburst
+server time.kriss.re.kr iburst
+server ntp.kornet.net iburst
+server ntp.ubuntu.com iburst
+EOF
+systemctl disable --now systemd-timesyncd 2>/dev/null || true
+systemctl enable chrony
+chronyc reload sources || systemctl restart chrony || true
+echo "  -> NTP servers: time.bora.net, time.kriss.re.kr, ntp.kornet.net, ntp.ubuntu.com"
 
 # 불필요한 패키지 제거
 echo "Cleaning up unnecessary packages..."
