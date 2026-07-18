@@ -292,6 +292,11 @@ Agent 4: shellcheck packer/scripts/04-k8s-prereq.sh
     - 다음 빌드의 패키징 단계가 디렉터리를 재생성하며 이전 빌드의 box를 삭제함 (버전/프로바이더 무관)
     - 해결: 각 빌드 완료 직후 box를 `packer/dist/` 등 별도 위치로 즉시 대피(`cp -c`). 연속/병렬 빌드 시 필수
 
+13. **중단(kill)된 VirtualBox 빌드는 잔여 상태 2종을 남김**
+    - `~/VirtualBox VMs/<name>/` 설정 파일 잔존 → 다음 빌드가 `Machine settings file already exists`로 3초 만에 실패
+    - 중단 시점에 output-vagrant에 쓰다 만 **손상 box**가 남아 대피 로직이 그대로 주워갈 수 있음
+    - 해결: kill 후 재빌드 전 잔여 디렉터리 삭제(+`<inaccessible>` 등록은 UUID로 unregistervm), 대피된 box는 `tar -tzf`로 무결성 검증
+
 ---
 
 ## Permissions
