@@ -88,6 +88,7 @@ packer/packer_cache/
 
 # Build logs
 packer/logs/
+packer/*.log
 
 # Screenshots (debugging)
 packer/*.png
@@ -134,3 +135,7 @@ Temporary Items
 # IntelliJ IDEA
 .idea/
 *.iml
+
+.omc/
+.claude/cache/
+.bkit/
