@@ -282,6 +282,12 @@ Agent 4: shellcheck packer/scripts/04-k8s-prereq.sh
     - 한쪽만 수정하고 다른 쪽 누락
     - 해결: 항상 두 파일 동시 확인
 
+### 빌드 판정 관련
+
+11. **빌드 "실패" 판정이어도 Box 아티팩트는 정상일 수 있음**
+    - VirtualBox ARM64: 최종 ISO detach 단계에서 커스텀 cleanup이 먼저 VM을 unregister해 `VBOX_E_OBJECT_NOT_FOUND` 오류 → Packer는 실패로 기록하지만 box는 이미 `output-vagrant/`에 생성됨
+    - 해결: 빌드 실패 보고 시 `ls -lh packer/output-vagrant/*.box`로 아티팩트 존재/크기부터 확인 후 재빌드 판단
+
 ---
 
 ## Permissions
