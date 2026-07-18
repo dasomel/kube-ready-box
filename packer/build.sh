@@ -286,8 +286,8 @@ build_box() {
   echo ""
 
   if [ $packer_exit_code -eq 0 ]; then
-    # Verify .box file was actually created
-    local box_file=$(ls -t *.box 2>/dev/null | head -1)
+    # Verify .box file was actually created (vagrant post-processor outputs to output-vagrant/)
+    local box_file=$(ls -t *.box output-vagrant/*.box 2>/dev/null | head -1)
     if [ -n "$box_file" ]; then
       echo -e "${GREEN}✅ Build SUCCESS: ${provider}-${arch}${NC}"
       echo "📝 Log saved to: ${logfile}"
