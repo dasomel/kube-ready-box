@@ -12,7 +12,7 @@ source "vmware-iso" "ubuntu-vmware-arm64" {
   headless             = false
   ssh_username         = var.ssh_username
   ssh_password         = var.ssh_password
-  ssh_timeout          = "30m"
+  ssh_timeout          = "1h"
   shutdown_command     = "echo '${var.ssh_password}' | sudo -S shutdown -P now"
   http_directory       = "http/autoinstall-${var.filesystem}"
 

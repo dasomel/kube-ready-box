@@ -44,7 +44,7 @@ jobs:
     # Pinned to 22.04: ubuntu-latest (24.04) ships kernel 6.17-azure for which
     # VirtualBox 7.0 cannot build vboxdrv via DKMS (CVE-2025/2026 v0.2.3 hit this).
     runs-on: ubuntu-22.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
