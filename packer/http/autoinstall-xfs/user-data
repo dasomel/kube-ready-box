@@ -88,6 +88,9 @@ autoinstall:
           match:
             name: "en*"
           dhcp4: true
+          # 26.04(systemd 259)에서 설치 후 DHCP DUID가 바뀌어 다른 IP를 받으면
+          # packer가 설치 단계의 낡은 리스 IP만 폴링해 SSH 타임아웃 발생 - MAC 고정으로 동일 IP 유지
+          dhcp-identifier: mac
 
   user-data:
     package_upgrade: true

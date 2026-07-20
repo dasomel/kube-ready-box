@@ -289,11 +289,16 @@ Agent 4: shellcheck packer/scripts/04-k8s-prereq.sh
     - VirtualBox ARM64: 최종 ISO detach 단계에서 커스텀 cleanup이 먼저 VM을 unregister해 `VBOX_E_OBJECT_NOT_FOUND` 오류 → Packer는 실패로 기록하지만 box는 이미 `output-vagrant/`에 생성됨
     - 해결: 빌드 실패 보고 시 `ls -lh packer/output-vagrant/*.box`로 아티팩트 존재/크기부터 확인 후 재빌드 판단
 
-12. **`output-vagrant/`는 빌드마다 초기화되는 공유 작업 디렉터리**
+12. **26.04 VMware 빌드 SSH 타임아웃: 설치 후 IP 변경이 원인일 수 있음**
+    - systemd 259(26.04)는 설치 후 DHCP DUID가 바뀌어 설치 단계와 다른 IP를 받음 → packer가 낡은 리스 IP만 폴링해 "Timeout waiting for SSH" (VirtualBox는 NAT 포워딩이라 무관)
+    - 진단: `/var/db/vmware/vmnet-dhcpd-vmnet8.leases` 리스 갱신 여부 + Fusion 콘솔에서 `ip a`로 실제 IP 확인. 게스트가 login 프롬프트에 떠 있으면 vagrant/vagrant 로그인 → `sudo ip addr add <리스IP>/24 dev enp2s0`로 빌드 구출 가능
+    - 영구 해결: autoinstall 시드 netplan에 `dhcp-identifier: mac` (두 시드 모두 적용됨)
+
+13. **`output-vagrant/`는 빌드마다 초기화되는 공유 작업 디렉터리**
     - 다음 빌드의 패키징 단계가 디렉터리를 재생성하며 이전 빌드의 box를 삭제함 (버전/프로바이더 무관)
     - 해결: 각 빌드 완료 직후 box를 `packer/dist/` 등 별도 위치로 즉시 대피(`cp -c`). 연속/병렬 빌드 시 필수
 
-13. **중단(kill)된 VirtualBox 빌드는 잔여 상태 2종을 남김**
+14. **중단(kill)된 VirtualBox 빌드는 잔여 상태 2종을 남김**
     - `~/VirtualBox VMs/<name>/` 설정 파일 잔존 → 다음 빌드가 `Machine settings file already exists`로 3초 만에 실패
     - 중단 시점에 output-vagrant에 쓰다 만 **손상 box**가 남아 대피 로직이 그대로 주워갈 수 있음
     - 해결: kill 후 재빌드 전 잔여 디렉터리 삭제(+`<inaccessible>` 등록은 UUID로 unregistervm), 대피된 box는 `tar -tzf`로 무결성 검증
