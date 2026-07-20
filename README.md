@@ -9,7 +9,7 @@
 
 Kubernetes-ready Ubuntu Vagrant Box with OS-level optimizations. Supports **24.04 LTS** (Noble Numbat, default) and **26.04 LTS** (Resolute Raccoon, kernel Linux 7.0).
 
-> **Vagrant Cloud**:
+> **Vagrant Cloud (v1.1.0)**:
 > - 24.04 ext4: `dasomel/ubuntu-24.04-ext4` / xfs: `dasomel/ubuntu-24.04-xfs`
 > - 26.04 ext4: `dasomel/ubuntu-26.04-ext4` / xfs: `dasomel/ubuntu-26.04-xfs`
 
@@ -41,7 +41,7 @@ Kubernetes-ready Ubuntu Vagrant Box with OS-level optimizations. Supports **24.0
 | Provider | AMD64 | ARM64 | Notes |
 |----------|-------|-------|-------|
 | VirtualBox | ✅ | ✅ | VirtualBox 7.1+ required for ARM64 |
-| VMware Fusion | ✅ | ✅ | Apple Silicon supported |
+| VMware Fusion | ✅* | ✅ | Apple Silicon supported; *AMD64 is local-build only — Vagrant Cloud ships ARM64 (CI runner limitation) |
 
 ## Quick Start
 
@@ -97,17 +97,20 @@ end
 
 ### OS Optimizations
 
-- **Kernel Parameters**: Network, memory, and filesystem tuning
+- **Kernel Parameters**: Network, memory, and filesystem tuning (`vm.max_map_count=1048576`)
 - **Resource Limits**: File descriptors, processes, memory locks
-- **K8s Prerequisites**: Swap disabled, kernel modules, IP forwarding
+- **K8s Prerequisites**: Swap disabled, required kernel modules (`br_netfilter`, `overlay`, `iscsi_tcp`), IP forwarding, persistent `bpffs` mount (`/sys/fs/bpf` for Cilium), CSI storage prerequisites (`open-iscsi` with `iscsid` enabled, `cryptsetup`, `dmsetup`, `nfs-common` for Longhorn V1)
+- **Security & Compliance**: `unattended-upgrades` purged (kubelet Graceful Node Shutdown conflict), `needrestart` removed (Qualys LPE CVEs), `auditd` installed (disabled by default, CIS benchmark ready with bounded I/O settings)
+- **Time Synchronization**: `chrony` replacing `systemd-timesyncd` (Ubuntu 25.10+/26.04 default, K8s/etcd recommended), Korean NTP servers configured via `/etc/chrony/sources.d/kr-ntp.sources`
 - **Disk I/O**: Scheduler and read-ahead optimization
-- **Network**: TCP buffers, conntrack, ring buffers
+- **Network**: TCP buffers, conntrack, ring buffers, `dhcp-identifier: mac` netplan configuration (fixes 26.04 post-install IP change SSH timeout)
 
 ### Pre-installed Tools
 
 | Category | Tools |
 |----------|-------|
-| **K8s Ecosystem** | jq, yq, bash-completion, nfs-common, sshpass |
+| **K8s Ecosystem** | jq, yq, bash-completion, nfs-common, open-iscsi, cryptsetup, dmsetup, apparmor-utils, sshpass |
+| **Security & Audit** | auditd (disabled by default) |
 | **Monitoring** | sysstat, iotop, iftop, nload, nethogs, dool |
 | **Network Diag** | ipvsadm, ipset, conntrack, ethtool, tcpdump, nmap |
 | **Performance** | linux-tools, bpfcc-tools, bpftrace |
@@ -197,9 +200,10 @@ UBUNTU_VERSION=26.04 ./upload-boxes.sh # 26.04 upload
 
 ### For Building from Source
 
-- Packer 1.10+
+- Packer 1.10+ (CI pinned to 1.15.4)
 - VirtualBox 7.1+ / VMware Fusion
 - 20GB+ disk space per box
+- Build timeouts: `ssh_timeout` 1h (2h for `vmware-arm64`), CI job timeout 90m
 
 ## License
 
