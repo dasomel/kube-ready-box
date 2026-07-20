@@ -261,8 +261,9 @@ Agent 4: shellcheck packer/scripts/04-k8s-prereq.sh
    - 해결: VMware Fusion 완전 재시작 (services.sh --stop/--start 포함)
    ```bash
    osascript -e 'quit app "VMware Fusion"'
-   sudo /Applications/VMware\ Fusion.app/Contents/Library/services.sh --stop
-   sudo /Applications/VMware\ Fusion.app/Contents/Library/services.sh --start
+   # 신버전은 services/ 하위 디렉터리 (구버전: Library/services.sh)
+   sudo "/Applications/VMware Fusion.app/Contents/Library/services/services.sh" --stop
+   sudo "/Applications/VMware Fusion.app/Contents/Library/services/services.sh" --start
    open -a "VMware Fusion"
    ```
 
