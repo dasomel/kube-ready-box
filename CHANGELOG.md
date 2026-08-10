@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [NixOS-0.1.0] - 2026-08-10
+
+### Added
+- **NixOS Kube-Ready Vagrant Box 0.1.0**: 선언적 불변 Linux OS 기반 Kubernetes 노드 이미지 구축
+- **In-Guest License & Metadata**: `/etc/vagrant-box/info.txt`, `/etc/vagrant-box/LICENSE` (MIT License) 및 `/etc/vagrant-box/manifest.json` 내장
+- **Software Bill of Materials (SBOM)**: Nix Store 매니페스트 및 SPDX 규격 메타데이터 탑재
+- **Vagrant Cloud Publish Automation**: `nixos/upload-nixos.sh` 스크립트를 통한 `dasomel/nixos-kube-ready` 0.1.0 배포 자동화
+- **CI/CD Integration**: `.github/workflows/build-nixos.yml` 기반 GitHub Actions 아티팩트 자동 빌드 지원
+
 ## [1.1.0] - 2026-07-18
 
 ### Added

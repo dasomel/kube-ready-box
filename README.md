@@ -28,9 +28,9 @@ Kubernetes-ready Ubuntu Vagrant Box with OS-level optimizations. Supports **24.0
 
 ## Features
 
-- **Base OS**: Ubuntu 24.04 LTS or 26.04 LTS Cloud Image
+- **Base OS**: Ubuntu 24.04 LTS, 26.04 LTS Cloud Image, and **NixOS** (Declarative Immutable OS)
 - **Multi-Architecture**: AMD64, ARM64
-- **Multi-Provider**: VirtualBox, VMware Fusion
+- **Multi-Provider**: VirtualBox, VMware Fusion, QEMU
 - **Filesystem Selection**: ext4 (default) or xfs
 - **K8s Ready**: OS tuning for Kubernetes (K8s not included)
 - **1TB Disk**: Large disk with thin provisioning (ext4 ~2.2GB, xfs ~3.4GB)

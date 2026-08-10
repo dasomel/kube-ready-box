@@ -81,7 +81,11 @@ fabric.properties
 # Build outputs
 packer/output-*/
 packer/*.box
+nixos/output-*/
+nixos/dist/
 *.box
+*.img
+*.raw
 
 # Packer cache
 packer/packer_cache/

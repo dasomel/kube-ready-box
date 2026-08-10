@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 dasomel
+#
+# Vagrantfile for testing NixOS Kubernetes-ready box
+
+Vagrant.configure("2") do |config|
+  # Default box name (local or uploaded)
+  config.vm.box = "dasomel/nixos-kube-ready"
+  config.ssh.username = "vagrant"
+
+  # VM Resources
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "kube-ready-nixos-test"
+    vb.memory = "2048"
+    vb.cpus = 2
+  end
+
+  config.vm.provider "qemu" do |qe|
+    qe.memory = "2048M"
+    qe.cpus = 2
+  end
+
+  # Network configuration (Optional static IP for K8s testing)
+  # config.vm.network "private_network", ip: "192.168.56.10"
+end

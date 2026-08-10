@@ -28,9 +28,9 @@ OS 수준 최적화가 적용된 Kubernetes-ready Ubuntu Vagrant Box. **24.04 LT
 
 ## 주요 기능
 
-- **기본 OS**: Ubuntu 24.04 LTS 또는 26.04 LTS Cloud Image
+- **기본 OS**: Ubuntu 24.04 LTS, 26.04 LTS Cloud Image 및 **NixOS** (선언적 불변 OS)
 - **멀티 아키텍처**: AMD64, ARM64
-- **멀티 프로바이더**: VirtualBox, VMware Fusion
+- **멀티 프로바이더**: VirtualBox, VMware Fusion, QEMU
 - **파일시스템 선택**: ext4 (기본) 또는 xfs
 - **K8s 준비 완료**: Kubernetes를 위한 OS 튜닝 (K8s는 미포함)
 - **1TB 디스크**: Thin provisioning으로 대용량 디스크 제공 (ext4 ~2.2GB, xfs ~3.4GB)
