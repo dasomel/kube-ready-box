@@ -6,10 +6,20 @@
 set -e
 
 VERSION="${VERSION:-0.1.0}"
-BOX_DIR="$(cd "$(dirname "$0")/dist" && pwd)"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
+
+# 파일명 규칙은 build.sh와 공유한다.
+# shellcheck source=nixos/box-common.sh
+. "${SCRIPT_DIR}/box-common.sh"
+
+BOX_DIR="${SCRIPT_DIR}/dist"
+if [ ! -d "$BOX_DIR" ]; then
+  echo "❌ Box directory not found: ${BOX_DIR}" >&2
+  echo "   먼저 ./build.sh virtualbox 로 박스를 빌드하세요." >&2
+  exit 1
+fi
 
 echo "╔════════════════════════════════════════════════════════════════╗"
 echo "║      📦 Vagrant Cloud NixOS Box Publish v${VERSION}               ║"
@@ -26,28 +36,28 @@ if ! vagrant cloud auth whoami 2>/dev/null; then
 fi
 echo ""
 
+# 0=업로드, 2=대상 없음(건너뜀), 1=실패
 upload_nixos_box() {
   local provider=$1
   local arch=$2
-  local box_file="dasomel-nixos-kube-ready-${arch}-${provider}.box"
-  local box_path="${BOX_DIR}/${box_file}"
+  local box_file box_path vagrant_provider
+  box_file=$(box_filename "$arch" "$provider")
+  box_path="${BOX_DIR}/${box_file}"
 
   if [ ! -f "$box_path" ]; then
     echo "⚠️  Box file not found: ${box_file} in ${BOX_DIR} (skipping)"
-    return 0
+    return 2
   fi
 
-  local box_name="dasomel/nixos-kube-ready"
-  local vagrant_provider="$provider"
-  [ "$provider" = "vmware" ] && vagrant_provider="vmware_desktop"
+  vagrant_provider="$provider"
 
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "📤 Uploading: ${box_file}"
-  echo "   Box: ${box_name} v${VERSION} (${vagrant_provider}, ${arch})"
+  echo "   Box: ${BOX_NAME} v${VERSION} (${vagrant_provider}, ${arch})"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
 
-  vagrant cloud publish "$box_name" "$VERSION" "$vagrant_provider" \
+  vagrant cloud publish "$BOX_NAME" "$VERSION" "$vagrant_provider" \
     "$box_path" \
     --architecture "$arch" \
     --version-description "Kubernetes-ready NixOS (Declarative Immutable OS) v${VERSION}
@@ -63,9 +73,9 @@ upload_nixos_box() {
 - Storage & CSI Prerequisites: openiscsi, cryptsetup, lvm2, persistent eBPF (/sys/fs/bpf)
 - Kernel & Sysctl Optimizations for Kubernetes workloads (swap disabled)
 
-## Software Bill of Materials (SBOM) & Metadata
-- SBOM Format: SPDX JSON / Nix Store Closure Manifest
-- In-Guest Metadata: \`/etc/vagrant-box/info.txt\`, \`/etc/vagrant-box/LICENSE\`, \`/etc/vagrant-box/manifest.json\`
+## In-Guest Metadata
+- \`/etc/vagrant-box/info.txt\`, \`/etc/vagrant-box/LICENSE\`, \`/etc/vagrant-box/manifest.json\`
+- SBOM (SPDX 2.3 JSON) is generated separately by \`nixos/build.sh sbom\` and published in the repository, not embedded in the box.
 
 ## Repository & Documentation
 https://github.com/dasomel/kube-ready-box" \
@@ -82,29 +92,49 @@ https://github.com/dasomel/kube-ready-box" \
 }
 
 uploaded=0
+skipped=0
 failed=0
 
-for provider in virtualbox vmware qemu libvirt; do
+# libvirt 박스는 Linux(vagrant-libvirt)와 macOS(vagrant-qemu)가 공유한다.
+# virtualbox는 목록에 없다: nixpkgs가 게스트 확장용 pkgsi686Linux를 요구해 ARM64에서 만들 수 없다.
+# 검증되지 않은 프로바이더를 실수로 공개하지 않도록 PROVIDERS로 범위를 좁힐 수 있다.
+#   예: PROVIDERS=libvirt VERSION=0.1.1 ./upload-nixos.sh
+PROVIDERS="${PROVIDERS:-libvirt vmware_desktop}"
+
+for provider in $PROVIDERS; do
   for arch in arm64 amd64; do
-    if upload_nixos_box "$provider" "$arch"; then
-      ((uploaded++))
-    else
-      ((failed++))
-    fi
+    # set -e 아래에서 산술 증가식이 0을 반환해 스크립트를 죽이지 않도록 $((...)) 대입을 쓴다.
+    set +e
+    upload_nixos_box "$provider" "$arch"
+    rc=$?
+    set -e
+    case "$rc" in
+      0) uploaded=$((uploaded + 1)) ;;
+      2) skipped=$((skipped + 1)) ;;
+      *) failed=$((failed + 1)) ;;
+    esac
   done
 done
 
 echo ""
 echo "╔════════════════════════════════════════════════════════════════╗"
-if [ $failed -eq 0 ]; then
-  echo "║        ✅ NixOS Box Upload Process Complete (${uploaded} uploaded)     ║"
-else
-  echo "║        ⚠️  NixOS Box Upload Complete (${uploaded} ok, ${failed} failed) ║"
-fi
+echo "║  NixOS Box Upload: ${uploaded} uploaded, ${skipped} skipped, ${failed} failed"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
-echo "Vagrant Cloud URL: https://app.vagrantup.com/dasomel/boxes/nixos-kube-ready"
+
+# 아무것도 올리지 않은 실행을 성공으로 보고하지 않는다.
+if [ "$failed" -gt 0 ]; then
+  echo "❌ ${failed}개 업로드 실패" >&2
+  exit 1
+fi
+if [ "$uploaded" -eq 0 ]; then
+  echo "❌ 업로드된 박스가 없습니다. ${BOX_DIR}에 $(box_filename '<arch>' '<provider>') 형식의 파일이 필요합니다." >&2
+  echo "   먼저 ./build.sh virtualbox 를 실행하세요." >&2
+  exit 1
+fi
+
+echo "Vagrant Cloud URL: https://app.vagrantup.com/${BOX_NAME%%/*}/boxes/${BOX_NAME#*/}"
 echo ""
 echo "Usage:"
-echo "  vagrant init dasomel/nixos-kube-ready"
+echo "  vagrant init ${BOX_NAME}"
 echo "  vagrant up"
