@@ -7,14 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [NixOS-0.1.1] - 2026-08-11
+
+`dasomel/nixos-kube-ready` 0.1.1 (libvirt / arm64) 배포. 0.1.0은 어떤 프로바이더로도 `vagrant up`이
+되지 않았고, 0.1.1에서 아래 네 가지를 고쳐 macOS(vagrant-qemu)와 VMware Fusion 경로를 실제 기동
+검증했습니다.
+
+### Fixed
+- **기본 공유 폴더 비활성화**: 게스트에 vboxsf/open-vm-tools가 없어 SMB로 폴백, 호스트 자격증명을 대화형으로 물어 기동이 정지하던 문제
+- **`config.ssh.shell = "bash"`**: Vagrant 기본 로그인 셸 래핑에서 게스트 stdout이 전달되지 않아 SSH 키 교체 단계가 `odd number of arguments for Hash`로 죽던 문제
+- **`/etc/fstab` 쓰기 가능화**: 스토어를 가리키는 읽기 전용 심볼릭 링크라 Vagrant 정리 단계가 `Read-only file system`으로 실패하던 문제 (활성화 시 최초 1회 실제 파일로 변환)
+- **버전 문자열 단일화**: `boxVersion` 한 곳에서 `info.txt`/`manifest.json`/MOTD가 파생되도록 변경. 이전에는 게스트 표기가 0.1.0으로 고정
+
+### Added
+- **`nixos/package-box.sh`**: 디스크 이미지를 Vagrant 박스로 포장 (libvirt / vmware_desktop). ARM64에서 nixos-generators가 박스 포맷을 만들지 못하는 제약을 우회
+- **`nixos/box-common.sh`**: 박스 파일명 규칙의 단일 출처. 빌드·포장·업로드 세 스크립트가 공유
+- **`upload-nixos.sh`의 `PROVIDERS` 필터**: 검증되지 않은 프로바이더가 실수로 공개되지 않도록 배포 범위 제한
+
 ## [NixOS-0.1.0] - 2026-08-10
 
 ### Added
-- **NixOS Kube-Ready Vagrant Box 0.1.0**: 선언적 불변 Linux OS 기반 Kubernetes 노드 이미지 구축
-- **In-Guest License & Metadata**: `/etc/vagrant-box/info.txt`, `/etc/vagrant-box/LICENSE` (MIT License) 및 `/etc/vagrant-box/manifest.json` 내장
-- **Software Bill of Materials (SBOM)**: Nix Store 매니페스트 및 SPDX 규격 메타데이터 탑재
-- **Vagrant Cloud Publish Automation**: `nixos/upload-nixos.sh` 스크립트를 통한 `dasomel/nixos-kube-ready` 0.1.0 배포 자동화
-- **CI/CD Integration**: `.github/workflows/build-nixos.yml` 기반 GitHub Actions 아티팩트 자동 빌드 지원
+- **NixOS 노드 설정 (`nixos/configuration.nix`)**: 기존 Ubuntu 스크립트와 동일한 K8s 커널/sysctl 튜닝을 선언적으로 기술
+- **In-Guest License & Metadata**: `/etc/vagrant-box/info.txt`, `/etc/vagrant-box/LICENSE` (MIT License), `/etc/vagrant-box/manifest.json` 내장
+- **빌드/업로드 스크립트**: `nixos/build.sh`, `nixos/upload-nixos.sh`
+- **SBOM 생성기**: `./nixos/build.sh sbom` — NixOS 시스템 클로저에서 SPDX 2.3 JSON 생성 (박스에 내장되지 않음)
+- **CI 워크플로우**: `.github/workflows/build-nixos.yml` (수동 디스패치)
+
+> 이 버전의 박스는 기동되지 않습니다. 0.1.1을 사용하세요. 제약과 빌드 경로는 [nixos/README.md](nixos/README.md) 참고.
 
 ## [1.1.0] - 2026-07-18
 

@@ -15,6 +15,7 @@ Kubernetes-ready Ubuntu 24.04 / 26.04 Vagrant Box 빌드 프로젝트. Packer를
 | K8s Prereq | `packer/scripts/04-k8s-prereq.sh` | swap, modules, sysctl |
 | Vagrant Cloud | `upload-boxes.sh` | `packer/scripts/upload-all.sh` |
 | CI/CD | `.github/workflows/` | `build-amd64.yml`, `build-arm64.yml` |
+| NixOS Box | `nixos/build.sh` | `nixos/configuration.nix`, `package-box.sh`, `upload-nixos.sh` |
 
 ## Project Structure
 
@@ -247,9 +248,9 @@ Agent 4: shellcheck packer/scripts/04-k8s-prereq.sh
    - VirtualBox 7.2.6+: scancode 이슈 해결됨, 정상 빌드 가능
    - 해결: VirtualBox 7.2.6 이상으로 업데이트
 
-5. **VMware Fusion 라이선스 필요**
-   - 무료 버전에서 headless 빌드 실패
-   - 해결: VMware Fusion Pro 또는 Player 필요
+5. **VMware Fusion 라이선스 (해소됨)**
+   - 과거: 무료 버전에서 headless 빌드 실패 → Fusion Pro 필요
+   - 현재: Fusion이 전 사용자 무료로 전환되어 라이선스 제약 없음 (확인 버전 26.0.0)
 
 6. **0.1.0 원본 빌드 설정 임의 수정 금지**
    - 0.1.0에서 성공한 pkr.hcl 빌드 설정(boot_wait, boot_command, http_directory 등)을 임의로 수정하면 빌드 실패
@@ -302,6 +303,32 @@ Agent 4: shellcheck packer/scripts/04-k8s-prereq.sh
     - `~/VirtualBox VMs/<name>/` 설정 파일 잔존 → 다음 빌드가 `Machine settings file already exists`로 3초 만에 실패
     - 중단 시점에 output-vagrant에 쓰다 만 **손상 box**가 남아 대피 로직이 그대로 주워갈 수 있음
     - 해결: kill 후 재빌드 전 잔여 디렉터리 삭제(+`<inaccessible>` 등록은 UUID로 unregistervm), 대피된 box는 `tar -tzf`로 무결성 검증
+
+### NixOS 박스 관련 (`nixos/`)
+
+15. **ARM64에서는 nixos-generators가 Vagrant 박스를 못 만든다**
+    - `vagrant-virtualbox` 포맷: nixpkgs가 게스트 확장용 `pkgsi686Linux`를 요구 → `i686 Linux package set can only be used with the x86 family`로 평가 단계 중단
+    - `vagrant-libvirt` 포맷: 애초에 존재하지 않음 (`nixos-generate --list`로 확인)
+    - 해결: `raw-efi`/`vmware`로 디스크 이미지만 만들고 `nixos/package-box.sh`로 직접 패키징
+
+16. **디스크 이미지 빌드는 `kvm` 시스템 기능을 요구하는데 Docker Desktop VM에는 `/dev/kvm`이 없다**
+    - 증상: `Required features: {kvm}` / `Available features: {benchmark, big-parallel, nixos-test, uid-range}`
+    - 우회: 컨테이너의 `/etc/nix/nix.conf`에 `system-features = kvm ...` 선언. 가속 없이 돌아가며 `error while reading directory ...: Invalid argument` 경고가 대량 발생하지만 산출물은 정상(부팅 검증 완료)
+    - 근본 해결: Docker Desktop 중첩 가상화(Apple M3+ / macOS 15+) 또는 `system.image.repart` 전환
+
+17. **vagrant-qemu는 libvirt 박스 형식을 그대로 쓴다**
+    - 플러그인이 `provider(:qemu, box_format: "libvirt", ...)`로 선언 → macOS 전용 박스를 따로 만들 필요가 없고, `metadata.json`에 `provider: qemu`라고 쓰면 `vagrant up --provider qemu`가 박스를 영영 못 찾는다
+    - 레지스트리의 공개 qemu 박스들도 전부 `libvirt` 프로바이더로 등록돼 있음
+
+18. **NixOS 게스트 + Vagrant 조합의 3대 함정** (모두 `vagrant up` 실패)
+    - 로그인 셸: Vagrant 기본 `bash -l` 래핑에서 게스트 stdout이 전달되지 않아 키 교체 단계가 `odd number of arguments for Hash`로 죽음 → 박스 Vagrantfile에 `config.ssh.shell = "bash"`
+    - `/etc/fstab`: 스토어를 가리키는 읽기 전용 심볼릭 링크 → Vagrant 정리 단계가 `Read-only file system`으로 실패 → 활성화 스크립트로 최초 1회 실제 파일 변환
+    - 공유 폴더: 게스트에 vboxsf/open-vm-tools가 없어 SMB로 폴백, 호스트 자격증명을 대화형으로 물어 자동화가 정지 → 박스 Vagrantfile에서 기본 공유 폴더 비활성화
+
+19. **VMware VMX를 최소 구성으로 직접 쓰면 `vmrun`이 SIGSEGV로 죽는다**
+    - 증상: `Unexpected signal: 11` (박스 등록·클론·네트워크 준비까지는 정상)
+    - 원인: `svga.*`, `pciBridge0/4~7`, `monitor.phys_bits_used` 등 구조 항목 누락
+    - 해결: 검증된 ARM64 박스의 VMX 구성을 그대로 따를 것. 디스크는 SATA(`sata0:0`)에 물리고 `nvme0.present = "FALSE"`
 
 ---
 
