@@ -20,8 +20,7 @@ cd packer
 vagrant box add --name test/ubuntu-24.04-ext4 output-vagrant/ubuntu-24.04-ext4-*.box
 cd ../test-vm/vmware  # 또는 virtualbox
 vagrant up
-vagrant ssh -c "cat /etc/vagrant-box/info.txt"
-vagrant ssh -c "/bin/bash /etc/vagrant-box/check-tuning.sh"
+./verify_box.sh
 vagrant destroy -f
 vagrant box remove test/ubuntu-24.04-ext4
 ```
@@ -68,22 +67,8 @@ Vagrant Cloud 웹사이트에서:
 ### 3.3 Box 버전 업로드
 
 ```bash
-cd packer/output-vagrant
-
-# VMware ARM64 업로드 (ext4 예시)
-vagrant cloud publish dasomel/ubuntu-24.04-ext4 {VERSION} vmware_desktop \
-  ubuntu-24.04-ext4-vmware-arm64.box \
-  --architecture arm64 \
-  --version-description "{RELEASE_NOTES}" \
-  --release
-
-# VirtualBox ARM64 업로드
-vagrant cloud version provider create dasomel/ubuntu-24.04-ext4 {VERSION} virtualbox \
-  --architecture arm64
-vagrant cloud version provider upload dasomel/ubuntu-24.04-ext4 {VERSION} virtualbox \
-  arm64 ubuntu-24.04-ext4-virtualbox-arm64.box
-
-# AMD64 빌드는 GitHub Actions에서 자동 업로드
+# 검증 완료된 provider만 명시적으로 업로드 (오발행 방지)
+PROVIDERS=vmware_desktop UBUNTU_VERSION=24.04 VERSION={VERSION} ./upload-boxes.sh
 ```
 
 ## 4. GitHub Actions로 AMD64 빌드

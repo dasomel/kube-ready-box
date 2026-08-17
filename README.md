@@ -187,8 +187,8 @@ cd packer
 ./build.sh all                         # 24.04 ext4
 ./build.sh all --version=26.04         # 26.04 ext4
 
-# Upload (root script)
-UBUNTU_VERSION=26.04 ./upload-boxes.sh # 26.04 upload
+# Upload only validated providers (root script)
+PROVIDERS=vmware_desktop UBUNTU_VERSION=26.04 ./upload-boxes.sh
 ```
 
 > **CI**: Use the `ubuntu_version` input in the GitHub Actions `workflow_dispatch` trigger to select 24.04 or 26.04.

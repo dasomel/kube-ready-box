@@ -184,8 +184,8 @@ cd packer
 ./build.sh all                         # 24.04 ext4
 ./build.sh all --version=26.04         # 26.04 ext4
 
-# 업로드 (루트 스크립트)
-UBUNTU_VERSION=26.04 ./upload-boxes.sh # 26.04 업로드
+# 검증된 provider만 업로드 (루트 스크립트)
+PROVIDERS=vmware_desktop UBUNTU_VERSION=26.04 ./upload-boxes.sh
 ```
 
 > **CI**: GitHub Actions `workflow_dispatch`의 `ubuntu_version` input으로 24.04 또는 26.04를 선택할 수 있습니다.
