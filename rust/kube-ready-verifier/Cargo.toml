@@ -1,0 +1,11 @@
+[package]
+name = "kube-ready-verifier"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Offline Kubernetes node preflight and artifact verifier"
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
