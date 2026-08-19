@@ -14,11 +14,16 @@ source "virtualbox-iso" "ubuntu-vbox-arm64" {
   ssh_password = var.ssh_password
   ssh_timeout  = "1h"
   http_directory = "http/autoinstall-${var.filesystem}"
+  cd_files = [
+    "http/autoinstall-${var.filesystem}/user-data",
+    "http/autoinstall-${var.filesystem}/meta-data"
+  ]
+  cd_label = "cidata"
   boot_wait = "10s"
   boot_command = [
-    "c<wait2s>",
-    "linux /casper/vmlinuz --- autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/<enter><wait2s>",
-    "initrd /casper/initrd<enter><wait2s>",
+    "c<wait>",
+    "linux /casper/vmlinuz autoinstall ds=nocloud;s=/cdrom/ ---<enter><wait>",
+    "initrd /casper/initrd<enter><wait>",
     "boot<enter>"
   ]
   shutdown_command = "echo '${var.ssh_password}' | sudo -S shutdown -P now"
