@@ -5,7 +5,7 @@ This document separates repository-side implementation from host-side validation
 | Issue | Repository implementation | Host validation remaining |
 |---|---|---|
 | #5 RFP profile | `test-vm/verify_box.sh --rfp-profile`, machine-readable report | Ubuntu 24.04/26.04 provider matrix and air-gapped VM run |
-| #6 Node preflight | `/usr/local/bin/k8s-node-preflight`, `test-vm/matrix.sh` | Full Ubuntu 24.04/26.04 × amd64/arm64 × ext4/xfs × VirtualBox/VMware |
+| #6 Node preflight | `/usr/local/bin/k8s-node-preflight` is now installed by Packer in all four Ubuntu provider/architecture templates; `test-vm/matrix.sh` | Rebuild boxes, then full Ubuntu 24.04/26.04 × amd64/arm64 × ext4/xfs × VirtualBox/VMware |
 | #7 Offline inputs | `tools/airgap-bundle.sh` | Zero-egress Packer build consuming only bundle inputs |
 | #8 Release | immutable promotion/rollback evidence helpers | Real Vagrant Cloud publish/download and staging matrix |
 | #9 NixOS | common preflight, hardened SSH profile, flake/offline entrypoint | Nix store/cache offline build and provider smoke matrix |
@@ -23,18 +23,33 @@ This document separates repository-side implementation from host-side validation
 
 ## Local validation contract
 
-Claude Code is the verification runner for the remaining host-side checks. It must not modify the repository during verification.
+Claude Code is the verification runner for remaining host-side checks. It must not modify the repository during verification.
 
 ```bash
-# Single case
-PROVIDER=vmware_desktop BOX=test/ubuntu-24.04 bash test-vm/matrix.sh
+# Always verify the exact remote revision first
+git fetch origin
+git switch main
+git reset --hard origin/main
+git rev-parse --short HEAD
 
-# Multiple cases
+# Static checks
+bash -n sandbox/verify-sandbox-evidence.sh
+bash -n test-vm/matrix.sh
+
+# VM matrix
 MATRIX='vmware_desktop|test/ubuntu-24.04,virtualbox|test/ubuntu-24.04-vbox' \
-bash test-vm/matrix.sh
+  bash test-vm/matrix.sh
 
-# Sandbox runtime verification
+# Sandbox runtime verification; expected to FAIL if the requested RuntimeClass is not installed.
 RUNTIME_CLASS=gvisor bash sandbox/verify-sandbox-evidence.sh
 ```
 
 Validation results should be returned with the exact tested commit SHA, command, provider, architecture, filesystem, and PASS/FAIL/UNKNOWN result. Repository changes are applied here, not by the verifier.
+
+## Current known verification finding
+
+At revision `64cf59a`, the existing published test boxes did not contain `/usr/local/bin/k8s-node-preflight`; the VM matrix therefore correctly failed before executing the preflight checks. This was a repository packaging defect, not a hypervisor failure.
+
+It is fixed by `6af9fe3` plus the four Packer template updates (`3ef7479`, `496b003`, `b947be3`, `e00f56d`). The boxes must be rebuilt before the matrix is rerun.
+
+The sandbox run also correctly failed closed because the requested `gvisor` RuntimeClass was not present in the target Kubernetes cluster. That result does not prove a gVisor E2E failure; it proves the verifier detects an unavailable runtime class. A real gVisor/containerd E2E requires a cluster/node where `runsc` and the corresponding RuntimeClass are installed.
