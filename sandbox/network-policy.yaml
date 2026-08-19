@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sandbox-default-egress
+  namespace: sandbox
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  # DNS is intentionally the only baseline exception. Platform policy should
+  # add explicit destinations required by the workload.
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
