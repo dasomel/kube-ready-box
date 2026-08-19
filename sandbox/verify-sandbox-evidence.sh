@@ -7,11 +7,10 @@ NAMESPACE="${NAMESPACE:-kube-ready-sandbox-test}"
 OUTPUT="${OUTPUT:-sandbox-evidence.json}"
 IMAGE="${IMAGE:-busybox:1.36}"
 FAILURES=0
+container_id=""
 
 command -v kubectl >/dev/null || { echo 'kubectl required' >&2; exit 2; }
 command -v python3 >/dev/null || { echo 'python3 required' >&2; exit 2; }
-
-json_escape() { python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().rstrip()))'; }
 
 check_runtimeclass() {
   kubectl get runtimeclass "$RUNTIME_CLASS" -o json >/tmp/runtimeclass.json 2>/dev/null || return 1
@@ -21,7 +20,6 @@ p=json.load(open('/tmp/runtimeclass.json'))
 handler=p.get('handler')
 if not handler:
     raise SystemExit('RuntimeClass handler is empty')
-print(handler)
 PY
 }
 
@@ -41,22 +39,14 @@ PY
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 trap 'kubectl delete namespace "$NAMESPACE" --ignore-not-found >/dev/null 2>&1 || true' EXIT
 
-status_runtime="PASS"
+status_runtime="FAIL"
 status_effective="FAIL"
 status_security="FAIL"
 status_negative="FAIL"
 status_resources="FAIL"
 
-if ! check_runtimeclass >/tmp/runtime-handler.txt 2>/dev/null; then
-  status_runtime="FAIL"
-else
-  status_effective="PASS"
-fi
-if [ "$status_runtime" = PASS ] && check_runtime_handler; then
+if check_runtimeclass && check_runtime_handler; then
   status_runtime="PASS"
-else
-  status_runtime="FAIL"
-  FAILURES=$((FAILURES + 1))
 fi
 
 cat <<EOF | kubectl -n "$NAMESPACE" apply -f - >/dev/null
@@ -93,11 +83,7 @@ if kubectl -n "$NAMESPACE" wait --for=condition=Ready pod/sandbox-evidence --tim
       status_resources="PASS"
     fi
   fi
-  if [ -n "$container_id" ]; then
-    status_effective="PASS"
-  fi
-else
-  status_effective="FAIL"
+  [ -n "$container_id" ] && status_effective="PASS"
 fi
 
 # Negative test: a deliberately missing RuntimeClass must be rejected before execution.
@@ -117,18 +103,12 @@ spec:
     image: $IMAGE
     command: ["true"]
 EOF
-  # A dry-run success means the admission path did not reject the missing class.
   status_negative="FAIL"
-  FAILURES=$((FAILURES + 1))
 else
-  if grep -qi 'RuntimeClass' /tmp/negative.out; then
-    status_negative="PASS"
-  else
-    status_negative="UNKNOWN"
-  fi
+  grep -qi 'RuntimeClass' /tmp/negative.out && status_negative="PASS" || status_negative="UNKNOWN"
 fi
 
-if [ "$status_effective" != PASS ] || [ "$status_security" != PASS ]; then
+if [ "$status_runtime" != PASS ] || [ "$status_effective" != PASS ] || [ "$status_security" != PASS ] || [ "$status_negative" != PASS ] || [ "$status_resources" != PASS ]; then
   FAILURES=$((FAILURES + 1))
 fi
 
@@ -142,8 +122,8 @@ PY
 )"
 
 python3 - "$OUTPUT" "$RUNTIME_CLASS" "$runtime_handler" "$status_runtime" "$status_effective" "$status_security" "$status_resources" "$status_negative" "$FAILURES" "$container_id" <<'PY'
-import json,sys,datetime
-(out,rc,handler,sr,se,ss,so,sn,failures,cid)=sys.argv[1:]
+import datetime,json,sys
+out,rc,handler,sr,se,ss,so,sn,failures,cid=sys.argv[1:]
 obj={
   'schema':'kube-ready-sandbox/v1',
   'runtimeClass':rc,
