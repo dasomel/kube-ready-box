@@ -94,7 +94,10 @@ jobs:
       - name: Syntax
         run: |
           bash -n tools/*.sh network/*.sh storage/*.sh time/*.sh security/*.sh observability/*.sh rocky/*.sh nixos/*.sh
-          python3 -m json.tool /dev/null >/dev/null 2>&1 || true
-      - name: Verify tool help
+      - name: Rust help
         working-directory: rust/kube-ready-verifier
         run: cargo run --locked --offline -- --help
+      - name: Aggregate contract runner
+        run: |
+          CONTRACT_OUTPUT=/tmp/kube-ready-contracts.json bash tools/kube-ready-contracts.sh
+          python3 -m json.tool /tmp/kube-ready-contracts.json >/dev/null
