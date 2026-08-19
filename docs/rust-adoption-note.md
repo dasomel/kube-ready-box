@@ -1,0 +1,1 @@
+Rust should be limited to preflight validation, offline artifact verification, sandbox runtime capability detection, and evidence collection. Packer/HCL, shell provisioning, and NixOS config should remain unchanged.
