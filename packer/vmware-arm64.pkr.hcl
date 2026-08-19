@@ -16,22 +16,25 @@ source "vmware-iso" "ubuntu-vmware-arm64" {
   shutdown_command     = "echo '${var.ssh_password}' | sudo -S shutdown -P now"
   http_directory       = "http/autoinstall-${var.filesystem}"
 
-  boot_wait = "20s"
+  # ARM64 EFI/GRUB on Apple Silicon can take longer to expose the installer
+  # command prompt than the AMD64 path. Keep the proven HTTP NoCloud flow but
+  # wait longer before typing into GRUB.
+  boot_wait = "45s"
   boot_command = [
-    "c<wait2s>",
-    "linux /casper/vmlinuz --- autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/<enter><wait2s>",
-    "initrd /casper/initrd<enter><wait2s>",
+    "c<wait5s>",
+    "linux /casper/vmlinuz --- autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/<enter><wait5s>",
+    "initrd /casper/initrd<enter><wait5s>",
     "boot<enter>"
   ]
 
   vmx_data = {
-    "ethernet0.virtualdev"      = "vmxnet3"
-    "usb_xhci.present"          = "TRUE"
-    "firmware"                  = "efi"
+    "ethernet0.virtualdev"       = "vmxnet3"
+    "usb_xhci.present"           = "TRUE"
+    "firmware"                   = "efi"
     "sata0:0.present"            = "TRUE"
     "sata0:0.deviceType"         = "cdrom-image"
-    "RemoteDisplay.vnc.enabled" = "TRUE"
-    "RemoteDisplay.vnc.port"    = "5900"
+    "RemoteDisplay.vnc.enabled"  = "TRUE"
+    "RemoteDisplay.vnc.port"     = "5900"
   }
 
   vnc_port_min = 5900
