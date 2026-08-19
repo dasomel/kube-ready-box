@@ -1,0 +1,34 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/m/Documents/IdeaProjects/20.dasomel/kube-ready-box/.codex/hooks/post-edit-reminder.sh' \"$CLAUDE_FILE_PATH\""
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/m/Documents/IdeaProjects/20.dasomel/kube-ready-box/.codex/hooks/post-edit-reminder.sh' \"$CLAUDE_FILE_PATH\""
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/m/Documents/IdeaProjects/20.dasomel/kube-ready-box/.codex/hooks/load-project-context.sh'"
+          }
+        ]
+      }
+    ]
+  }
+}
