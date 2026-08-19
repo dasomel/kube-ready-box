@@ -31,7 +31,6 @@ source "vmware-iso" "ubuntu-vmware-amd64" {
 build {
   sources = ["source.vmware-iso.ubuntu-vmware-amd64"]
 
-  # 스크립트 순차 실행
   provisioner "shell" {
     scripts = [
       "scripts/00-vagrant-setup.sh",
@@ -46,12 +45,12 @@ build {
       "scripts/08-security-check.sh",
       "scripts/license-info.sh",
       "scripts/generate-sbom.sh",
+      "scripts/09-k8s-node-preflight.sh",
       "scripts/99-cleanup.sh"
     ]
     execute_command = "echo '${var.ssh_password}' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
   }
 
-  # Vagrant Box 생성
   post-processor "vagrant" {
     output              = "output-vagrant/ubuntu-${var.ubuntu_version}-${var.filesystem}-vmware-amd64.box"
     compression_level   = 9
