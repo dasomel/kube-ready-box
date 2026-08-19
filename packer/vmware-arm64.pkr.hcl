@@ -18,18 +18,18 @@ source "vmware-iso" "ubuntu-vmware-arm64" {
 
   boot_wait = "20s"
   boot_command = [
-    "e<wait>",
-    "<down><down><down><end>",
-    " autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ ---",
-    "<f10>"
+    "c<wait2s>",
+    "linux /casper/vmlinuz --- autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/<enter><wait2s>",
+    "initrd /casper/initrd<enter><wait2s>",
+    "boot<enter>"
   ]
 
   vmx_data = {
     "ethernet0.virtualdev"      = "vmxnet3"
     "usb_xhci.present"          = "TRUE"
     "firmware"                  = "efi"
-    "sata0:0.present"           = "TRUE"
-    "sata0:0.deviceType"        = "cdrom-image"
+    "sata0:0.present"            = "TRUE"
+    "sata0:0.deviceType"         = "cdrom-image"
     "RemoteDisplay.vnc.enabled" = "TRUE"
     "RemoteDisplay.vnc.port"    = "5900"
   }
