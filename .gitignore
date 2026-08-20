@@ -147,3 +147,4 @@ Temporary Items
 # 검증 산출물 (test-vm/preflight 실행 결과)
 matrix-evidence.json
 *-evidence.json
+hardened-configuration.nix

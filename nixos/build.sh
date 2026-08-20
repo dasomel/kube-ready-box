@@ -26,6 +26,32 @@ OUTPUT_DIR="output-vagrant"
 DIST_DIR="dist"
 CONFIG_FILE="configuration.nix"
 
+# HARDENED=1 이면 production SSH/security 오버레이를 얹어 빌드한다(#9).
+# 하드닝 프로파일은 vagrant insecure key 를 제거하므로 대체 공개키가 반드시 필요하다.
+# HARDENED_SSH_KEY 로 넘기며, 없으면 nix assertion 이 빌드를 거부한다.
+HARDENED="${HARDENED:-0}"
+HARDENED_SSH_KEY="${HARDENED_SSH_KEY:-}"
+
+if [ "$HARDENED" = "1" ]; then
+  if [ -z "$HARDENED_SSH_KEY" ]; then
+    echo "Error: HARDENED=1 인데 HARDENED_SSH_KEY 가 비어 있습니다." >&2
+    echo "       하드닝 프로파일은 vagrant insecure key 를 제거하므로," >&2
+    echo "       대체 공개키가 없으면 로그인 불가능한 이미지가 됩니다." >&2
+    echo "       예: HARDENED=1 HARDENED_SSH_KEY=\"ssh-ed25519 AAAA...\" ./build.sh raw" >&2
+    exit 1
+  fi
+  CONFIG_FILE="hardened-configuration.nix"
+  cat > "${SCRIPT_DIR}/${CONFIG_FILE}" <<EOF
+# 자동 생성 파일 (build.sh, HARDENED=1). 직접 수정하지 마세요.
+{ ... }:
+{
+  imports = [ ./configuration.nix ./hardened-profile.nix ];
+  kubeReady.hardenedAuthorizedKeys = [ "${HARDENED_SSH_KEY}" ];
+}
+EOF
+  echo "하드닝 프로파일로 빌드합니다: ${CONFIG_FILE}"
+fi
+
 PLATFORM=$(detect_arch)
 
 show_usage() {
@@ -48,6 +74,12 @@ OPTIONS:
 EXAMPLES:
   $0 virtualbox       Build NixOS Vagrant box for VirtualBox
   $0 qemu             Build NixOS Vagrant box for QEMU/libvirt
+
+HARDENED PROFILE (#9):
+  HARDENED=1 HARDENED_SSH_KEY="ssh-ed25519 AAAA..." $0 raw
+  production 용 SSH/보안 오버레이를 얹는다. vagrant insecure key 와 password 인증을
+  제거하므로 대체 공개키가 반드시 필요하며, 없으면 빌드를 거부한다.
+  sudo 비밀번호를 요구하려면 hardened-profile.nix 의 kubeReady.hardenedPasswordHash 를 설정한다.
 
 PREREQUISITES:
   - Nix package manager installed (https://nixos.org/download.html)
