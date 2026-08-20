@@ -94,3 +94,15 @@ locals {
   iso_url_arm64      = local.iso_data[var.ubuntu_version].arm64_url
   iso_checksum_arm64 = local.iso_data[var.ubuntu_version].arm64_sum
 }
+
+# gVisor 샌드박스 프로파일 (#11). 기본 0 = 표준 박스에 런타임을 넣지 않는다.
+variable "sandbox_profile" {
+  type    = string
+  default = "0"
+}
+
+# 재현 가능한 빌드를 위해 gVisor 릴리스를 고정한다. "latest" 는 빌드마다 결과가 달라진다.
+variable "gvisor_release" {
+  type    = string
+  default = "latest"
+}

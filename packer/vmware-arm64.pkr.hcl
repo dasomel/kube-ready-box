@@ -56,7 +56,12 @@ build {
       "scripts/license-info.sh",
       "scripts/generate-sbom.sh",
       "scripts/09-k8s-node-preflight.sh",
+      "scripts/10-sandbox-runtime.sh",
       "scripts/99-cleanup.sh"
+    ]
+    environment_vars = [
+      "SANDBOX_PROFILE=${var.sandbox_profile}",
+      "GVISOR_RELEASE=${var.gvisor_release}"
     ]
     execute_command = "echo '${var.ssh_password}' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
   }

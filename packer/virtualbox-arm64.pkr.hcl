@@ -1,8 +1,8 @@
 source "virtualbox-iso" "ubuntu-vbox-arm64" {
-  skip_export = true
-  iso_url       = local.iso_url_arm64
-  iso_checksum  = local.iso_checksum_arm64
-  iso_interface = "virtio"
+  skip_export          = true
+  iso_url              = local.iso_url_arm64
+  iso_checksum         = local.iso_checksum_arm64
+  iso_interface        = "virtio"
   vm_name              = "ubuntu-${var.ubuntu_version}-virtualbox-arm64"
   guest_os_type        = "Ubuntu_arm64"
   cpus                 = var.cpus
@@ -10,15 +10,15 @@ source "virtualbox-iso" "ubuntu-vbox-arm64" {
   disk_size            = var.disk_size
   hard_drive_interface = "virtio"
   headless             = var.headless
-  ssh_username = var.ssh_username
-  ssh_password = var.ssh_password
-  ssh_timeout  = "1h"
-  http_directory = "http/autoinstall-${var.filesystem}"
+  ssh_username         = var.ssh_username
+  ssh_password         = var.ssh_password
+  ssh_timeout          = "1h"
+  http_directory       = "http/autoinstall-${var.filesystem}"
   cd_files = [
     "http/autoinstall-${var.filesystem}/user-data",
     "http/autoinstall-${var.filesystem}/meta-data"
   ]
-  cd_label = "cidata"
+  cd_label  = "cidata"
   boot_wait = "10s"
   boot_command = [
     "c<wait>",
@@ -67,7 +67,12 @@ build {
       "scripts/license-info.sh",
       "scripts/generate-sbom.sh",
       "scripts/09-k8s-node-preflight.sh",
+      "scripts/10-sandbox-runtime.sh",
       "scripts/99-cleanup.sh"
+    ]
+    environment_vars = [
+      "SANDBOX_PROFILE=${var.sandbox_profile}",
+      "GVISOR_RELEASE=${var.gvisor_release}"
     ]
     execute_command = "echo '${var.ssh_password}' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
   }
