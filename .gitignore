@@ -143,3 +143,7 @@ Temporary Items
 .omc/
 .claude/cache/
 .bkit/
+
+# 검증 산출물 (test-vm/preflight 실행 결과)
+matrix-evidence.json
+*-evidence.json
