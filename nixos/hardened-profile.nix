@@ -43,10 +43,12 @@ with lib;
       }
     ];
 
+    # configuration.nix 가 같은 옵션을 정의하므로 mkForce 로 우선순위를 올려야 한다.
+    # 그렇지 않으면 "conflicting definition values" 로 평가 자체가 실패한다.
     services.openssh.settings = {
-      PermitRootLogin = "no";
-      PasswordAuthentication = false;
-      KbdInteractiveAuthentication = false;
+      PermitRootLogin = mkForce "no";
+      PasswordAuthentication = mkForce false;
+      KbdInteractiveAuthentication = mkForce false;
     };
 
     users.users.vagrant.openssh.authorizedKeys.keys =
@@ -54,7 +56,7 @@ with lib;
 
     # 비밀번호 해시가 주어진 경우에만 sudo 에 비밀번호를 요구한다.
     # 해시 없이 wheelNeedsPassword 를 켜면 sudo 가 불가능한 이미지가 된다.
-    security.sudo.wheelNeedsPassword = config.kubeReady.hardenedPasswordHash != null;
+    security.sudo.wheelNeedsPassword = mkForce (config.kubeReady.hardenedPasswordHash != null);
     users.users.vagrant.hashedPassword =
       mkIf (config.kubeReady.hardenedPasswordHash != null)
         config.kubeReady.hardenedPasswordHash;
