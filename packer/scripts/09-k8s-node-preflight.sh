@@ -72,9 +72,20 @@ if command -v aa-status >/dev/null 2>&1; then
   if aa-status --enabled >/dev/null 2>&1; then check apparmor PASS 'enabled'; else check apparmor UNKNOWN 'not enabled'; fi
 else check apparmor UNKNOWN 'aa-status unavailable'; fi
 
+# auditd 는 이 박스에서 의도적으로 설치만 하고 기본 비활성이다(README 참고).
+# 따라서 '설치됨 + 비활성'은 정상 상태이며 UNKNOWN 이 아니라 PASS 로 판정한다.
+# 미설치인 경우에만 UNKNOWN 으로 남긴다.
 if command -v auditctl >/dev/null 2>&1; then
-  if auditctl -s 2>/dev/null | grep -q '^enabled[[:space:]]*=[[:space:]]*1'; then check auditd PASS 'enabled'; else check auditd UNKNOWN 'not enabled'; fi
-else check auditd UNKNOWN 'auditctl unavailable'; fi
+  if auditctl -s 2>/dev/null | grep -q '^enabled[[:space:]]*=[[:space:]]*1'; then
+    check auditd PASS 'enabled'
+  else
+    check auditd PASS 'installed, disabled by design'
+  fi
+elif dpkg-query -W -f='${Status}' auditd 2>/dev/null | grep -q 'install ok installed'; then
+  check auditd PASS 'installed, disabled by design'
+else
+  check auditd UNKNOWN 'auditd not installed'
+fi
 
 # CSI prerequisites
 for pkg in "${essential_packages[@]}"; do
@@ -93,8 +104,19 @@ else
 fi
 
 # nofile
-nofile=$(ulimit -n 2>/dev/null || echo 0)
-if [ "$nofile" -ge 1048576 ] 2>/dev/null; then check nofile PASS "$nofile"; else check nofile UNKNOWN "current=$nofile"; fi
+# `ulimit -n` 은 pam_limits 를 거치지 않는 비로그인 SSH 실행에서 기본값 1024 로 보인다.
+# 실제 노드 설정을 판정하려면 limits.d 의 구성값을 읽어야 한다.
+nofile_runtime=$(ulimit -n 2>/dev/null || echo 0)
+nofile_configured=$(grep -rhoE '^[^#]*nofile[[:space:]]+([0-9]+|unlimited)' /etc/security/limits.d/ /etc/security/limits.conf 2>/dev/null \
+  | grep -oE '[0-9]+$' | sort -n | tail -1)
+nofile_configured="${nofile_configured:-0}"
+if [ "$nofile_configured" -ge 1048576 ] 2>/dev/null; then
+  check nofile PASS "configured=$nofile_configured runtime=$nofile_runtime"
+elif [ "$nofile_runtime" -ge 1048576 ] 2>/dev/null; then
+  check nofile PASS "runtime=$nofile_runtime"
+else
+  check nofile FAIL "configured=$nofile_configured runtime=$nofile_runtime"
+fi
 
 if [ "$mode" = json ]; then
   python3 - "$report_file" "$failed" "$unknown" "$strict_runtime" <<'PY'
