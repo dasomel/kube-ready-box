@@ -53,14 +53,36 @@ prepare() {
   command -v apt-get >/dev/null || fail "apt-get is required"
   mkdir -p "$BUNDLE_DIR"/{iso,debs,keys,binaries,trivy-db}
 
-  local iso_url
+  # arm64 live-server ISO 는 releases.ubuntu.com 에 없다(404). cdimage 에만 있다.
+  # 이전에는 두 아키텍처 모두 releases.ubuntu.com 을 써서 arm64 번들 생성이 불가능했다.
+  local point_release iso_base iso_dir iso_url
   if [ "$UBUNTU_VERSION" = "24.04" ]; then
-    iso_url="https://releases.ubuntu.com/24.04.4/ubuntu-24.04.4-live-server-${ARCH}.iso"
+    point_release="24.04.4"
   else
-    iso_url="https://releases.ubuntu.com/26.04/ubuntu-26.04-live-server-${ARCH}.iso"
+    point_release="26.04"
   fi
-  local iso_file="$BUNDLE_DIR/iso/$(basename "$iso_url")"
+  iso_base="ubuntu-${point_release}-live-server-${ARCH}.iso"
+  if [ "$ARCH" = "arm64" ]; then
+    iso_dir="https://cdimage.ubuntu.com/releases/${point_release}/release"
+  else
+    iso_dir="https://releases.ubuntu.com/${point_release}"
+  fi
+  iso_url="${iso_dir}/${iso_base}"
+  local iso_file="$BUNDLE_DIR/iso/${iso_base}"
   curl -fL --retry 3 -o "$iso_file" "$iso_url"
+
+  # 업스트림 SHA256SUMS 와 대조한다. 이전에는 받은 파일의 해시를 기록만 해서,
+  # 잘못 받아진 ISO 도 그대로 정답으로 봉인됐다(#7 "재현 가능한 동일 input").
+  echo "Verifying ISO against upstream SHA256SUMS..."
+  local upstream_sums expected actual
+  upstream_sums="$BUNDLE_DIR/iso/SHA256SUMS.upstream"
+  curl -fL --retry 3 -o "$upstream_sums" "${iso_dir}/SHA256SUMS"
+  expected=$(awk -v f="*${iso_base}" '$2 == f {print $1; exit}' "$upstream_sums")
+  [ -n "$expected" ] || expected=$(awk -v f="${iso_base}" '$2 == f {print $1; exit}' "$upstream_sums")
+  [ -n "$expected" ] || fail "upstream SHA256SUMS 에 ${iso_base} 항목이 없습니다"
+  actual=$(sha256sum "$iso_file" | awk '{print $1}')
+  [ "$expected" = "$actual" ] || fail "ISO 체크섬 불일치: expected=$expected actual=$actual"
+  echo "ISO checksum OK: $actual"
 
   printf '%s\n' "${packages[@]}" > "$PACKAGE_LIST"
   local deb_arch="$ARCH"
@@ -76,6 +98,7 @@ schema_version=1
 ubuntu_version=$UBUNTU_VERSION
 architecture=$ARCH
 iso_url=$iso_url
+iso_sha256=$actual
 package_count=$(wc -l < "$PACKAGE_LIST")
 bundle_created_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 EOF_MANIFEST
