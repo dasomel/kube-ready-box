@@ -36,9 +36,11 @@ cd "$tmp_dir"
 # release/latest 는 빌드마다 다른 결과를 내는 움직이는 타깃이라 재현 가능한 이미지를
 # 만들 수 없다(#7 오프라인 번들, #8 immutable promotion, #10 SBOM 과 직접 충돌).
 # GVISOR_RELEASE 로 고정하고, 미지정 시에만 latest 를 쓰되 그 사실을 경고한다.
-gvisor_release="${GVISOR_RELEASE:-latest}"
+# 기본값은 실제로 설치·검증한 릴리스로 고정한다. "latest" 는 빌드 시점마다 달라져
+# 검증한 것과 배포되는 것이 달라진다(2026-08-21 검증: release-20260817.0, spec 1.2.1).
+gvisor_release="${GVISOR_RELEASE:-20260817.0}"
 if [ "$gvisor_release" = "latest" ]; then
-  echo "[WARN] GVISOR_RELEASE 미지정 - 'latest' 를 사용합니다. 재현 가능한 빌드가 아닙니다." >&2
+  echo "[WARN] GVISOR_RELEASE=latest - 빌드 시점마다 결과가 달라지며 재현 가능한 빌드가 아닙니다." >&2
 fi
 base_url="https://storage.googleapis.com/gvisor/releases/release/${gvisor_release}/${target_arch}"
 
