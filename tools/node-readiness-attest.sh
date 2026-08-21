@@ -14,9 +14,7 @@ checks=()
 json_escape() { python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().rstrip()))'; }
 add() {
   local id="$1" status="$2" detail="$3"
-  checks+=("$(printf '%s' "$detail" | json_escape | sed 's/^/\"/; s/$/\"/' | sed "s/\\\"/\"/g")")"
-  # replace the above string with a compact JSON object safely
-  checks[${#checks[@]}-1]="{\"id\":\"$id\",\"status\":\"$status\",\"detail\":$(printf '%s' "$detail" | json_escape)}"
+  checks+=("{\"id\":\"$id\",\"status\":\"$status\",\"detail\":$(printf '%s' "$detail" | json_escape)}")
   case "$status" in FAIL) FAILURES=$((FAILURES+1));; UNKNOWN) UNKNOWN=$((UNKNOWN+1));; esac
 }
 

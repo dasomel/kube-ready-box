@@ -54,7 +54,16 @@ while IFS=$'\t' read -r pkg _version _source _status; do
 done < "$packages_json"
 sort -u "$EVIDENCE_DIR/copyright-SHA256SUMS" 2>/dev/null -o "$EVIDENCE_DIR/copyright-SHA256SUMS" || true
 
-if [ -s "$EVIDENCE_DIR/inventory-SHA256SUMS" ]; then
+# 패키지 인벤토리의 체크섬을 실제로 생성한다.
+# 이전에는 inventory-SHA256SUMS 의 존재만 확인했는데 그 파일을 만드는 코드가 없어
+# 라이선스 정책 준수 여부와 무관하게 게이트가 항상 FAIL 이었다.
+inventory_sha256=""
+if [ -s "$EVIDENCE_DIR/license-packages.tsv" ]; then
+  sha256sum "$EVIDENCE_DIR/license-packages.tsv" > "$EVIDENCE_DIR/inventory-SHA256SUMS"
+  inventory_sha256=$(awk '{print $1; exit}' "$EVIDENCE_DIR/inventory-SHA256SUMS")
+fi
+
+if [ -n "$inventory_sha256" ]; then
   inventory_status=PASS
 else
   inventory_status=FAIL
@@ -69,7 +78,8 @@ cat > "$OUTPUT" <<EOF
   "status": "${status}",
   "failures": ${failures},
   "unknowns": ${unknowns},
-  "inventory_sha256": "${inventory_status}",
+  "inventory_sha256": "${inventory_sha256}",
+  "inventory_status": "${inventory_status}",
   "policy": "${POLICY_FILE}",
   "deny_licenses": "${DENY_LICENSES}",
   "deny_packages": "${DENY_PACKAGES}",
