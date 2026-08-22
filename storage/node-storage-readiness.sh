@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 checks=(); failures=0; unknowns=0
-add(){ local id=$1 st=$2 d=$3; checks+=("{\"id\":\"$id\",\"status\":\"$st\",\"detail\":$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$d")}"); [ "$st" = FAIL ] && failures=$((failures+1)); [ "$st" = UNKNOWN ] && unknowns=$((unknowns+1)); }
+add(){ local id=$1 st=$2 d=$3; checks+=("{\"id\":\"$id\",\"status\":\"$st\",\"detail\":$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$d")}"); case "$st" in FAIL) failures=$((failures+1));; UNKNOWN) unknowns=$((unknowns+1));; esac; }
 
 fs=$(findmnt -n -o FSTYPE / 2>/dev/null || echo unknown); case "$fs" in ext4|xfs) add root_filesystem PASS "$fs";; *) add root_filesystem UNKNOWN "$fs";; esac
 

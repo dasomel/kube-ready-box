@@ -148,3 +148,6 @@ Temporary Items
 matrix-evidence.json
 *-evidence.json
 hardened-configuration.nix
+
+# Rust 빌드 산출물
+rust/**/target/

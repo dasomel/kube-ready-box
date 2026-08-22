@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 checks=(); failures=0; unknowns=0
-add(){ local id=$1 st=$2 d=$3; checks+=("{\"id\":\"$id\",\"status\":\"$st\",\"detail\":$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$d")}"); [ "$st" = FAIL ] && failures=$((failures+1)); [ "$st" = UNKNOWN ] && unknowns=$((unknowns+1)); }
+add(){ local id=$1 st=$2 d=$3; checks+=("{\"id\":\"$id\",\"status\":\"$st\",\"detail\":$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$d")}"); case "$st" in FAIL) failures=$((failures+1));; UNKNOWN) unknowns=$((unknowns+1));; esac; }
 
 for p in /proc/sys/net/ipv4/ip_forward /proc/sys/net/ipv6/conf/all/forwarding; do
   id=$(basename "$p"); [ -r "$p" ] && [ "$(cat "$p")" = 1 ] && add "$id" PASS 1 || add "$id" FAIL missing-or-zero
@@ -20,8 +20,10 @@ if [ -r /proc/sys/net/netfilter/nf_conntrack_max ]; then
   add conntrack PASS "count=$count max=$max"
 else add conntrack UNKNOWN unavailable; fi
 
-for iface in $(ls /sys/class/net); do
-  [ "$iface" = lo ] && continue
+for ifpath in /sys/class/net/*; do
+  [ -e "$ifpath" ] || continue
+  iface=$(basename "$ifpath")
+  if [ "$iface" = lo ]; then continue; fi
   mtu=$(cat "/sys/class/net/$iface/mtu" 2>/dev/null || echo unknown)
   add "mtu_$iface" PASS "$mtu"
 done
