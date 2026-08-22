@@ -330,6 +330,36 @@ Agent 4: shellcheck packer/scripts/04-k8s-prereq.sh
     - 원인: `svga.*`, `pciBridge0/4~7`, `monitor.phys_bits_used` 등 구조 항목 누락
     - 해결: 검증된 ARM64 박스의 VMX 구성을 그대로 따를 것. 디스크는 SATA(`sata0:0`)에 물리고 `nvme0.present = "FALSE"`
 
+### CI / 검증 하네스 관련
+
+20. **`set -euo pipefail` 아래서 `[ ... ] && var=...` 로 끝나는 헬퍼는 항상 1을 반환한다**
+    - 조건이 거짓이면 함수의 종료 상태가 1이 되고, bare 호출(`add foo PASS 1`)은 그 자리에서 스크립트를 죽인다. 출력도 에러 메시지도 없이 exit 1만 남는다
+    - `&&` 리스트 *안*에서의 실패는 set -e 면제 대상이지만, 그 함수를 **bare 로 호출한 지점**은 면제가 아니다. 이 차이 때문에 눈으로는 안 보인다
+    - 실제 피해: 6개 readiness 스크립트(`network/` `storage/` `time/` `security/` `rocky/` `nixos/`)가 전부 첫 검사에서 죽어 출력 0바이트였다. 각각 이슈 #17 #18 #19 #16 #15 #9의 산출물이고 전부 완료로 보고돼 있었다
+    - 해결: 마지막 문장을 `case "$st" in FAIL) ...;; UNKNOWN) ...;; esac` 로. `case` 는 매칭 실패해도 0을 반환한다
+    - 같은 함정: `grep ... | cut ...` 을 그대로 반환하는 함수 → 키가 없으면 1을 반환해 호출부의 bare 대입(`v=$(get_field x)`)이 죽는다. `|| true` 로 흡수할 것
+
+21. **집계기가 실패를 삼키면 CI 초록은 거짓말이다**
+    - `tools/kube-ready-contracts.sh` 는 파싱 불가한 리포트를 `evidence: null` 로 기록하고 exit 0 으로 끝냈다. CI는 5개 중 4개가 null 인 채로 통과했다
+    - 판정 기준을 분리할 것: `status: FAIL` 은 정당한 **검사 결과**(환경 문제)이므로 통과, **증거 부재**는 도구 결함이므로 실패. 지금은 `evidence_missing[]` 이 비면 통과, 아니면 exit 1 (`ALLOW_MISSING_EVIDENCE=1` 로만 예외)
+    - 검증 도구를 고쳤으면 **양방향**으로 확인할 것 — 정상 트리에서 통과하는 것만으로는 부족하고, 일부러 깨뜨렸을 때 빨간불이 뜨는지도 봐야 한다
+
+22. **`main` CI가 빨간 채로 방치되면 가드는 없는 것과 같다**
+    - 2026-08 기준 15회 연속 실패 상태에서 커밋 9개가 그 위에 얹혔다. 차단 원인은 사소했다: shellcheck 경고 1건, 그리고 Rust 계약 테스트가 `target/debug/` 를 보는데 CI는 `--release` 만 빌드한 것(→ 첫 줄에서 즉사, 한 번도 실행된 적 없음)
+    - 푸시 후 `gh run list --limit 1` 로 결과를 확인할 것. 빨간불을 발견하면 새 작업보다 그것을 먼저 고친다
+    - 로컬에서 CI와 동일한 명령을 그대로 재현할 수 있다:
+    ```bash
+    find packer/scripts nixos rocky security network storage time observability tools rust \
+      -type f -name '*.sh' -print0 | xargs -0 -r shellcheck --severity=warning
+    bash -n tools/*.sh network/*.sh storage/*.sh time/*.sh security/*.sh observability/*.sh rocky/*.sh nixos/*.sh
+    ```
+
+23. **리눅스 타깃 스크립트는 컨테이너에서 실제로 돌려볼 것**
+    - macOS 에서는 `/proc` `/sys` 가 없어 검증이 불가능하고, 문법 검사만으로는 위 20번 같은 결함이 안 잡힌다
+    - `docker run --rm --entrypoint bash -v "$PWD:/w" -w /w <python3 있는 이미지> -c 'bash 스크립트'`
+    - 주의: macOS 의 `/tmp` 는 Docker Desktop 공유 경로가 아니다. `-v /tmp/x:/w` 는 조용히 빈 마운트가 되어 "No such file or directory" 로 오판하게 된다. 비교용 사본은 **리포 하위**에 만들 것
+
+
 ---
 
 ## Permissions
