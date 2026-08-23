@@ -115,10 +115,31 @@ validate_config() {
 # SPDX SBOM을 NixOS 시스템 클로저에서 생성한다. 이미지 빌드와 별개로 실행 가능.
 generate_sbom() {
   check_nix
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo -e "${RED}Error: 'python3' command is not installed or not in PATH.${NC}"
+    exit 1
+  fi
   mkdir -p "${DIST_DIR}"
 
   local out system closure
   out="${DIST_DIR}/$(sbom_filename "${PLATFORM}")"
+
+  # Release provenance (#9 AC): git commit / box version / flake.lock hash.
+  # VERSION 관례는 upload-nixos.sh와 공유한다 (VERSION="${VERSION:-0.1.0}").
+  local git_commit box_version flake_lock_sha provenance_json annotation_comment
+  git_commit=$(git -C "${SCRIPT_DIR}" rev-parse HEAD 2>/dev/null || echo unknown)
+  box_version="${VERSION:-0.1.0}"
+  if [ -f "${SCRIPT_DIR}/flake.lock" ]; then
+    flake_lock_sha=$(sha256sum "${SCRIPT_DIR}/flake.lock" | awk '{print $1}')
+  else
+    flake_lock_sha="unknown"
+  fi
+  # SPDX 문서 스키마를 깨지 않도록 임의 최상위 필드 대신 표준 annotations로 붙인다.
+  # provenance_json 자체도 printf 로 손수 조립하면 VERSION 같은 외부 입력에 따옴표가
+  # 섞였을 때 깨진 JSON을 문자열로 박아넣게 되므로, add()와 같은 방식으로 두 겹 다
+  # json.dumps 를 통과시킨다.
+  provenance_json=$(python3 -c 'import json,sys; print(json.dumps({"gitCommit":sys.argv[1],"boxVersion":sys.argv[2],"flakeLockSha256":sys.argv[3]}))' "$git_commit" "$box_version" "$flake_lock_sha")
+  annotation_comment=$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$provenance_json")
 
   echo -e "${BLUE}=== Generating SBOM (SPDX) ===${NC}"
   system=$(nix-build '<nixpkgs/nixos>' -A system --no-out-link \
@@ -132,6 +153,7 @@ generate_sbom() {
     printf '  "SPDXID": "SPDXRef-DOCUMENT",\n'
     printf '  "name": "%s-%s",\n' "$BOX_PREFIX" "$PLATFORM"
     printf '  "creationInfo": { "creators": ["Tool: nix-store --query --requisites"] },\n'
+    printf '  "annotations": [ { "annotationDate": "%s", "annotationType": "OTHER", "annotator": "Tool: kube-ready-box/build.sh", "comment": %s } ],\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$annotation_comment"
     printf '  "packages": [\n'
     printf '%s\n' "$closure" | awk '
       {

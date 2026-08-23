@@ -3,12 +3,16 @@ set -euo pipefail
 checks=(); failures=0; unknowns=0
 add(){ local id=$1 st=$2 d=$3; checks+=("{\"id\":\"$id\",\"status\":\"$st\",\"detail\":$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$d")}"); case "$st" in FAIL) failures=$((failures+1));; UNKNOWN) unknowns=$((unknowns+1));; esac; }
 
-. /etc/os-release
-[ "$ID" = nixos ] && add os PASS "NixOS $VERSION_ID" || add os FAIL "not NixOS"
+[ -r /etc/os-release ] && . /etc/os-release
+[ "${ID:-}" = nixos ] && add os PASS "NixOS ${VERSION_ID:-unknown}" || add os FAIL "not NixOS"
+[ -r /etc/os-release ] && add os_id PASS "${ID:-unknown}" || add os_id UNKNOWN "/etc/os-release missing"
+add architecture PASS "$(uname -m)"
 stat -fc %T /sys/fs/cgroup 2>/dev/null | grep -q cgroup2fs && add cgroup_v2 PASS enabled || add cgroup_v2 FAIL missing
 swapon --show --noheadings 2>/dev/null | grep -q . && add swap FAIL enabled || add swap PASS disabled
 for m in overlay br_netfilter; do grep -q "^$m " /proc/modules 2>/dev/null && add module_$m PASS loaded || add module_$m FAIL not-loaded; done
 [ -r /proc/sys/net/ipv4/ip_forward ] && [ "$(cat /proc/sys/net/ipv4/ip_forward)" = 1 ] && add ip_forward PASS 1 || add ip_forward FAIL 0
+[ -r /proc/sys/net/bridge/bridge-nf-call-iptables ] && { [ "$(cat /proc/sys/net/bridge/bridge-nf-call-iptables)" = 1 ] && add bridge_nf_iptables PASS 1 || add bridge_nf_iptables FAIL "$(cat /proc/sys/net/bridge/bridge-nf-call-iptables)"; } || add bridge_nf_iptables UNKNOWN not-readable
+[ -r /proc/sys/net/bridge/bridge-nf-call-ip6tables ] && { [ "$(cat /proc/sys/net/bridge/bridge-nf-call-ip6tables)" = 1 ] && add bridge_nf_ip6tables PASS 1 || add bridge_nf_ip6tables FAIL "$(cat /proc/sys/net/bridge/bridge-nf-call-ip6tables)"; } || add bridge_nf_ip6tables UNKNOWN not-readable
 mountpoint -q /sys/fs/bpf 2>/dev/null && add bpffs PASS mounted || add bpffs UNKNOWN not-mounted
 systemctl cat containerd >/dev/null 2>&1 && add containerd PASS installed || add containerd UNKNOWN not-installed
 command -v runc >/dev/null && add runc PASS installed || add runc UNKNOWN missing
