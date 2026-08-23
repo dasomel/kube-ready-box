@@ -42,8 +42,10 @@ apt-get install -y \
   apparmor-utils
 
 # yq (mikefarah/yq) - YAML processor for K8s manifests
+# "latest" 는 빌드 시점마다 달라져 재현 가능한 빌드를 깨뜨린다(#30 공급망 고정).
+# YQ_VERSION 으로 고정하고, 필요 시 환경변수로 override 한다.
 echo "Installing yq..."
-YQ_VERSION=$(curl -sL https://api.github.com/repos/mikefarah/yq/releases/latest | jq -r '.tag_name')
+YQ_VERSION="${YQ_VERSION:-v4.44.3}"
 ARCH=$(dpkg --print-architecture)
 curl -sL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${ARCH}" -o /usr/local/bin/yq
 chmod +x /usr/local/bin/yq

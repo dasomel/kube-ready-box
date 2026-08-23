@@ -57,7 +57,24 @@ prepare() {
   # 이전에는 두 아키텍처 모두 releases.ubuntu.com 을 써서 arm64 번들 생성이 불가능했다.
   local point_release iso_base iso_dir iso_url
   if [ "$UBUNTU_VERSION" = "24.04" ]; then
-    point_release="24.04.4"
+    # point_release 는 packer/plugins.pkr.hcl 의 ISO URL 에서 뽑아온다(단일 source of
+    # truth). 과거 이 값을 여기에 별도로 하드코딩했다가 plugins.pkr.hcl 이 24.04.3 을
+    # 가리키는 동안 여기는 24.04.4 로 방치되어, 번들이 packer 가 실제로 쓰는 ISO 와
+    # 다른 point release 로 만들어질 수 있었다.
+    local plugins_hcl="$ROOT/packer/plugins.pkr.hcl"
+    local extracted=""
+    if [ -f "$plugins_hcl" ]; then
+      extracted="$(grep -oE '24\.04\.[0-9]+' "$plugins_hcl" | head -1 || true)"
+    fi
+    case "$extracted" in
+      24.04.*)
+        point_release="$extracted"
+        ;;
+      *)
+        point_release="24.04.4"
+        echo "WARNING: could not extract point release from $plugins_hcl; falling back to hardcoded $point_release (may drift from the actual Packer ISO)" >&2
+        ;;
+    esac
   else
     point_release="26.04"
   fi

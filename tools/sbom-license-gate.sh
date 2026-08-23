@@ -25,8 +25,27 @@ json_escape() { python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().r
 
 packages_json="$EVIDENCE_DIR/license-packages.tsv"
 : > "$packages_json"
-if command -v dpkg-query >/dev/null 2>&1; then
-  dpkg-query -W -f='${Package}\t${Version}\t${Source}\t${Status}\n' | sort > "$packages_json"
+
+# ROOT="/" means "the currently running system" (e.g. inside a guest during
+# provisioning) and dpkg-query already targets that correctly with no flags.
+# Any other ROOT means "a mounted/extracted image" — dpkg-query ignores ROOT
+# by default and would silently report the *host's* packages instead, so it
+# must be pointed at that image's admindir explicitly.
+dpkg_admindir=""
+if [ "$ROOT" != "/" ]; then
+  dpkg_admindir="$ROOT/var/lib/dpkg"
+fi
+
+if [ -n "$dpkg_admindir" ] && [ ! -d "$dpkg_admindir" ]; then
+  echo "dpkg admindir not found under ROOT: $dpkg_admindir" >&2
+  failures=$((failures + 1))
+  unknowns=$((unknowns + 1))
+elif command -v dpkg-query >/dev/null 2>&1; then
+  if [ -n "$dpkg_admindir" ]; then
+    dpkg-query --admindir="$dpkg_admindir" -W -f='${Package}\t${Version}\t${Source}\t${Status}\n' | sort > "$packages_json"
+  else
+    dpkg-query -W -f='${Package}\t${Version}\t${Source}\t${Status}\n' | sort > "$packages_json"
+  fi
 else
   echo "dpkg-query unavailable" >&2
   unknowns=$((unknowns + 1))
@@ -72,6 +91,31 @@ fi
 
 status=PASS
 [ "$failures" -gt 0 ] && status=FAIL
+
+# Embed the parsed package inventory as a JSON array so the report is
+# self-contained evidence on its own, not just a pointer to the .tsv sidecar.
+packages_array_json=$(python3 -c '
+import json, sys
+
+path = sys.argv[1]
+items = []
+with open(path, "r", encoding="utf-8") as fh:
+    for line in fh:
+        line = line.rstrip("\n")
+        if not line:
+            continue
+        fields = line.split("\t")
+        fields += [""] * (4 - len(fields))
+        name, version, source, pkg_status = fields[:4]
+        items.append({
+            "name": name,
+            "version": version,
+            "source": source,
+            "status": pkg_status,
+        })
+print(json.dumps(items))
+' "$packages_json")
+
 cat > "$OUTPUT" <<EOF
 {
   "schema_version": 1,
@@ -83,7 +127,8 @@ cat > "$OUTPUT" <<EOF
   "policy": "${POLICY_FILE}",
   "deny_licenses": "${DENY_LICENSES}",
   "deny_packages": "${DENY_PACKAGES}",
-  "review_required_for_unknown_license": true
+  "review_required_for_unknown_license": true,
+  "packages": ${packages_array_json}
 }
 EOF
 
