@@ -16,10 +16,17 @@ apt-get install -y \
   nload \
   nethogs
 
-# dool (dstat replacement) - not in Ubuntu 24.04 repos, install from GitHub
+# dool (dstat replacement) - not in Ubuntu 24.04 repos, install from a pinned
+# GitHub release .deb (#30 공급망 고정). "master" 브랜치 raw 스크립트를 그대로
+# curl|install 하던 이전 방식은 업스트림이 조용히 바뀌면 그대로 흘러들어오는
+# floating dependency였다.
 echo "Installing dool (dstat replacement)..."
-curl -sL "https://raw.githubusercontent.com/scottchiefbaker/dool/master/dool" -o /usr/local/bin/dool
-chmod +x /usr/local/bin/dool
+DOOL_VERSION="${DOOL_VERSION:-1.3.8}"
+DOOL_SHA256="${DOOL_SHA256:-818c833551b365a89f6ae29f07df5ea34588563e2eebaf3b2f93d64f6c9787fd}"
+curl -sL "https://github.com/scottchiefbaker/dool/releases/download/v${DOOL_VERSION}/dool-${DOOL_VERSION}.deb" -o /tmp/dool.deb
+echo "${DOOL_SHA256}  /tmp/dool.deb" | sha256sum -c -
+dpkg -i /tmp/dool.deb
+rm -f /tmp/dool.deb
 echo "  dool installed: $(dool --version 2>&1 | head -1)"
 
 # 네트워크 진단 도구
@@ -43,12 +50,21 @@ apt-get install -y \
 
 # yq (mikefarah/yq) - YAML processor for K8s manifests
 # "latest" 는 빌드 시점마다 달라져 재현 가능한 빌드를 깨뜨린다(#30 공급망 고정).
-# YQ_VERSION 으로 고정하고, 필요 시 환경변수로 override 한다.
+# YQ_VERSION 으로 고정하고, 필요 시 환경변수로 override 한다. 체크섬은 yq의
+# releases/<tag>/checksums 파일에서 직접 뽑아 미리 고정한 값이다(재확인:
+# extract-checksum.sh SHA-256 yq_linux_<arch> 로 동일 값 산출 확인됨).
 echo "Installing yq..."
 YQ_VERSION="${YQ_VERSION:-v4.44.3}"
 ARCH=$(dpkg --print-architecture)
-curl -sL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${ARCH}" -o /usr/local/bin/yq
-chmod +x /usr/local/bin/yq
+case "$ARCH" in
+  amd64) YQ_SHA256="${YQ_SHA256:-a2c097180dd884a8d50c956ee16a9cec070f30a7947cf4ebf87d5f36213e9ed7}" ;;
+  arm64) YQ_SHA256="${YQ_SHA256:-0e7e1524f68d91b3ff9b089872d185940ab0fa020a5a9052046ef10547023156}" ;;
+  *) echo "No pinned yq checksum for architecture '$ARCH'; refusing to install unverified binary" >&2; exit 1 ;;
+esac
+curl -sL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${ARCH}" -o /tmp/yq
+echo "${YQ_SHA256}  /tmp/yq" | sha256sum -c -
+install -m 755 /tmp/yq /usr/local/bin/yq
+rm -f /tmp/yq
 echo "  yq $(yq --version) installed"
 
 # 성능 분석 도구

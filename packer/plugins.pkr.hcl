@@ -1,17 +1,20 @@
 packer {
   required_version = ">= 1.10.0"
 
+  # 버전을 ">= 1.0.0" 처럼 열어두면 packer init 실행마다 그 시점의 최신 버전을
+  # 조용히 새로 받아온다 (#30 공급망 고정 — floating 버전 제약도 동일한 위험).
+  # 검증하고 실제 사용 중인 정확한 버전으로 고정한다.
   required_plugins {
     virtualbox = {
-      version = ">= 1.0.0"
+      version = "= 1.1.3"
       source  = "github.com/hashicorp/virtualbox"
     }
     vmware = {
-      version = ">= 1.0.0"
+      version = "= 1.2.0"
       source  = "github.com/hashicorp/vmware"
     }
     vagrant = {
-      version = ">= 1.0.0"
+      version = "= 1.1.6"
       source  = "github.com/hashicorp/vagrant"
     }
   }

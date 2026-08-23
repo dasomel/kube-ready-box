@@ -19,10 +19,23 @@ VAGRANT_INSECURE_KEY_ED25519="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN1YdxBpNlzxDq
 echo "Creating .ssh directory..."
 mkdir -p "${SSH_DIR}"
 
-# Install Vagrant insecure public keys
+# Install Vagrant insecure public keys. The upstream file is fetched from the
+# "main" branch (floating ref, #30 공급망 고정), so it is only trusted when its
+# content matches one of the known-good embedded keys above; a fetch that
+# succeeds but returns something unexpected (compromised branch, MITM,
+# unexpected upstream edit) falls back to the embedded keys instead of being
+# trusted blindly.
 echo "Installing Vagrant insecure public keys..."
-if curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/hashicorp/vagrant/main/keys/vagrant.pub -o "${SSH_DIR}/authorized_keys" 2>/dev/null; then
-  echo "Downloaded keys from GitHub"
+FETCHED_KEYS=""
+if FETCHED_KEYS=$(curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/hashicorp/vagrant/main/keys/vagrant.pub 2>/dev/null); then # unpinned-guard:allow -- content verified against embedded keys below, not trusted blindly
+  if printf '%s\n' "$FETCHED_KEYS" | grep -qF "$VAGRANT_INSECURE_KEY_RSA" && printf '%s\n' "$FETCHED_KEYS" | grep -qF "$VAGRANT_INSECURE_KEY_ED25519"; then
+    printf '%s\n' "$FETCHED_KEYS" > "${SSH_DIR}/authorized_keys"
+    echo "Downloaded keys from GitHub (matched known-good embedded keys)"
+  else
+    echo "Downloaded key content did NOT match known-good embedded keys; using embedded keys instead"
+    echo "${VAGRANT_INSECURE_KEY_RSA}" > "${SSH_DIR}/authorized_keys"
+    echo "${VAGRANT_INSECURE_KEY_ED25519}" >> "${SSH_DIR}/authorized_keys"
+  fi
 else
   echo "Curl failed, using embedded keys..."
   echo "${VAGRANT_INSECURE_KEY_RSA}" > "${SSH_DIR}/authorized_keys"

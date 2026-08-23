@@ -67,6 +67,15 @@ jobs:
         run: |
           find packer/scripts nixos rocky security network storage time observability tools rust -type f -name '*.sh' -print0 | xargs -0 -r shellcheck --severity=warning
 
+  supply-chain-guard:
+    name: Unpinned build input guard (#30)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject floating downloads / open plugin version constraints
+        run: bash tools/unpinned-input-guard.sh
+
   rust:
     name: Rust verifier
     runs-on: ubuntu-latest
