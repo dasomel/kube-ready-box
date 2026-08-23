@@ -29,6 +29,7 @@ run_report(){
 [ -f "$ROOT/security/workload-security-check.sh" ] && run_report security "bash $ROOT/security/workload-security-check.sh" || true
 [ -f "$ROOT/rocky/preflight.sh" ] && [ "${RUN_ROCKY_PROFILE:-0}" = 1 ] && run_report rocky "bash $ROOT/rocky/preflight.sh" || true
 [ -f "$ROOT/nixos/preflight.sh" ] && [ "${RUN_NIXOS_PROFILE:-0}" = 1 ] && run_report nixos "bash $ROOT/nixos/preflight.sh" || true
+[ -f "$ROOT/observability/node-diagnostic-profile.sh" ] && [ "${RUN_OBSERVABILITY_PROFILE:-0}" = 1 ] && run_report observability "DIAGNOSTIC_DURATION_SECONDS=${DIAGNOSTIC_DURATION_SECONDS:-1} bash $ROOT/observability/node-diagnostic-profile.sh" || true
 python3 - "$OUT" "$(IFS=,; echo "${reports[*]:-}")" "$(IFS=,; echo "${missing[*]:-}")" <<'PY'
 import json,sys
 out,raw,miss=sys.argv[1:]

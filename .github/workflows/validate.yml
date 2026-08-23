@@ -108,5 +108,5 @@ jobs:
         run: cargo run --locked --offline -- --help
       - name: Aggregate contract runner
         run: |
-          CONTRACT_OUTPUT=/tmp/kube-ready-contracts.json bash tools/kube-ready-contracts.sh
+          CONTRACT_OUTPUT=/tmp/kube-ready-contracts.json RUN_OBSERVABILITY_PROFILE=1 DIAGNOSTIC_DURATION_SECONDS=1 bash tools/kube-ready-contracts.sh
           python3 -m json.tool /tmp/kube-ready-contracts.json >/dev/null
