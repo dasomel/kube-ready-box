@@ -92,14 +92,20 @@ fi
 status=PASS
 [ "$failures" -gt 0 ] && status=FAIL
 
-# Embed the parsed package inventory as a JSON array so the report is
-# self-contained evidence on its own, not just a pointer to the .tsv sidecar.
-packages_array_json=$(python3 -c '
+# 패키지 배열(수백 개 패키지)을 argv로 넘기면 실제 Ubuntu 러너처럼 패키지가
+# 많은 환경에서 "Argument list too long"(ARG_MAX 초과)으로 죽는다 -- 이걸
+# 컨테이너 테스트(패키지 적음)에서는 못 잡고 실제 CI 러너에서만 재현됐다.
+# .tsv 파일 경로만 argv로 넘기고 python 안에서 직접 읽어 큰 문자열이
+# 셸을 거치지 않게 한다. 최종 JSON도 한 번에 조립해 컴팩트(한 줄)로 쓴다 --
+# 이 저장소의 다른 모든 evidence 스크립트와 동일한 관례이자,
+# tools/kube-ready-contracts.sh 의 run_report() 가 `tail -n 1` 로 마지막
+# 줄만 읽어 파싱하기 때문에 필수적이다.
+python3 -c '
 import json, sys
+status, failures, unknowns, inventory_sha256, inventory_status, policy_file, deny_licenses, deny_packages, packages_path, output = sys.argv[1:]
 
-path = sys.argv[1]
 items = []
-with open(path, "r", encoding="utf-8") as fh:
+with open(packages_path, "r", encoding="utf-8") as fh:
     for line in fh:
         line = line.rstrip("\n")
         if not line:
@@ -113,17 +119,7 @@ with open(path, "r", encoding="utf-8") as fh:
             "source": source,
             "status": pkg_status,
         })
-print(json.dumps(items))
-' "$packages_json")
 
-# 컴팩트(한 줄) JSON으로 쓴다 -- 이 저장소의 다른 모든 evidence 스크립트와
-# 동일한 관례이자, tools/kube-ready-contracts.sh 의 run_report() 가
-# `tail -n 1` 로 마지막 줄만 읽어 파싱하기 때문에 필수적이다. 이전의
-# heredoc pretty-print 는 여러 줄로 나뉘어 마지막 줄(`}`)만 읽히면
-# 파싱 불가능한 evidence 로 처리됐다.
-python3 -c '
-import json, sys
-status, failures, unknowns, inventory_sha256, inventory_status, policy_file, deny_licenses, deny_packages, packages_json, output = sys.argv[1:]
 obj = {
     "schema_version": 1,
     "status": status,
@@ -135,12 +131,12 @@ obj = {
     "deny_licenses": deny_licenses,
     "deny_packages": deny_packages,
     "review_required_for_unknown_license": True,
-    "packages": json.loads(packages_json),
+    "packages": items,
 }
 raw = json.dumps(obj, sort_keys=True, separators=(",", ":"))
 with open(output, "w") as fh:
     fh.write(raw + "\n")
 print(raw)
-' "$status" "$failures" "$unknowns" "$inventory_sha256" "$inventory_status" "$POLICY_FILE" "$DENY_LICENSES" "$DENY_PACKAGES" "$packages_array_json" "$OUTPUT"
+' "$status" "$failures" "$unknowns" "$inventory_sha256" "$inventory_status" "$POLICY_FILE" "$DENY_LICENSES" "$DENY_PACKAGES" "$packages_json" "$OUTPUT"
 
 [ "$status" = PASS ]
