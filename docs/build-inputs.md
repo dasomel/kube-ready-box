@@ -53,7 +53,7 @@ All four values above (`DOOL_SHA256`, `YQ_SHA256` per-arch, and the gVisor
 default release) were computed by downloading the artifact directly and
 running `sha256sum`/`sha512sum`, not copied from a third party.
 
-## OS packages (apt)
+## OS package version reproducibility (apt)
 
 Installed via `apt-get install` against Ubuntu's own signed archive
 (`/etc/apt/sources.list.d/ubuntu.sources`, GPG-verified by apt itself) —
@@ -61,12 +61,22 @@ authenticity is handled by apt's existing trust chain, not by this repo.
 What is **not** yet pinned: exact package *versions* — a rebuild next month
 can pull newer point-releases of the same packages, so the resulting
 package set is not byte-for-byte reproducible across time even though every
-package is authentic. Producing a full pinned/reproducible package manifest
-(e.g. an apt snapshot mirror or explicit `package=version` pins for every
-installed package) is a larger follow-up, not attempted in this pass —
-`packer/scripts/generate-sbom.sh` records the actually-installed versions
-per build as evidence, so drift is at least visible after the fact even
-though it isn't prevented before the fact.
+package is authentic. `packer/scripts/generate-sbom.sh` records the
+actually-installed versions per build as evidence, so drift is at least
+visible after the fact even though it isn't prevented before the fact.
+
+Deliberately not attempted in this pass: forcing exact `apt-get install
+package=version` pins repo-wide, or standing up an apt snapshot mirror
+(e.g. snapshot.ubuntu.com) to install from. Both require either (a) a
+"last known good" version manifest captured from an actual completed
+build — which needs a real multi-provider build run to produce, not
+something this environment can generate — or (b) a new external
+dependency (a snapshot service) that itself becomes a build input needing
+its own availability/trust evaluation. Attempting either without that
+groundwork risks trading "not perfectly reproducible" for "silently
+broken the next time an old package version is no longer available,"
+which is a worse failure mode. Tracked as a follow-up that needs a real
+build baseline first.
 
 ## Build-time network egress restriction
 
@@ -101,50 +111,45 @@ Korean NTP servers `01-base.sh` configures).
 
 **What this does and does not cover, honestly:**
 
-- The dnsmasq+ipset+iptables mechanism itself was verified directly: in a
-  Linux container with `NET_ADMIN`/`NET_RAW`, a `curl` to an allowed domain
-  (`raw.githubusercontent.com`) succeeded (HTTP 200, real content, and the
-  ipset was populated with the CDN's actual current IPs), and a `curl` to a
-  disallowed domain (`example.com`) timed out — the `DROP` rule actually
-  drops traffic, this isn't just a config file that looks right.
-- What was **not** verified: an actual full Packer VM build with this
-  enabled end-to-end (no systemd available in the container images used
-  for testing, so `systemctl enable --now dnsmasq` and the service-level
-  wiring in `00-egress-restrict.sh` were not exercised — only the
-  underlying firewall/DNS mechanism was, using the equivalent commands run
-  directly instead of via systemd). That's why this stays opt-in
+- The dnsmasq+ipset+iptables mechanism was verified directly in a Linux
+  container with `NET_ADMIN`/`NET_RAW` during development, then **again
+  for real** in CI's `supply-chain-negative-tests` job, which runs on a
+  genuine systemd VM (GitHub-hosted `ubuntu-latest`): the script's actual
+  `systemctl enable --now dnsmasq` path (not a manual equivalent) brings
+  the service up, `systemctl is-active dnsmasq` confirms `active`, a
+  `curl` to an allowed domain succeeds (HTTP 200), a `curl` to a
+  disallowed domain (`example.com`) is actually blocked, and reverting
+  the restriction restores connectivity to that same domain. This job
+  runs on every PR touching the relevant paths, so this stays a live
+  regression check, not a one-time claim.
+- What that CI job does **not** cover: an actual Packer-orchestrated VM
+  build with this option enabled end-to-end (the CI job runs the
+  provisioning script directly on the runner, not inside a Packer
+  VirtualBox/VMware build). That's still why this stays opt-in
   (`restrict_build_egress` defaults to `0`) rather than becoming the
-  default build behavior — flipping the default should happen only after
-  someone runs a real build with it enabled and confirms nothing in
-  00–99 breaks.
+  default — flipping the default should wait until someone runs a real
+  Packer build with it on and confirms nothing across the full 00–99
+  provisioning sequence breaks.
 - The OS *installer* phase (autoinstall/subiquity, before any provisioner
   script runs) is not covered — that phase's network access is controlled
   by the ISO's own installer config, not by anything in `packer/scripts/`.
 
-## OS package version reproducibility (apt)
+## Negative tests (CI)
 
-Installed via `apt-get install` against Ubuntu's own signed archive
-(`/etc/apt/sources.list.d/ubuntu.sources`, GPG-verified by apt itself) —
-authenticity is handled by apt's existing trust chain, not by this repo.
-What is **not** yet pinned: exact package *versions* — a rebuild next month
-can pull newer point-releases of the same packages, so the resulting
-package set is not byte-for-byte reproducible across time even though every
-package is authentic. `packer/scripts/generate-sbom.sh` records the
-actually-installed versions per build as evidence, so drift is at least
-visible after the fact even though it isn't prevented before the fact.
+`supply-chain-negative-tests` in `.github/workflows/validate.yml` runs on
+every relevant PR:
 
-Deliberately not attempted in this pass: forcing exact `apt-get install
-package=version` pins repo-wide, or standing up an apt snapshot mirror
-(e.g. snapshot.ubuntu.com) to install from. Both require either (a) a
-"last known good" version manifest captured from an actual completed
-build — which needs a real multi-provider build run to produce, not
-something this environment can generate — or (b) a new external
-dependency (a snapshot service) that itself becomes a build input needing
-its own availability/trust evaluation. Attempting either without that
-groundwork risks trading "not perfectly reproducible" for "silently
-broken the next time an old package version is no longer available,"
-which is a worse failure mode. Tracked as a follow-up that needs a real
-build baseline first.
+- the egress-restriction live test described above
+- a mismatched-checksum test against the real `03-os-packages.sh`: it
+  overrides `DOOL_SHA256` to a value that won't match the real download,
+  runs the actual script, and asserts both that it exits non-zero *and*
+  that `/usr/local/bin/dool` was never installed — fail-closed, not just
+  fail-noisy
+
+This is #30's "negative test covers substituted package/binary and
+unexpected network access" acceptance criterion, satisfied for these two
+specific cases (checksum substitution, network egress) — not a general
+fuzzer covering every input in the tables above.
 
 ## Not yet covered by this inventory
 
@@ -153,8 +158,8 @@ build baseline first.
 - Quarantine/rollback workflow specifically for a compromised OS/package/tool
   input (distinct from `tools/release-promote.sh`'s box-level rollback,
   which operates on already-built box artifacts, not build inputs).
-- A negative CI test that actually substitutes a package/binary and confirms
-  the build fails closed (today's guard is static analysis of the scripts,
-  not a live substitution test).
+- Negative tests for the other pinned downloads (yq, gVisor) and for the
+  Packer plugin pins — only dool has a live substitution test today.
+- A real Packer-orchestrated build with `restrict_build_egress=1`.
 
 See issue #30 for the full requirement list.
