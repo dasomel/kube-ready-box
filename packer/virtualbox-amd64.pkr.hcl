@@ -53,6 +53,10 @@ build {
     ]
     environment_vars = [
       "RESTRICT_BUILD_EGRESS=${var.restrict_build_egress}",
+      "KUBE_READY_COMMIT_SHA=${var.commit_sha}",
+      "KUBE_READY_BUILD_ID=${var.build_id}",
+      "KUBE_READY_WORKFLOW_RUN=${var.workflow_run}",
+      "KUBE_READY_BOX_VERSION=${var.box_version}",
       "SANDBOX_PROFILE=${var.sandbox_profile}",
       "GVISOR_RELEASE=${var.gvisor_release}"
     ]

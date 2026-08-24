@@ -254,6 +254,23 @@ build_box() {
   local datetime=$(date +"%Y%m%d-%H%M%S")
   local logfile="logs/build-${provider}-${arch}-${FILESYSTEM}-${datetime}.log"
 
+  # #28 portfolio provenance (Narwhal #161): thread commit/build/workflow
+  # identity into the box's SBOM via Packer's PKR_VAR_* convention (picked
+  # up automatically, same as Terraform's TF_VAR_*). GITHUB_* vars are set
+  # by GitHub Actions already; empty/absent outside CI, where the pkr.hcl
+  # variable defaults ("unknown"/"local") apply instead.
+  local commit_sha box_version
+  commit_sha=$(git rev-parse HEAD 2>/dev/null || echo unknown)
+  box_version=$(git describe --tags --always 2>/dev/null || echo 0.0.0-dev)
+  export PKR_VAR_commit_sha="$commit_sha"
+  export PKR_VAR_build_id="${GITHUB_RUN_ID:-local}-${datetime}"
+  if [ -n "${GITHUB_RUN_ID:-}" ] && [ -n "${GITHUB_SERVER_URL:-}" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; then
+    export PKR_VAR_workflow_run="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+  else
+    export PKR_VAR_workflow_run="local"
+  fi
+  export PKR_VAR_box_version="$box_version"
+
   # Determine source name based on provider
   local source_name=""
   if [ "$provider" = "virtualbox" ]; then

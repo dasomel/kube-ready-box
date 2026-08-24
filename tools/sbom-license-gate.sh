@@ -116,21 +116,31 @@ with open(path, "r", encoding="utf-8") as fh:
 print(json.dumps(items))
 ' "$packages_json")
 
-cat > "$OUTPUT" <<EOF
-{
-  "schema_version": 1,
-  "status": "${status}",
-  "failures": ${failures},
-  "unknowns": ${unknowns},
-  "inventory_sha256": "${inventory_sha256}",
-  "inventory_status": "${inventory_status}",
-  "policy": "${POLICY_FILE}",
-  "deny_licenses": "${DENY_LICENSES}",
-  "deny_packages": "${DENY_PACKAGES}",
-  "review_required_for_unknown_license": true,
-  "packages": ${packages_array_json}
+# 컴팩트(한 줄) JSON으로 쓴다 -- 이 저장소의 다른 모든 evidence 스크립트와
+# 동일한 관례이자, tools/kube-ready-contracts.sh 의 run_report() 가
+# `tail -n 1` 로 마지막 줄만 읽어 파싱하기 때문에 필수적이다. 이전의
+# heredoc pretty-print 는 여러 줄로 나뉘어 마지막 줄(`}`)만 읽히면
+# 파싱 불가능한 evidence 로 처리됐다.
+python3 -c '
+import json, sys
+status, failures, unknowns, inventory_sha256, inventory_status, policy_file, deny_licenses, deny_packages, packages_json, output = sys.argv[1:]
+obj = {
+    "schema_version": 1,
+    "status": status,
+    "failures": int(failures),
+    "unknowns": int(unknowns),
+    "inventory_sha256": inventory_sha256,
+    "inventory_status": inventory_status,
+    "policy": policy_file,
+    "deny_licenses": deny_licenses,
+    "deny_packages": deny_packages,
+    "review_required_for_unknown_license": True,
+    "packages": json.loads(packages_json),
 }
-EOF
+raw = json.dumps(obj, sort_keys=True, separators=(",", ":"))
+with open(output, "w") as fh:
+    fh.write(raw + "\n")
+print(raw)
+' "$status" "$failures" "$unknowns" "$inventory_sha256" "$inventory_status" "$POLICY_FILE" "$DENY_LICENSES" "$DENY_PACKAGES" "$packages_array_json" "$OUTPUT"
 
-cat "$OUTPUT"
 [ "$status" = PASS ]

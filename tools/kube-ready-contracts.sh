@@ -30,6 +30,7 @@ run_report(){
 [ -f "$ROOT/rocky/preflight.sh" ] && [ "${RUN_ROCKY_PROFILE:-0}" = 1 ] && run_report rocky "bash $ROOT/rocky/preflight.sh" || true
 [ -f "$ROOT/nixos/preflight.sh" ] && [ "${RUN_NIXOS_PROFILE:-0}" = 1 ] && run_report nixos "bash $ROOT/nixos/preflight.sh" || true
 [ -f "$ROOT/observability/node-diagnostic-profile.sh" ] && [ "${RUN_OBSERVABILITY_PROFILE:-0}" = 1 ] && run_report observability "DIAGNOSTIC_DURATION_SECONDS=${DIAGNOSTIC_DURATION_SECONDS:-1} bash $ROOT/observability/node-diagnostic-profile.sh" || true
+[ -f "$ROOT/tools/sbom-license-gate.sh" ] && [ "${RUN_LICENSE_GATE:-0}" = 1 ] && run_report license "bash $ROOT/tools/sbom-license-gate.sh" || true
 python3 - "$OUT" "$(IFS=,; echo "${reports[*]:-}")" "$(IFS=,; echo "${missing[*]:-}")" <<'PY'
 import json,sys
 out,raw,miss=sys.argv[1:]

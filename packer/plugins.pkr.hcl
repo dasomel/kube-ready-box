@@ -120,3 +120,25 @@ variable "restrict_build_egress" {
   type    = string
   default = "0"
 }
+
+# #28 portfolio provenance (Narwhal #161's SBOM metadata minimum set:
+# commit_sha, build_id, workflow_run; "version" reuses the pre-existing
+# box_version variable below). build.sh exports these as PKR_VAR_*
+# environment variables before invoking `packer build`; Packer picks them
+# up automatically (the same convention Terraform uses for TF_VAR_*).
+# Defaults cover a manual `packer build` invocation outside build.sh/CI,
+# where none of this provenance is available.
+variable "commit_sha" {
+  type    = string
+  default = "unknown"
+}
+
+variable "build_id" {
+  type    = string
+  default = "local"
+}
+
+variable "workflow_run" {
+  type    = string
+  default = "local"
+}

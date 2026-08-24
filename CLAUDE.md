@@ -421,3 +421,4 @@ Agent 4: shellcheck packer/scripts/04-k8s-prereq.sh
 - [k8s-post-install.md](docs/k8s-post-install.md) - K8s 설치 후 설정
 - [build-inputs.md](docs/build-inputs.md) - 외부 빌드 입력 전수조사/고정 현황 (#30)
 - [public-rfp-readiness.md](docs/public-rfp-readiness.md) - 공공 RFP 검증 프로파일 요구사항 대조 (#5)
+- [portfolio-contract.md](docs/portfolio-contract.md) - Dasomel OSS Portfolio 공통 Make/CI/SBOM/license 계약 대조 (#28)

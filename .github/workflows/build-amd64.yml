@@ -176,9 +176,9 @@ jobs:
         id: version
         run: |
           if [ -n "${{ inputs.version }}" ]; then
-            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
           else
-            echo "version=$(date +%Y.%m.%d)" >> $GITHUB_OUTPUT
+            echo "version=$(date +%Y.%m.%d)" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Setup Vagrant
@@ -190,7 +190,7 @@ jobs:
 
       - name: Get FS Upper
         id: fs
-        run: echo "upper=$(echo '${{ matrix.filesystem }}' | tr '[:lower:]' '[:upper:]')" >> $GITHUB_OUTPUT
+        run: echo "upper=$(echo '${{ matrix.filesystem }}' | tr '[:lower:]' '[:upper:]')" >> "$GITHUB_OUTPUT"
 
       - name: Publish to Vagrant Cloud
         env:

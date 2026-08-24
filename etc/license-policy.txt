@@ -1,4 +1,0 @@
-# One normalized SPDX license identifier per line.
-# Leave empty until the release's license scanner has classified components.
-# Examples of policy entries belong in an organization-specific overlay, not
-# in the generic kube-ready-box default.

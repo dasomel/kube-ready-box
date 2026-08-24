@@ -66,6 +66,14 @@ jobs:
       - name: Shellcheck
         run: |
           find packer/scripts nixos rocky security network storage time observability tools rust -type f -name '*.sh' -print0 | xargs -0 -r shellcheck --severity=warning
+      - name: actionlint
+        run: |
+          ACTIONLINT_VERSION=1.7.12
+          ACTIONLINT_SHA256=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+          curl -sL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" -o /tmp/actionlint.tar.gz
+          echo "${ACTIONLINT_SHA256}  /tmp/actionlint.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/actionlint.tar.gz -C /tmp actionlint
+          /tmp/actionlint -color .github/workflows/*.yml
 
   supply-chain-guard:
     name: Unpinned build input guard (#30)
@@ -108,8 +116,22 @@ jobs:
         run: cargo run --locked --offline -- --help
       - name: Aggregate contract runner
         run: |
-          CONTRACT_OUTPUT=/tmp/kube-ready-contracts.json RUN_OBSERVABILITY_PROFILE=1 DIAGNOSTIC_DURATION_SECONDS=1 bash tools/kube-ready-contracts.sh
+          CONTRACT_OUTPUT=/tmp/kube-ready-contracts.json RUN_OBSERVABILITY_PROFILE=1 RUN_LICENSE_GATE=1 DIAGNOSTIC_DURATION_SECONDS=1 bash tools/kube-ready-contracts.sh
           python3 -m json.tool /tmp/kube-ready-contracts.json >/dev/null
+
+  # Named to match the portfolio-wide CI stage vocabulary (Narwhal #161,
+  # #28): validate/test/security/license/sbom/build/package/e2e/release/
+  # attest. Duplicates the license check the aggregator above also runs --
+  # kept as its own job so it shows up by that name in PR checks, matching
+  # how the other OSS repos in the portfolio name this stage.
+  license:
+    name: license
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: License gate
+        run: bash tools/sbom-license-gate.sh
 
   supply-chain-negative-tests:
     name: Supply-chain negative tests (#30)
