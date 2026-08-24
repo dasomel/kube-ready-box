@@ -32,6 +32,13 @@ if [ "${RESTRICT_BUILD_EGRESS:-0}" != "1" ]; then
   exit 0
 fi
 
+# 이 스크립트는 00번대 중에서도 가장 먼저 실행돼 첫 부팅 직후에 apt-get을
+# 호출한다. cloud-init/subiquity의 후처리(autoremove, unattended-upgrades
+# 트리거 등)가 아직 dpkg lock을 쥐고 있을 수 있어, 그걸 기다리지 않으면
+# "Could not get lock /var/lib/dpkg/lock-frontend"로 죽는다 -- 01-base.sh
+# 가 이미 쓰고 있는 것과 같은 가드.
+cloud-init status --wait || true
+
 SET_NAME="kube_ready_build_allowlist"
 DNSMASQ_CONF="/etc/dnsmasq.d/kube-ready-egress.conf"
 STATE_FILE="/etc/vagrant-box/egress-restrict.state"

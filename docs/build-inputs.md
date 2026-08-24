@@ -122,14 +122,9 @@ Korean NTP servers `01-base.sh` configures).
   the restriction restores connectivity to that same domain. This job
   runs on every PR touching the relevant paths, so this stays a live
   regression check, not a one-time claim.
-- What that CI job does **not** cover: an actual Packer-orchestrated VM
-  build with this option enabled end-to-end (the CI job runs the
-  provisioning script directly on the runner, not inside a Packer
-  VirtualBox/VMware build). That's still why this stays opt-in
-  (`restrict_build_egress` defaults to `0`) rather than becoming the
-  default — flipping the default should wait until someone runs a real
-  Packer build with it on and confirms nothing across the full 00–99
-  provisioning sequence breaks.
+- **Update, real Packer build confirmed**: ran `packer build -only=virtualbox-iso.ubuntu-vbox-arm64 -var restrict_build_egress=1 -var ubuntu_version=26.04 -var filesystem=ext4` twice, end to end, on this machine. Both times `00-egress-restrict.sh` set up the restriction, every provisioning script from `00-vagrant-setup.sh` through `10-sandbox-runtime.sh` completed successfully with egress restricted (real `apt-get`/`curl` traffic to the allowed domains, including the dool/yq checksum-verified downloads), `99-cleanup.sh` reverted it ("egress restriction reverted" in both logs), and a valid `.box` was produced (`tar -tzf` confirms `metadata.json`/`Vagrantfile`/`box.ovf`/disk image, ~1.8GB). One real bug was found and fixed by this: the script ran `apt-get install` immediately as the very first provisioner, before cloud-init's own first-boot package work had released the dpkg lock, and died with `Could not get lock /var/lib/dpkg/lock-frontend` — fixed by adding the same `cloud-init status --wait || true` guard `01-base.sh` already uses.
+  - Both runs also hit a `packer build` exit code of "errored" — but this is **CLAUDE.md mistake pattern #11** (VirtualBox ARM64's ISO-detach step races the local-shell packaging script's VM unregister, `VBOX_E_OBJECT_NOT_FOUND`), a pre-existing, already-documented Packer/VirtualBox interaction with no relation to this script — confirmed unrelated by reproducing it identically on both the restricted-egress run and by it being pattern #11's known, generic behavior. The box artifact was valid both times regardless of Packer's reported exit code, per that pattern's own documented remedy (check `output-vagrant/*.box` directly rather than trust the reported exit code).
+  - Still not covered: the other 7 provider/arch/OS/filesystem combinations (only virtualbox-arm64 × 26.04 × ext4 was run), and VMware specifically (untested with this option). `restrict_build_egress` stays opt-in (default `0`) until more combinations are confirmed — one verified target doesn't retire the "verify the rest before flipping the default" caveat, it just means the mechanism itself is no longer hypothetical.
 - The OS *installer* phase (autoinstall/subiquity, before any provisioner
   script runs) is not covered — that phase's network access is controlled
   by the ISO's own installer config, not by anything in `packer/scripts/`.
