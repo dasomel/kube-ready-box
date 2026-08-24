@@ -110,3 +110,64 @@ jobs:
         run: |
           CONTRACT_OUTPUT=/tmp/kube-ready-contracts.json RUN_OBSERVABILITY_PROFILE=1 DIAGNOSTIC_DURATION_SECONDS=1 bash tools/kube-ready-contracts.sh
           python3 -m json.tool /tmp/kube-ready-contracts.json >/dev/null
+
+  supply-chain-negative-tests:
+    name: Supply-chain negative tests (#30)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # GitHub-hosted ubuntu-latest runners are real systemd VMs, unlike the
+      # containers used to develop/spot-check this script locally -- this is
+      # the first real end-to-end exercise of 00-egress-restrict.sh's
+      # systemctl-dependent path (see docs/build-inputs.md for what that gap
+      # was), not just the dnsmasq/ipset/iptables mechanism in isolation.
+      - name: Egress restriction blocks disallowed destinations, allows allowed ones
+        run: |
+          set -e
+          sudo RESTRICT_BUILD_EGRESS=1 bash packer/scripts/00-egress-restrict.sh
+          systemctl is-active dnsmasq
+
+          echo "Allowed domain must succeed:"
+          curl -sS --max-time 10 -o /dev/null -w 'http_code=%{http_code}\n' https://raw.githubusercontent.com/hashicorp/vagrant/main/keys/vagrant.pub
+
+          echo "Disallowed domain must be blocked:"
+          if curl -sS --max-time 5 -o /dev/null https://example.com/; then
+            echo "::error::disallowed domain was NOT blocked -- egress restriction is not working"
+            exit 1
+          fi
+          echo "  -> correctly blocked"
+
+          echo "Reverting (mirrors 99-cleanup.sh's teardown):"
+          sudo iptables -D OUTPUT -j KUBE_READY_EGRESS || true
+          sudo iptables -F KUBE_READY_EGRESS || true
+          sudo iptables -X KUBE_READY_EGRESS || true
+          sudo ipset destroy kube_ready_build_allowlist || true
+          sudo systemctl disable --now dnsmasq
+          sudo rm -f /etc/dnsmasq.d/kube-ready-egress.conf
+          sudo rm -f /etc/resolv.conf
+          echo "nameserver 127.0.0.53" | sudo tee /etc/resolv.conf >/dev/null
+
+          echo "Previously-disallowed domain must work again after teardown:"
+          curl -sS --max-time 10 -o /dev/null -w 'http_code=%{http_code}\n' https://example.com/
+
+      # Confirms the checksum-verified installers in 03-os-packages.sh
+      # actually fail closed on a mismatch instead of installing an
+      # unverified binary -- #30's "negative test covers substituted
+      # package/binary" acceptance criterion, run against the real script.
+      - name: Mismatched dool checksum must fail closed, not install
+        run: |
+          set +e
+          sudo apt-get update -qq
+          sudo DOOL_SHA256=0000000000000000000000000000000000000000000000000000000000000000 bash packer/scripts/03-os-packages.sh
+          rc=$?
+          set -e
+          if [ -x /usr/local/bin/dool ]; then
+            echo "::error::dool was installed despite a mismatched checksum -- fail-closed is broken"
+            exit 1
+          fi
+          if [ "$rc" -eq 0 ]; then
+            echo "::error::03-os-packages.sh exited 0 despite a mismatched dool checksum"
+            exit 1
+          fi
+          echo "Correctly refused to install dool with a mismatched checksum (script exit=$rc)"
