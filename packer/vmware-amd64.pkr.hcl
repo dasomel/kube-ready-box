@@ -33,6 +33,7 @@ build {
 
   provisioner "shell" {
     scripts = [
+      "scripts/00-egress-restrict.sh",
       "scripts/00-vagrant-setup.sh",
       "scripts/01-base.sh",
       "scripts/02-os-tuning.sh",
@@ -50,6 +51,7 @@ build {
       "scripts/99-cleanup.sh"
     ]
     environment_vars = [
+      "RESTRICT_BUILD_EGRESS=${var.restrict_build_egress}",
       "SANDBOX_PROFILE=${var.sandbox_profile}",
       "GVISOR_RELEASE=${var.gvisor_release}"
     ]

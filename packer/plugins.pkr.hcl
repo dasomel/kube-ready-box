@@ -109,3 +109,14 @@ variable "gvisor_release" {
   type    = string
   default = "latest"
 }
+
+# #30 공급망 고정: 활성화하면 00-egress-restrict.sh 가 provisioning 중
+# outbound 를 docs/build-inputs.md 에 나열된 허용 도메인으로만 제한한다.
+# 기본값 "0" (비활성) -- 컨테이너 안에서 메커니즘 자체는 검증했지만, 실제
+# Packer VM 빌드 전체에 대해서는 아직 end-to-end 검증하지 못했다. 검증
+# 없이 기본값으로 켜면 모든 향후 빌드가 조용히 깨질 위험이 있어, 명시적
+# opt-in 으로만 둔다.
+variable "restrict_build_egress" {
+  type    = string
+  default = "0"
+}

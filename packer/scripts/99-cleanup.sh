@@ -5,6 +5,28 @@ set -e
 
 echo "=== Final Cleanup for Kube-ready Box ==="
 
+# 00-egress-restrict.sh 가 남긴 빌드 전용 outbound 제약을 되돌린다. 배포되는
+# 노드는 이 제약 없이 정상적으로 임의 DNS/네트워크를 쓸 수 있어야 한다 -
+# 다른 정리 단계보다 먼저 실행해서, 이후 단계가 실패해도 최소한 이 상태는
+# 원복되게 한다.
+if [ -f /etc/vagrant-box/egress-restrict.state ]; then
+  echo "Reverting build-time egress restriction..."
+  iptables -D OUTPUT -j KUBE_READY_EGRESS 2>/dev/null || true
+  iptables -F KUBE_READY_EGRESS 2>/dev/null || true
+  iptables -X KUBE_READY_EGRESS 2>/dev/null || true
+  ipset destroy kube_ready_build_allowlist 2>/dev/null || true
+  rm -f /etc/dnsmasq.d/kube-ready-egress.conf
+  systemctl disable --now dnsmasq 2>/dev/null || true
+  apt-get purge -y dnsmasq ipset 2>/dev/null || true
+  if [ -f /etc/vagrant-box/egress-restrict.state.resolv.conf.was_symlink ]; then
+    ln -sf "$(cat /etc/vagrant-box/egress-restrict.state.resolv.conf.was_symlink)" /etc/resolv.conf
+  elif [ -f /etc/vagrant-box/egress-restrict.state.resolv.conf.orig ]; then
+    cp -a /etc/vagrant-box/egress-restrict.state.resolv.conf.orig /etc/resolv.conf
+  fi
+  rm -f /etc/vagrant-box/egress-restrict.state /etc/vagrant-box/egress-restrict.state.resolv.conf.orig /etc/vagrant-box/egress-restrict.state.resolv.conf.was_symlink
+  echo "  -> egress restriction reverted"
+fi
+
 apt-get autoremove -y
 apt-get clean
 rm -rf /var/lib/apt/lists/*
