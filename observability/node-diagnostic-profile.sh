@@ -78,9 +78,18 @@ elapsed=$(( $(date +%s) - start ))
 # raw_output 은 항상 "excluded-by-default" 로 고정한다 — checks[] 는 숫자/버전
 # 문자열만 담고 tcpdump/audit 원본 출력을 절대 넣지 않으므로, redaction 대상이
 # 될 raw output 자체가 애초에 수집되지 않는다.
-python3 - "$OUT" "$elapsed" "$MAX_BYTES" "$(IFS=,; echo "${checks[*]}")" <<'PY'
+#
+# checks[] 를 이어붙인 문자열을 argv 로 그대로 넘기면 (도구 버전 문자열이
+# 늘어날수록) 실제 CI 러너에서 ARG_MAX 초과로 죽을 수 있다 -- 이 저장소가
+# tools/sbom-license-gate.sh 와 tools/kube-ready-contracts.sh 에서 이미
+# 겪은 것과 같은 버그 유형이라 여기도 파일로 넘긴다.
+checks_file=$(mktemp)
+printf '%s' "$(IFS=,; echo "${checks[*]}")" > "$checks_file"
+python3 - "$OUT" "$elapsed" "$MAX_BYTES" "$checks_file" <<'PY'
 import json,sys
-out, elapsed, max_bytes, raw_checks = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), sys.argv[4]
+out, elapsed, max_bytes, checks_file = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), sys.argv[4]
+with open(checks_file) as f:
+    raw_checks = f.read()
 checks = json.loads('[' + raw_checks + ']') if raw_checks else []
 obj = {
     'schema': 'kube-ready-observability/v1',
@@ -96,3 +105,4 @@ if len(raw.encode()) > max_bytes:
 open(out, 'w').write(raw)
 print(raw, end='')
 PY
+rm -f "$checks_file"
