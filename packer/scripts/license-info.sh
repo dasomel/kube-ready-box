@@ -25,6 +25,15 @@ Source:       https://github.com/dasomel/kube-ready-box
 Box URL:      https://app.vagrantup.com/dasomel/boxes/ubuntu-${UBUNTU_VER}
 
 ===============================================
+  Build Provenance
+===============================================
+
+Commit SHA:   ${KUBE_READY_COMMIT_SHA:-unknown}
+Build ID:     ${KUBE_READY_BUILD_ID:-unknown}
+Box Version:  ${KUBE_READY_BOX_VERSION:-unknown}
+Workflow Run: ${KUBE_READY_WORKFLOW_RUN:-unknown}
+
+===============================================
   Pre-installed Optimizations
 ===============================================
 
