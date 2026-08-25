@@ -109,8 +109,14 @@ jobs:
         run: file target/aarch64-unknown-linux-gnu/release/kube-ready-verifier | tee /tmp/arm64-file-output.txt
           && grep -q "ARM aarch64" /tmp/arm64-file-output.txt
       - name: Actually run the cross-built binary under qemu-user-static
+        # The binary is dynamically linked (interpreter /lib/ld-linux-aarch64.so.1),
+        # which does not exist on an amd64 rootfs -- qemu-user needs -L pointing at
+        # the aarch64 cross-libc sysroot the gcc-aarch64-linux-gnu install above
+        # already provides, or it fails with "Could not open
+        # '/lib/ld-linux-aarch64.so.1'". Confirmed by reproducing this exact failure
+        # in a --platform linux/amd64 container before adding -L here.
         working-directory: rust/kube-ready-verifier
-        run: qemu-aarch64-static target/aarch64-unknown-linux-gnu/release/kube-ready-verifier --help
+        run: qemu-aarch64-static -L /usr/aarch64-linux-gnu target/aarch64-unknown-linux-gnu/release/kube-ready-verifier --help
 
   contract-syntax:
     name: Contract syntax and JSON smoke
