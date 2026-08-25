@@ -41,9 +41,61 @@ USAGE
 
 fail() { echo "ERROR: $*" >&2; exit 1; }
 
+run_as_root() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "$@"
+  else
+    command -v sudo >/dev/null || fail "sudo is required to configure a foreign apt architecture"
+    sudo "$@"
+  fi
+}
+
 validate_target() {
   case "$UBUNTU_VERSION" in 24.04|26.04) ;; *) fail "unsupported Ubuntu version: $UBUNTU_VERSION" ;; esac
   case "$ARCH" in amd64|arm64) ;; *) fail "unsupported architecture: $ARCH" ;; esac
+}
+
+configure_foreign_architecture() {
+  local deb_arch="$1" host_arch
+  host_arch="$(dpkg --print-architecture)"
+  [ "$deb_arch" != "$host_arch" ] || return 0
+
+  local suite ports_source ports_keyring ports_contents ports_tmp
+  case "$UBUNTU_VERSION" in
+    24.04) suite="noble" ;;
+    26.04) suite="resolute" ;;
+    *) fail "no apt suite mapping for Ubuntu $UBUNTU_VERSION" ;;
+  esac
+
+  ports_source="/etc/apt/sources.list.d/kube-ready-box-ports-${deb_arch}.sources"
+  ports_keyring="/usr/share/keyrings/ubuntu-archive-keyring.gpg"
+  [ -r "$ports_keyring" ] || fail "missing Ubuntu archive keyring: $ports_keyring"
+  ports_contents="Types: deb
+URIs: http://ports.ubuntu.com/ubuntu-ports/
+Suites: ${suite} ${suite}-updates ${suite}-backports ${suite}-security
+Components: main universe restricted multiverse
+Architectures: ${deb_arch}
+Signed-By: ${ports_keyring}
+"
+
+  run_as_root dpkg --add-architecture "$deb_arch"
+  ports_tmp="$(mktemp)"
+  printf '%s' "$ports_contents" > "$ports_tmp"
+  if [ -e "$ports_source" ] && ! run_as_root cmp -s "$ports_tmp" "$ports_source"; then
+    rm -f "$ports_tmp"
+    fail "existing ports source differs from the expected configuration: $ports_source"
+  fi
+  if [ ! -e "$ports_source" ]; then
+    run_as_root install -m 0644 "$ports_tmp" "$ports_source"
+  fi
+  rm -f "$ports_tmp"
+
+  # Refresh only the dedicated ports source. This verifies the new source without
+  # failing because unrelated pre-existing host sources may have stale indexes.
+  run_as_root apt-get update \
+    -o "Dir::Etc::sourcelist=${ports_source}" \
+    -o "Dir::Etc::sourceparts=-" \
+    -o "APT::Get::List-Cleanup=0"
 }
 
 prepare() {
@@ -103,6 +155,7 @@ prepare() {
 
   printf '%s\n' "${packages[@]}" > "$PACKAGE_LIST"
   local deb_arch="$ARCH"
+  configure_foreign_architecture "$deb_arch"
   while IFS= read -r pkg; do
     (cd "$BUNDLE_DIR/debs" && apt-get download "${pkg}:${deb_arch}")
 done < "$PACKAGE_LIST"
