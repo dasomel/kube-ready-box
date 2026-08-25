@@ -53,7 +53,7 @@ lint:
 	fi
 
 test:
-	cd rust/kube-ready-verifier && cargo check --locked --offline && cargo build --release --locked --offline && bash tests/cli_contract.sh
+	cd rust/kube-ready-verifier && cargo check --locked --offline && cargo test --locked --offline && cargo build --release --locked --offline && bash tests/cli_contract.sh
 	CONTRACT_OUTPUT=/tmp/kube-ready-contracts.json bash tools/kube-ready-contracts.sh
 	python3 -m json.tool /tmp/kube-ready-contracts.json >/dev/null
 

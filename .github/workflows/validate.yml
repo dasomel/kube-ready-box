@@ -92,15 +92,25 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with: { targets: aarch64-unknown-linux-gnu }
-      - name: Native offline build/check
+      - name: Native offline build/check/test
         working-directory: rust/kube-ready-verifier
         run: |
           cargo check --locked --offline
+          cargo test --locked --offline
           cargo build --release --locked --offline
           bash tests/cli_contract.sh
-      - name: ARM64 offline compile check
+      - name: Install arm64 cross-linker and qemu user-mode emulation
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu qemu-user-static
+      - name: ARM64 cross-build (real link, not just compile-check)
         working-directory: rust/kube-ready-verifier
-        run: cargo check --locked --offline --target aarch64-unknown-linux-gnu
+        run: cargo build --release --locked --offline --target aarch64-unknown-linux-gnu
+      - name: Confirm the arm64 binary is genuinely aarch64
+        working-directory: rust/kube-ready-verifier
+        run: file target/aarch64-unknown-linux-gnu/release/kube-ready-verifier | tee /tmp/arm64-file-output.txt
+          && grep -q "ARM aarch64" /tmp/arm64-file-output.txt
+      - name: Actually run the cross-built binary under qemu-user-static
+        working-directory: rust/kube-ready-verifier
+        run: qemu-aarch64-static target/aarch64-unknown-linux-gnu/release/kube-ready-verifier --help
 
   contract-syntax:
     name: Contract syntax and JSON smoke
@@ -108,12 +118,15 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       - name: Syntax
         run: |
           bash -n tools/*.sh network/*.sh storage/*.sh time/*.sh security/*.sh observability/*.sh rocky/*.sh nixos/*.sh
-      - name: Rust help
+      - name: Build Rust verifier release binary
         working-directory: rust/kube-ready-verifier
-        run: cargo run --locked --offline -- --help
+        run: |
+          cargo build --release --locked --offline
+          ./target/release/kube-ready-verifier --help
       - name: Aggregate contract runner
         # sbom-license-gate.sh (via RUN_LICENSE_GATE=1) defaults to writing
         # evidence under /etc/vagrant-box, matching where it runs inside a
@@ -122,8 +135,13 @@ jobs:
         # reports (readiness excepted, already redirected to /tmp) don't
         # write under /etc and are unaffected by running as root.
         run: |
-          sudo env CONTRACT_OUTPUT=/tmp/kube-ready-contracts.json RUN_OBSERVABILITY_PROFILE=1 RUN_LICENSE_GATE=1 DIAGNOSTIC_DURATION_SECONDS=1 bash tools/kube-ready-contracts.sh
+          sudo env CONTRACT_OUTPUT=/tmp/kube-ready-contracts.json RUN_OBSERVABILITY_PROFILE=1 RUN_LICENSE_GATE=1 RUN_RUST_VERIFIER=1 KUBE_READY_VERIFIER_BIN="$PWD/rust/kube-ready-verifier/target/release/kube-ready-verifier" DIAGNOSTIC_DURATION_SECONDS=1 bash tools/kube-ready-contracts.sh
           python3 -m json.tool /tmp/kube-ready-contracts.json >/dev/null
+          python3 -c "import json; d=json.load(open('/tmp/kube-ready-contracts.json')); assert any(r['name']=='rust_verifier' for r in d['reports']), d['reports']"
+      - name: Benchmark Rust verifier vs shell (informational, non-blocking)
+        continue-on-error: true
+        run: |
+          KUBE_READY_VERIFIER_BIN="$PWD/rust/kube-ready-verifier/target/release/kube-ready-verifier" bash tools/bench-verifier.sh | tee -a "$GITHUB_STEP_SUMMARY"
 
   # Named to match the portfolio-wide CI stage vocabulary (Narwhal #161,
   # #28): validate/test/security/license/sbom/build/package/e2e/release/

@@ -31,6 +31,8 @@ run_report(){
 [ -f "$ROOT/nixos/preflight.sh" ] && [ "${RUN_NIXOS_PROFILE:-0}" = 1 ] && run_report nixos "bash $ROOT/nixos/preflight.sh" || true
 [ -f "$ROOT/observability/node-diagnostic-profile.sh" ] && [ "${RUN_OBSERVABILITY_PROFILE:-0}" = 1 ] && run_report observability "DIAGNOSTIC_DURATION_SECONDS=${DIAGNOSTIC_DURATION_SECONDS:-1} bash $ROOT/observability/node-diagnostic-profile.sh" || true
 [ -f "$ROOT/tools/sbom-license-gate.sh" ] && [ "${RUN_LICENSE_GATE:-0}" = 1 ] && run_report license "bash $ROOT/tools/sbom-license-gate.sh" || true
+RUST_VERIFIER_BIN="${KUBE_READY_VERIFIER_BIN:-$ROOT/rust/kube-ready-verifier/target/release/kube-ready-verifier}"
+[ -x "$RUST_VERIFIER_BIN" ] && [ "${RUN_RUST_VERIFIER:-0}" = 1 ] && run_report rust_verifier "$RUST_VERIFIER_BIN preflight" || true
 # report 가 많거나(license 의 패키지 배열처럼) 커지면 전부 이어붙인 문자열을
 # argv 로 넘기다가 실제 CI 러너에서 "Argument list too long"(ARG_MAX)으로
 # 죽는다 -- tools/sbom-license-gate.sh 에서 이미 한 번 잡은 것과 같은 버그
