@@ -25,7 +25,7 @@ help:
 	@echo "  make fmt      - packer fmt -check (Packer templates)"
 	@echo "  make lint     - shellcheck + bash -n + actionlint (if installed)"
 	@echo "  make test     - Rust verifier build/test + contract JSON smoke"
-	@echo "  make security - unpinned build-input guard (#30)"
+	@echo "  make security - unpinned build-input guard (#30); ROOT= also audits image identity residue"
 	@echo "  make license  - license gate against dpkg on ROOT= (default: this host)"
 	@echo "  make sbom     - SBOM/package-inventory guidance (generated inside the guest at build time)"
 	@echo "  make build UBUNTU_VERSION=24.04 FILESYSTEM=ext4 - build all boxes for one version/filesystem"
@@ -38,6 +38,8 @@ help:
 	@echo "inside a guest/CI Linux host (ROOT=/, the default) or point ROOT= at a mounted"
 	@echo "box image's filesystem. make sbom's evidence is likewise generated INSIDE the"
 	@echo "guest during provisioning, not on this host before a box exists."
+	@echo "make security ROOT=<extracted-image-root> additionally checks the image for leaked"
+	@echo "SSH host private keys and machine identity residue (it does not mount box disks)."
 
 fmt:
 	cd packer && packer fmt -check -diff .
@@ -57,8 +59,11 @@ test:
 	CONTRACT_OUTPUT=/tmp/kube-ready-contracts.json bash tools/kube-ready-contracts.sh
 	python3 -m json.tool /tmp/kube-ready-contracts.json >/dev/null
 
+# ROOT optionally points at a mounted/extracted box image to audit for leaked
+# SSH host keys and machine identity residue after the input guard passes.
 security:
 	bash tools/unpinned-input-guard.sh
+	@if [ -n "$(ROOT)" ]; then bash tools/image-identity-security-check.sh "$(ROOT)"; fi
 
 # ROOT defaults to tools/sbom-license-gate.sh's own default (the running
 # system) -- override to point at a mounted/extracted box image instead.
