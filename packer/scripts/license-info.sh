@@ -98,7 +98,12 @@ To view this information again: cat /etc/vagrant-box/info.txt
 EOF
 
 # motd 설정 (로그인 시 표시)
-cat > /etc/update-motd.d/99-vagrant-box-info <<'SCRIPT'
+# /etc/update-motd.d/ 는 pam_motd(Debian/Ubuntu)가 스캔하는 디렉토리라
+# Rocky/RHEL에는 이 디렉토리 자체가 없다 - 실제 빌드에서
+# "No such file or directory"로 확인됨. Rocky는 정적 /etc/motd에 직접 쓴다.
+if command -v dpkg >/dev/null 2>&1; then
+  mkdir -p /etc/update-motd.d
+  cat > /etc/update-motd.d/99-vagrant-box-info <<'SCRIPT'
 #!/bin/sh
 . /etc/os-release
 _ID="$ID"
@@ -115,8 +120,20 @@ cat <<MOTD
 
 MOTD
 SCRIPT
+  chmod +x /etc/update-motd.d/99-vagrant-box-info
+else
+  cat > /etc/motd <<MOTD
 
-chmod +x /etc/update-motd.d/99-vagrant-box-info
+╔══════════════════════════════════════════════╗
+║   dasomel/${ID}-${VERSION_ID} - K8s Ready OS   ║
+║   ${PRETTY_NAME} + K8s Optimizations       ║
+╚══════════════════════════════════════════════╝
+
+📦 Box Info: cat /etc/vagrant-box/info.txt
+📚 K8s Setup Guide: https://kubernetes.io/docs/setup/
+
+MOTD
+fi
 
 echo "License information installed to /etc/vagrant-box/info.txt"
 echo ""

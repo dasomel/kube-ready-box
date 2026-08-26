@@ -26,6 +26,8 @@ echo "Updating packages..."
 dnf -y update
 
 # 필수 패키지 설치
+# open-vm-tools: minimal ISO 로컬 저장소에 없어 kickstart %packages에 넣으면
+# anaconda가 대화형으로 멈춘다(실제 빌드에서 확인) - 네트워크가 붙는 여기서 설치.
 echo "Installing essential packages..."
 dnf install -y \
   curl \
@@ -33,7 +35,9 @@ dnf install -y \
   vim \
   git \
   rsync \
-  net-tools
+  net-tools \
+  open-vm-tools
+systemctl enable --now vmtoolsd
 
 # 불필요한 패키지 제거
 echo "Cleaning up unnecessary packages..."

@@ -38,6 +38,52 @@ domains (`download.rockylinux.org`, `dl.rockylinux.org`,
 `mirrors.rockylinux.org`) are in `00-egress-restrict.sh`'s
 `ALLOWED_DOMAINS`, same allowlist mechanism as the Ubuntu mirrors above.
 
+**Real boot+build confirmed** (#15): `./build.sh --os=rocky vmware-arm64`
+ran end to end on this machine and produced a valid
+`rocky-9-ext4-vmware-arm64.box` (~1.8GB, `tar -tzf` confirms
+`Vagrantfile`/`metadata.json`/32 `disk-s*.vmdk` segments/`.vmx`/`.nvram`/
+`.vmsd`/`.vmxf`, `metadata.json` reports `provider: vmware_desktop,
+architecture: arm64`). The kickstart's GRUB `boot_command`
+(`<up><wait>e<wait>`, `<down><down><end><wait>`,
+` inst.ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ks.cfg<wait>`, `<f10>`)
+worked against the real Rocky 9.8 aarch64 minimal ISO's actual GRUB2 menu
+on the first attempt -- that part was never the problem.
+
+It took four real attempts to get a clean run, and each failure was a
+genuine bug caught by watching the actual VM (screen capture over the
+VMware Fusion window, since `vmrun captureScreen` needs guest login that
+isn't available before first boot), not a hypothesis:
+
+1. `open-vm-tools` was listed in the kickstart's `%packages` section, but
+   Rocky's *minimal* ISO doesn't carry it in its local repo -- anaconda
+   stopped at an interactive "missing packages: open-vm-tools. Would you
+   like to ignore this and continue with installation?" prompt with no
+   way for Packer to answer it. Moved to `01-base-rocky.sh` (dnf, once
+   the network is up) instead of the kickstart's offline package set.
+2. The kickstart's `user --name=vagrant --groups=wheel` line never set a
+   password, which normally leaves an account locked -- Packer's
+   `ssh_password = "vagrant"` password auth would have had nothing valid
+   to authenticate against. Added a fixed SHA-512 crypt hash for the
+   conventional Vagrant `vagrant` password directly in the kickstart
+   (`user ... --password=$6$... --iscrypted`), not regenerated per build,
+   so the box stays reproducible.
+3. `license-info.sh` unconditionally wrote to
+   `/etc/update-motd.d/99-vagrant-box-info` -- that directory only exists
+   because Debian/Ubuntu's `pam_motd` mechanism creates it; Rocky/RHEL
+   has no equivalent, so the write failed with
+   "No such file or directory" and killed the whole provisioning run.
+   Branched on `command -v dpkg` (matching the pattern already used
+   elsewhere in this script and in `generate-sbom.sh`/`99-cleanup.sh`):
+   Ubuntu keeps the existing dynamic `/etc/update-motd.d/` script, Rocky
+   writes a static `/etc/motd` instead (verified both paths in a real
+   container before retrying the VM build).
+
+Not yet done: `vagrant box add` + `vagrant up` + running
+`rocky/preflight.sh` inside the booted guest to confirm it actually
+reports `PASS` (plan's own verification step 7, still open). Only ext4/
+VMware/ARM64/Rocky 9 has been built -- xfs, VirtualBox, AMD64, and
+Rocky 10 remain untested per the plan's explicit scope.
+
 ## Packer plugins
 
 Pinned to exact versions in `packer/plugins.pkr.hcl`'s `required_plugins`
