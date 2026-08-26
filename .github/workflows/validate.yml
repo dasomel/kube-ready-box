@@ -243,7 +243,7 @@ jobs:
 
           swap_file=
           ip_forward_before=
-          ntp_before=
+          chrony_stopped=0
 
           fail() {
             echo "::error::$*" >&2
@@ -277,9 +277,9 @@ jobs:
                 cleanup_failed=1
               fi
             fi
-            if [ "$ntp_before" = yes ]; then
-              if ! sudo timedatectl set-ntp true; then
-                echo "::error::cleanup could not re-enable NTP" >&2
+            if [ "$chrony_stopped" = 1 ]; then
+              if ! sudo systemctl start chrony; then
+                echo "::error::cleanup could not restart chrony" >&2
                 cleanup_failed=1
               fi
             fi
@@ -394,28 +394,22 @@ jobs:
           require_status /tmp/network-forward-mutated.json ip_forward FAIL
           run_or_fail "could not restore net.ipv4.ip_forward after network test" sudo sysctl -w "net.ipv4.ip_forward=$ip_forward_before" >/dev/null
 
-          # Disabling NTP should turn timedatectl's synchronization evidence UNKNOWN,
-          # never leave this check falsely PASS.
-          if ! ntp_before=$(timedatectl show -p NTP --value); then
-            fail "could not read NTP state before time test"
-          fi
+          # timedatectl_sync (NTPSynchronized) is UNKNOWN-only by this script's own
+          # design -- it never FAILs, and NTPSynchronized was empirically confirmed
+          # (this job's 2nd real run) to stay "yes" for a while after `timedatectl
+          # set-ntp false`, since disabling the config flag doesn't instantly
+          # desync an already-synced clock. `synchronized` (chronyc tracking's Leap
+          # status) is this script's actual FAIL-capable time check, so stop the
+          # real chrony daemon instead -- chronyc has nothing to report Normal from
+          # once chronyd isn't running to answer it.
           run_json /tmp/time-baseline.json bash time/node-time-readiness.sh
-          require_non_fail /tmp/time-baseline.json timedatectl_sync
-          run_or_fail "could not disable NTP for time test" sudo timedatectl set-ntp false
-          if ! ntp_synchronized_after=$(timedatectl show -p NTPSynchronized --value); then
-            fail "could not read NTPSynchronized after disabling NTP for time test"
-          fi
-          case "$ntp_synchronized_after" in
-            [Yy][Ee][Ss])
-              fail "NTPSynchronized remained yes after disabling NTP; negative condition was not induced"
-              ;;
-          esac
+          require_status /tmp/time-baseline.json synchronized PASS
+          run_or_fail "could not stop chrony for time test" sudo systemctl stop chrony
+          chrony_stopped=1
           run_json /tmp/time-mutated.json bash time/node-time-readiness.sh
-          require_status /tmp/time-mutated.json timedatectl_sync UNKNOWN
-          if [ "$ntp_before" = yes ]; then
-            run_or_fail "could not restore NTP after time test" sudo timedatectl set-ntp true
-          fi
-          ntp_before=
+          require_status /tmp/time-mutated.json synchronized FAIL
+          run_or_fail "could not restart chrony after time test" sudo systemctl start chrony
+          chrony_stopped=0
 
           # /dev/null is a real devfs character-device input, not a mock; it exercises
           # the documented live-expansion input validation path.
