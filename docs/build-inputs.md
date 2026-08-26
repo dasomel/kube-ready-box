@@ -26,7 +26,8 @@ proceed if the downloaded ISO doesn't match.
 runtime rather than holding an independent copy, so the two can't drift.
 
 Pinned by `iso_checksum` in `packer/plugins.pkr.hcl`'s `rocky_iso_data`
-local (#15, first slice — Rocky 9, ARM64, VMware, ext4 only):
+local (#15 — Rocky 9, ARM64, VMware; ext4 boot-verified, xfs added and
+statically verified):
 
 | Rocky | Arch | URL | Checksum source |
 |---|---|---|---|
@@ -78,11 +79,27 @@ isn't available before first boot), not a hypothesis:
    writes a static `/etc/motd` instead (verified both paths in a real
    container before retrying the VM build).
 
-Not yet done: `vagrant box add` + `vagrant up` + running
-`rocky/preflight.sh` inside the booted guest to confirm it actually
-reports `PASS` (plan's own verification step 7, still open). Only ext4/
-VMware/ARM64/Rocky 9 has been built -- xfs, VirtualBox, AMD64, and
-Rocky 10 remain untested per the plan's explicit scope.
+**Verification step 7 also completed**: `vagrant box add` + `vagrant up
+--provider=vmware_desktop` + running `rocky/preflight.sh` inside the
+booted guest confirmed `"status":"PASS"` (failures:0, unknowns:2 -- both
+expected by design: `containerd_systemdcgroup` since this box doesn't
+install a container runtime, and `rocky10_x86_64_v3` since this is Rocky
+9, not 10). Published to Vagrant Cloud as `dasomel/rocky-9-ext4` 0.1.0
+(vmware_desktop/arm64).
+
+**xfs added** (`packer/http/rocky-9-xfs/ks.cfg`,
+`packer/scripts/05-disk-tuning-rocky.sh`'s xfs branch -- prjquota via
+fstab + `grubby --update-kernel=ALL --args="rootflags=prjquota"` (RHEL9 is
+BLS-based, unlike Ubuntu's `/etc/default/grub` + `update-grub`) +
+`dracut -f --regenerate-all`). `rocky_http_dir` and the box output name
+now key off `var.filesystem` like the Ubuntu templates. `xfsprogs`/
+`grubby`/`dracut` are confirmed part of the `@core` package group the
+kickstart already installs (`dnf group info core` against a real
+`rockylinux:9` container), so no new package dependency was introduced.
+Statically verified only (`packer validate`/`packer fmt`/`ksvalidator -v
+RHEL9`/shellcheck/`bash -n`) -- not yet boot-verified, unlike the ext4
+slice above. VirtualBox ARM64, AMD64, and Rocky 10 remain untested per
+the plan's explicit scope.
 
 ## Packer plugins
 

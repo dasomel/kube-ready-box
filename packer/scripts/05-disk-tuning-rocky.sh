@@ -104,7 +104,7 @@ else
   log "Step 3: No free space in VG, skipping LV extension"
 fi
 
-# Step 4: Resize filesystem (ext4 - this build's filesystem is fixed to ext4)
+# Step 4: Resize filesystem (auto-detect ext4 or xfs)
 FSTYPE=$(blkid -o value -s TYPE /dev/rocky-vg/rocky-lv 2>/dev/null || echo "unknown")
 log "Step 4: Resizing filesystem (detected: $FSTYPE)..."
 case "$FSTYPE" in
@@ -113,6 +113,13 @@ case "$FSTYPE" in
       log "  -> ext4 filesystem resized successfully"
     else
       log "  -> ext4 filesystem resize failed or not needed"
+    fi
+    ;;
+  xfs)
+    if xfs_growfs / 2>&1; then
+      log "  -> xfs filesystem resized successfully"
+    else
+      log "  -> xfs filesystem resize failed or not needed"
     fi
     ;;
   *)
@@ -179,7 +186,7 @@ for disk in /sys/block/nvme*/queue/read_ahead_kb; do
 done
 
 #=========================================
-# fstab 최적화 (noatime) - ext4 전용, xfs prjquota 분기는 이번 슬라이스 스코프 아웃
+# fstab 최적화 (noatime, prjquota)
 #=========================================
 ROOT_FSTYPE=$(blkid -o value -s TYPE /dev/rocky-vg/rocky-lv 2>/dev/null || echo "unknown")
 echo "Root filesystem detected: $ROOT_FSTYPE"
@@ -188,7 +195,7 @@ echo "Applying noatime,nodiratime to /etc/fstab..."
 # 백업 생성
 cp /etc/fstab /etc/fstab.bak
 
-# ext4 파일시스템에 noatime,nodiratime 추가
+# ext4/xfs 파일시스템에 noatime,nodiratime 추가
 # 이미 noatime이 있으면 건너뜀
 if grep -q "noatime" /etc/fstab; then
   echo "noatime already configured in fstab"
@@ -205,16 +212,54 @@ else
   fi
 fi
 
+# XFS: prjquota 설정 (K8s ephemeral storage quota 지원) - packer/scripts/05-disk-tuning.sh
+# (Ubuntu)와 동일 의도. RHEL9는 BLS 기반 부트로더라 update-grub 대신 grubby로
+# 모든 커널 엔트리에 일괄 반영한다 - /etc/default/grub sed 편집이 아님.
+if [ "$ROOT_FSTYPE" = "xfs" ]; then
+  echo "XFS detected: configuring prjquota for K8s ephemeral storage quota..."
+
+  # 1. fstab에 prjquota 추가 (root xfs 마운트 라인)
+  if grep -q "prjquota" /etc/fstab; then
+    echo "  -> prjquota already in fstab"
+  else
+    if sed -i '/ \/ .*xfs/ s/defaults/defaults,prjquota/' /etc/fstab && grep -q "prjquota" /etc/fstab; then
+      echo "  -> Added prjquota to fstab"
+    else
+      echo "  -> WARNING: Could not add prjquota to fstab (grubby rootflags will handle it)"
+    fi
+  fi
+
+  # 2. grubby로 모든 BLS 커널 엔트리에 rootflags=prjquota 반영
+  if grubby --info=ALL 2>/dev/null | grep -q "rootflags=prjquota"; then
+    echo "  -> rootflags=prjquota already applied via grubby"
+  else
+    grubby --update-kernel=ALL --args="rootflags=prjquota"
+    echo "  -> Added rootflags=prjquota via grubby"
+  fi
+
+  # 3. initramfs 재생성 (prjquota 마운트 옵션 반영)
+  dracut -f --regenerate-all
+  echo "  -> initramfs regenerated with prjquota"
+fi
+
 # 현재 마운트된 파일시스템에도 적용 (재부팅 없이)
 echo "Remounting filesystems with noatime..."
-mount -o remount,noatime,nodiratime / 2>/dev/null || \
-  echo "Note: Root remount may require reboot to take full effect"
+if [ "$ROOT_FSTYPE" = "xfs" ]; then
+  mount -o remount,noatime,nodiratime,prjquota / 2>/dev/null || \
+    echo "Note: Root remount may require reboot to take full effect"
+else
+  mount -o remount,noatime,nodiratime / 2>/dev/null || \
+    echo "Note: Root remount may require reboot to take full effect"
+fi
 
 echo ""
 echo "Disk I/O optimization applied:"
 echo "  - I/O scheduler: none (SSD optimized)"
 echo "  - Read-ahead: 256KB"
 echo "  - Mount options: noatime,nodiratime"
+if [ "$ROOT_FSTYPE" = "xfs" ]; then
+  echo "  - XFS prjquota: enabled (fstab + grubby rootflags + initramfs)"
+fi
 echo ""
 
 echo "=== 05-disk-tuning-rocky.sh: Complete ==="

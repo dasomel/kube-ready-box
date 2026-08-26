@@ -118,7 +118,7 @@ locals {
   }
   rocky_iso_url_arm64      = local.rocky_iso_data[var.rocky_version].arm64_url
   rocky_iso_checksum_arm64 = local.rocky_iso_data[var.rocky_version].arm64_sum
-  rocky_http_dir           = "http/rocky-${var.rocky_version}-ext4"
+  rocky_http_dir           = "http/rocky-${var.rocky_version}-${var.filesystem}"
 }
 
 # gVisor 샌드박스 프로파일 (#11). 기본 0 = 표준 박스에 런타임을 넣지 않는다.

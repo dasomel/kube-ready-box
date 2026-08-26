@@ -72,7 +72,7 @@ build {
   }
 
   post-processor "vagrant" {
-    output              = "output-vagrant/rocky-${var.rocky_version}-ext4-vmware-arm64.box"
+    output              = "output-vagrant/rocky-${var.rocky_version}-${var.filesystem}-vmware-arm64.box"
     compression_level   = 9
     keep_input_artifact = false
   }
