@@ -24,6 +24,14 @@ VERSION=vX.Y.Z ./tools/release-promote.sh init
 
 `release-evidence/$VERSION/`에 provider/arch/filesystem 검증 결과, SHA256SUMS, SBOM, security report, license report를 보관한다.
 
+`promote`가 evidence를 검증할 때 `RUN_RUST_VERIFIER=1`을 붙이면 `rust/kube-ready-verifier`의
+`verify-evidence` 서브커맨드로 같은 5개 파일을 독립적으로 재검증한다(#12). 두 검증기가 어긋나면
+(검증기 드리프트) promote가 실패하며 원인을 출력한다 — 기본은 꺼져 있어 기존 동작에 영향 없음.
+
+```bash
+RUN_RUST_VERIFIER=1 VERSION=vX.Y.Z ./tools/release-promote.sh promote
+```
+
 ## 3. Candidate → staging → production
 
 `promote`는 상태 파일에 기록된 현재 stage를 기준으로 한 단계씩만 전진한다. 같은 명령을 두 번 실행해야 production까지 도달한다.

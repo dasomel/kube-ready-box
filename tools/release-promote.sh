@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="${VERSION:-}"
 RELEASE_DIR="${RELEASE_DIR:-release-evidence}"
 STATE_FILE="$RELEASE_DIR/$VERSION/release-state.env"
@@ -71,6 +72,23 @@ evidence_valid(){ evidence_error "$1" >/dev/null; }
 
 EVIDENCE_FILES="verification.json SHA256SUMS sbom.json security-report.json license-report.json"
 
+# rust/kube-ready-verifier의 verify-evidence는 이 스크립트의 validate_sha256sums()/
+# validate_json()을 독립적으로 재구현한 교차검증기다(#12). opt-in(RUN_RUST_VERIFIER=1,
+# kube-ready-contracts.sh와 동일 idiom) — 바이너리가 없거나 플래그가 꺼져 있으면 완전히
+# 무해하다. 두 검증기가 일치하면 신뢰도가 올라가고, 어긋나면(검증기 드리프트) 여기서
+# 잡아낸다 — 이 게이트를 대체하지 않는다(verify_evidence.rs 자체 문서 참고).
+cross_check_rust_verifier(){
+  [ "${RUN_RUST_VERIFIER:-0}" = 1 ] || return 0
+  local bin="${KUBE_READY_VERIFIER_BIN:-$ROOT/rust/kube-ready-verifier/target/release/kube-ready-verifier}"
+  [ -x "$bin" ] || { echo "RUN_RUST_VERIFIER=1 but verifier binary not found/executable: $bin" >&2; exit 1; }
+  local out
+  if ! out=$("$bin" verify-evidence "$RELEASE_DIR/$VERSION" 2>&1); then
+    echo "Rust verifier cross-check disagrees with release-promote.sh's own evidence validation:" >&2
+    echo "$out" >&2
+    exit 1
+  fi
+}
+
 # promote 단계 전용: 하나라도 무효/누락이면 즉시 종료한다.
 validate_all_evidence(){
   local f path reason
@@ -81,6 +99,7 @@ validate_all_evidence(){
       exit 1
     fi
   done
+  cross_check_rust_verifier
 }
 
 # verification.json을 required-matrix.txt와 대조한다.
