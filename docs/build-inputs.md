@@ -25,6 +25,19 @@ proceed if the downloaded ISO doesn't match.
 `tools/airgap-bundle.sh` derives its point-release from `plugins.pkr.hcl` at
 runtime rather than holding an independent copy, so the two can't drift.
 
+Pinned by `iso_checksum` in `packer/plugins.pkr.hcl`'s `rocky_iso_data`
+local (#15, first slice — Rocky 9, ARM64, VMware, ext4 only):
+
+| Rocky | Arch | URL | Checksum source |
+|---|---|---|---|
+| 9.8 | arm64 | download.rockylinux.org/pub/rocky/9/isos/aarch64 | `packer/plugins.pkr.hcl` `rocky_iso_data["9"].arm64_sum` |
+
+Checksum verified directly against the upstream `CHECKSUM` file at
+`download.rockylinux.org/pub/rocky/9/isos/aarch64/CHECKSUM`. Rocky mirror
+domains (`download.rockylinux.org`, `dl.rockylinux.org`,
+`mirrors.rockylinux.org`) are in `00-egress-restrict.sh`'s
+`ALLOWED_DOMAINS`, same allowlist mechanism as the Ubuntu mirrors above.
+
 ## Packer plugins
 
 Pinned to exact versions in `packer/plugins.pkr.hcl`'s `required_plugins`

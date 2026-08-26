@@ -27,9 +27,15 @@ if [ -f /etc/vagrant-box/egress-restrict.state ]; then
   echo "  -> egress restriction reverted"
 fi
 
-apt-get autoremove -y
-apt-get clean
-rm -rf /var/lib/apt/lists/*
+if command -v apt-get >/dev/null 2>&1; then
+  apt-get autoremove -y
+  apt-get clean
+  rm -rf /var/lib/apt/lists/*
+elif command -v dnf >/dev/null 2>&1; then
+  dnf -y autoremove || true
+  dnf clean all
+  rm -rf /var/cache/dnf/*
+fi
 
 find /var/log -type f -name "*.log" -exec truncate -s 0 {} \;
 find /var/log -type f -name "*.gz" -delete

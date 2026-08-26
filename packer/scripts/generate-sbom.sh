@@ -7,7 +7,13 @@ SBOM_DIR="/etc/vagrant-box"
 mkdir -p "$SBOM_DIR"
 
 . /etc/os-release
-ARCH="$(dpkg --print-architecture 2>/dev/null || uname -m)"
+if command -v dpkg >/dev/null 2>&1; then
+  ARCH="$(dpkg --print-architecture 2>/dev/null || uname -m)"
+elif command -v rpm >/dev/null 2>&1; then
+  ARCH="$(rpm --eval '%{_arch}')"
+else
+  ARCH="$(uname -m)"
+fi
 KERNEL="$(uname -r)"
 BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
@@ -20,8 +26,13 @@ else
   echo "trivy not installed; generating deterministic dpkg inventory only"
 fi
 
-dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\t${Status}\n' | sort > "$SBOM_DIR/packages.txt"
-dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\n' | sort > "$SBOM_DIR/components.tsv"
+if command -v dpkg >/dev/null 2>&1; then
+  dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\t${Status}\n' | sort > "$SBOM_DIR/packages.txt"
+  dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\n' | sort > "$SBOM_DIR/components.tsv"
+elif command -v rpm >/dev/null 2>&1; then
+  rpm -qa --qf '%{NAME}\t%{VERSION}-%{RELEASE}\t%{ARCH}\t%{INSTALLTIME}\n' | sort > "$SBOM_DIR/packages.txt"
+  rpm -qa --qf '%{NAME}\t%{VERSION}-%{RELEASE}\t%{ARCH}\n' | sort > "$SBOM_DIR/components.tsv"
+fi
 
 # Record kernel/modules/firmware as release evidence in addition to packages.
 {
@@ -40,16 +51,16 @@ dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\n' | sort > "$SBOM_DIR
 cat > "$SBOM_DIR/manifest.json" <<EOF
 {
   "schema_version": 3,
-  "artifact": "dasomel/ubuntu-${VERSION_ID}",
-  "name": "dasomel/ubuntu-${VERSION_ID}",
-  "base_os": "Ubuntu ${VERSION_ID}",
+  "artifact": "dasomel/${ID}-${VERSION_ID}",
+  "name": "dasomel/${ID}-${VERSION_ID}",
+  "base_os": "${PRETTY_NAME}",
   "architecture": "${ARCH}",
   "kernel": "${KERNEL}",
   "build_date": "${BUILD_DATE}",
   "timestamp": "${BUILD_DATE}",
   "sbom_generator": "$(command -v trivy >/dev/null 2>&1 && trivy version --format json 2>/dev/null | tr '\n' ' ' || echo 'offline-dpkg-inventory')",
   "sbom_formats": ["spdx-json", "cyclonedx-json", "dpkg-tsv"],
-  "package_count": $(dpkg-query -W | wc -l),
+  "package_count": $(command -v dpkg >/dev/null 2>&1 && dpkg-query -W | wc -l || rpm -qa | wc -l),
   "source": "https://github.com/dasomel/kube-ready-box",
   "supplier": "dasomel",
   "license": "MIT",

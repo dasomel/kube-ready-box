@@ -98,6 +98,29 @@ locals {
   iso_checksum_arm64 = local.iso_data[var.ubuntu_version].arm64_sum
 }
 
+variable "rocky_version" {
+  type        = string
+  default     = "9"
+  description = "Rocky Linux major version. Only '9' is implemented; '10' is reserved (see rocky/README.md experimental status) and rejected until its own ISO/checksum/provisioning path is added."
+
+  validation {
+    condition     = contains(["9"], var.rocky_version)
+    error_message = "Rocky version must be '9' (Rocky 10 support is not implemented yet)."
+  }
+}
+
+locals {
+  rocky_iso_data = {
+    "9" = {
+      arm64_url = "https://download.rockylinux.org/pub/rocky/9/isos/aarch64/Rocky-9.8-aarch64-minimal.iso"
+      arm64_sum = "sha256:2924b291feaebe083bc0d0553e472be0a38ed5c91b4841129ec80b0cecc10efd"
+    }
+  }
+  rocky_iso_url_arm64      = local.rocky_iso_data[var.rocky_version].arm64_url
+  rocky_iso_checksum_arm64 = local.rocky_iso_data[var.rocky_version].arm64_sum
+  rocky_http_dir           = "http/rocky-${var.rocky_version}-ext4"
+}
+
 # gVisor 샌드박스 프로파일 (#11). 기본 0 = 표준 박스에 런타임을 넣지 않는다.
 variable "sandbox_profile" {
   type    = string

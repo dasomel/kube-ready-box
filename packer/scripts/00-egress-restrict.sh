@@ -59,6 +59,9 @@ ALLOWED_DOMAINS=(
   time.kriss.re.kr
   ntp.kornet.net
   ntp.ubuntu.com
+  download.rockylinux.org
+  dl.rockylinux.org
+  mirrors.rockylinux.org
 )
 
 echo "=== 00-egress-restrict.sh: restricting build-time egress to ${#ALLOWED_DOMAINS[@]} allowed domains ==="

@@ -33,6 +33,8 @@ detect_platform() {
 PLATFORM=$(detect_platform)
 FILESYSTEM="ext4"  # Default filesystem (ext4 or xfs)
 UBUNTU_VERSION="${UBUNTU_VERSION:-24.04}"  # Default Ubuntu version (24.04 or 26.04)
+OS_NAME="ubuntu"  # Default OS (ubuntu or rocky) -- keeps existing behavior unchanged
+ROCKY_VERSION="${ROCKY_VERSION:-9}"
 
 show_usage() {
   cat <<EOF
@@ -75,6 +77,10 @@ UBUNTU VERSION:
   --version=VER       Ubuntu version: 24.04 (default) or 26.04
                       Can also set UBUNTU_VERSION env var.
 
+OS SELECTION:
+  --os=NAME           OS to build: ubuntu (default) or rocky
+                      rocky currently only supports: vmware-arm64 (ext4)
+
 EXAMPLES:
   $0 init                           # Install Packer plugins
   $0 validate                       # Validate all templates (24.04)
@@ -83,6 +89,7 @@ EXAMPLES:
   $0 vmware-arm64 --fs=xfs          # Build VMware ARM64 box (24.04, xfs)
   $0 all --version=26.04            # Build all boxes (26.04, ext4)
   $0 all --fs=xfs --version=26.04   # Build all boxes (26.04, xfs)
+  $0 --os=rocky vmware-arm64        # Build Rocky 9 VMware ARM64 box (ext4)
 
 REQUIREMENTS:
   - Packer 1.8+
@@ -274,17 +281,27 @@ build_box() {
   # Determine source name based on provider
   local source_name=""
   if [ "$provider" = "virtualbox" ]; then
-    source_name="virtualbox-iso.ubuntu-vbox-${arch}"
+    source_name="virtualbox-iso.${OS_NAME}-vbox-${arch}"
   elif [ "$provider" = "vmware" ]; then
-    source_name="vmware-iso.ubuntu-vmware-${arch}"
+    source_name="vmware-iso.${OS_NAME}-vmware-${arch}"
   else
     echo "Error: Unknown provider '$provider'"
     exit 1
   fi
 
+  # Rocky templates don't take -var filesystem/ubuntu_version (they're
+  # ext4-only and versioned by rocky_version instead) -- keep the Ubuntu
+  # path passing zero unknown vars to Rocky and vice versa.
+  local -a os_vars=()
+  if [ "$OS_NAME" = "rocky" ]; then
+    os_vars=(-var "rocky_version=${ROCKY_VERSION}")
+  else
+    os_vars=(-var "filesystem=$FILESYSTEM" -var "ubuntu_version=${UBUNTU_VERSION}")
+  fi
+
   echo ""
   echo "=========================================="
-  echo "Building: ${provider} ${arch} (Ubuntu ${UBUNTU_VERSION}, ${FILESYSTEM})"
+  echo "Building: ${provider} ${arch} (OS: ${OS_NAME}, Ubuntu ${UBUNTU_VERSION}, ${FILESYSTEM})"
   echo "Platform: ${PLATFORM}"
   echo "Ubuntu: ${UBUNTU_VERSION}"
   echo "Filesystem: ${FILESYSTEM}"
@@ -296,7 +313,7 @@ build_box() {
   # Run packer build and capture exit code
   # Note: Use PIPESTATUS to get packer's exit code, not tee's
   set +e  # Temporarily disable exit on error
-  packer build -force -only="$source_name" -var "filesystem=$FILESYSTEM" -var "ubuntu_version=${UBUNTU_VERSION}" . 2>&1 | tee "$logfile"
+  packer build -force -only="$source_name" "${os_vars[@]}" . 2>&1 | tee "$logfile"
   local packer_exit_code=${PIPESTATUS[0]}
   set -e  # Re-enable exit on error
 
@@ -368,6 +385,22 @@ while [[ $# -gt 0 ]]; do
       UBUNTU_VERSION="$2"
       if [[ -z "$UBUNTU_VERSION" || ("$UBUNTU_VERSION" != "24.04" && "$UBUNTU_VERSION" != "26.04") ]]; then
         echo -e "${RED}Error: Invalid Ubuntu version '${UBUNTU_VERSION:-}'. Use '24.04' or '26.04'.${NC}"
+        exit 1
+      fi
+      shift 2
+      ;;
+    --os=*)
+      OS_NAME="${1#*=}"
+      if [[ "$OS_NAME" != "ubuntu" && "$OS_NAME" != "rocky" ]]; then
+        echo -e "${RED}Error: Invalid OS '$OS_NAME'. Use 'ubuntu' or 'rocky'.${NC}"
+        exit 1
+      fi
+      shift
+      ;;
+    --os)
+      OS_NAME="$2"
+      if [[ -z "$OS_NAME" || ("$OS_NAME" != "ubuntu" && "$OS_NAME" != "rocky") ]]; then
+        echo -e "${RED}Error: Invalid OS '${OS_NAME:-}'. Use 'ubuntu' or 'rocky'.${NC}"
         exit 1
       fi
       shift 2

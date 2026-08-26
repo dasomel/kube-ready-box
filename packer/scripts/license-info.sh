@@ -5,24 +5,26 @@ set -e
 
 echo "=== license-info.sh: Installing License Information ==="
 
-# Detect Ubuntu version at runtime
-UBUNTU_VER="$(. /etc/os-release && echo "$VERSION_ID")"
+# Detect OS distro/version at runtime
+. /etc/os-release
+BOX_DISTRO_ID="${ID}"
+BOX_VER="${VERSION_ID}"
 
 # Box 정보 파일 생성
 mkdir -p /etc/vagrant-box
 
 cat <<EOF > /etc/vagrant-box/info.txt
 ===============================================
-  dasomel/ubuntu-${UBUNTU_VER} Vagrant Box
+  dasomel/${BOX_DISTRO_ID}-${BOX_VER} Vagrant Box
 ===============================================
 
-Box Name:     dasomel/ubuntu-${UBUNTU_VER}
-Base OS:      Ubuntu ${UBUNTU_VER} LTS (Cloud Image)
+Box Name:     dasomel/${BOX_DISTRO_ID}-${BOX_VER}
+Base OS:      ${PRETTY_NAME} (Cloud Image)
 Purpose:      Kubernetes-ready optimized OS
 License:      MIT License
 
 Source:       https://github.com/dasomel/kube-ready-box
-Box URL:      https://app.vagrantup.com/dasomel/boxes/ubuntu-${UBUNTU_VER}
+Box URL:      https://app.vagrantup.com/dasomel/boxes/${BOX_DISTRO_ID}-${BOX_VER}
 
 ===============================================
   Build Provenance
@@ -83,8 +85,8 @@ DEALINGS IN THE SOFTWARE.
   Third-Party Components
 ===============================================
 
-Ubuntu ${UBUNTU_VER} LTS: https://ubuntu.com/
-  License: Various (see /usr/share/doc/*/copyright)
+${PRETTY_NAME}: ${HOME_URL:-https://www.${BOX_DISTRO_ID}.com/}
+  License: Various (see /usr/share/doc/*/copyright, /usr/share/licenses/*)
 
 For complete SBOM and dependency information, visit:
 https://github.com/dasomel/kube-ready-box
@@ -98,12 +100,14 @@ EOF
 # motd 설정 (로그인 시 표시)
 cat > /etc/update-motd.d/99-vagrant-box-info <<'SCRIPT'
 #!/bin/sh
-_VER="$(. /etc/os-release && echo "$VERSION_ID")"
+. /etc/os-release
+_ID="$ID"
+_VER="$VERSION_ID"
 cat <<MOTD
 
 ╔══════════════════════════════════════════════╗
-║   dasomel/ubuntu-${_VER} - K8s Ready OS        ║
-║   Ubuntu ${_VER} LTS + K8s Optimizations       ║
+║   dasomel/${_ID}-${_VER} - K8s Ready OS        ║
+║   ${PRETTY_NAME} + K8s Optimizations       ║
 ╚══════════════════════════════════════════════╝
 
 📦 Box Info: cat /etc/vagrant-box/info.txt
