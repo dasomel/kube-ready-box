@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 dasomel
+#
+# Structured, explicitly-approved exceptions to etc/license-policy.conf's
+# DENY_PACKAGES (Narwhal #161: "repo별 예외를 명시적으로 승인"). Consumed by
+# tools/sbom-license-gate.sh: a DENY_PACKAGES match with a matching row here
+# is allowed but recorded in license-report.json's exceptions_applied for
+# audit -- it never silently disappears from evidence.
+#
+# Format (tab-separated, one exception per line):
+#   package<TAB>reason<TAB>approved_by<TAB>approved_date(YYYY-MM-DD)
+#
+# Example (do not uncomment without a real approval record):
+# some-denied-pkg	required for X, reviewed against license terms Y	dasomel	2026-08-26

@@ -90,11 +90,27 @@ pass:
   consolidation surfaced). Wired into both the aggregator
   (`RUN_LICENSE_GATE=1`) and a dedicated `license` CI job, this pass.
 
-Not attempted: an actual license *exception process* (Narwhal #161 asks
-for "repo별 예외를 명시적으로 승인") beyond the existing
-`DENY_LICENSES`/`DENY_PACKAGES` conservative-denylist mechanism — a
-structured per-package exception-with-approval-record workflow is a
-separate, larger piece of design, not built here.
+**Fixed a real bug this pass**: `POLICY_FILE` defaulted to
+`$ROOT/etc/vagrant-box/license-policy.conf` — a real in-guest path, but no
+Packer provisioner has ever copied `etc/license-policy.conf` there, in
+either CI (`ROOT=/`, the ephemeral runner) or a real box build. The
+default silently fell back to a placeholder deny-list
+(`GPL-3-only-AND-proprietary-placeholder`, matching no real SPDX ID) and
+empty `DENY_PACKAGES` — the repo's committed policy had never actually
+been enforced anywhere. Default is now resolved relative to the script's
+own location (`etc/license-policy.conf`, next to `tools/`), independent of
+`ROOT` (which stays purely about where the package *database* is read
+from — real host, mounted image, or booted guest).
+
+**License exception process** (Narwhal #161 asks for "repo별 예외를
+명시적으로 승인"): `etc/license-exceptions.tsv`, a structured
+package/reason/approved_by/approved_date record consumed by
+`sbom-license-gate.sh`. A `DENY_PACKAGES` match with a matching exception
+row is allowed but never silently dropped — it's recorded under
+`exceptions_applied` in `license-report.json` for audit. Verified in a
+real Ubuntu 24.04 container: an unapproved deny-listed package fails the
+gate; the same package with a matching exception row passes and the
+exception appears in evidence.
 
 ## What #28/#161 asks for that this pass does NOT cover
 
@@ -106,7 +122,6 @@ separate, larger piece of design, not built here.
   emits both formats (via `trivy`, when installed) plus a dpkg-tsv
   fallback; a written interchange/conversion guide per #161's ask is not
   authored here.
-- **A structured license exception-with-approval record** (see above).
 - **Vulnerability scanning as a release gate** — `trivy` is used for SBOM
   generation only (`--offline-scan`, no vulnerability DB check wired to
   fail a build).

@@ -5,7 +5,16 @@ set -euo pipefail
 
 ROOT="${ROOT:-/}"
 EVIDENCE_DIR="${EVIDENCE_DIR:-$ROOT/etc/vagrant-box}"
-POLICY_FILE="${POLICY_FILE:-$ROOT/etc/vagrant-box/license-policy.conf}"
+# POLICY_FILE의 기본값은 ROOT(스캔 대상 - 실 게스트/마운트된 이미지/CI 러너 자신)가
+# 아니라 이 스크립트가 속한 저장소를 기준으로 잡는다. 어떤 packer 프로비저너도
+# etc/license-policy.conf를 게스트의 /etc/vagrant-box/로 복사한 적이 없어서
+# (실제 빌드/CI 어디서도 확인됨), 예전 기본값은 항상 존재하지 않는 경로였고
+# 조용히 무해한 placeholder(GPL-3-only-AND-proprietary-placeholder, 어떤 실제
+# SPDX ID와도 매치되지 않음)로 폴백해 저장소에 커밋된 실제 정책이 한 번도
+# 적용된 적이 없었다.
+SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+POLICY_FILE="${POLICY_FILE:-$SCRIPT_ROOT/etc/license-policy.conf}"
+EXCEPTIONS_FILE="${EXCEPTIONS_FILE:-$SCRIPT_ROOT/etc/license-exceptions.tsv}"
 OUTPUT="${OUTPUT:-$EVIDENCE_DIR/license-report.json}"
 
 mkdir -p "$(dirname "$OUTPUT")"
@@ -51,10 +60,25 @@ else
   unknowns=$((unknowns + 1))
 fi
 
+# 예외는 DENY_PACKAGES 매치 자체를 지우지 않는다 -- 승인된 예외로 FAIL을
+# 면제하되, 누가/언제/왜 승인했는지 exceptions_applied 로 evidence에 남긴다
+# (Narwhal #161 "repo별 예외를 명시적으로 승인"). 형식: package<TAB>reason
+# <TAB>approved_by<TAB>approved_date(YYYY-MM-DD), '#'로 시작하는 줄은 주석.
+exceptions_applied="$EVIDENCE_DIR/license-exceptions-applied.tsv"
+: > "$exceptions_applied"
 for pkg in $DENY_PACKAGES; do
   if grep -q "^${pkg}[[:space:]]" "$packages_json"; then
-    echo "DENY package present: $pkg" >&2
-    failures=$((failures + 1))
+    exception_line=""
+    if [ -f "$EXCEPTIONS_FILE" ]; then
+      exception_line=$(awk -F'\t' -v p="$pkg" '$1 !~ /^#/ && $1 == p {print; exit}' "$EXCEPTIONS_FILE")
+    fi
+    if [ -n "$exception_line" ]; then
+      echo "DENY package present but exception approved: $pkg" >&2
+      printf '%s\n' "$exception_line" >> "$exceptions_applied"
+    else
+      echo "DENY package present: $pkg" >&2
+      failures=$((failures + 1))
+    fi
   fi
 done
 
@@ -102,7 +126,7 @@ status=PASS
 # 줄만 읽어 파싱하기 때문에 필수적이다.
 python3 -c '
 import json, sys
-status, failures, unknowns, inventory_sha256, inventory_status, policy_file, deny_licenses, deny_packages, packages_path, output = sys.argv[1:]
+status, failures, unknowns, inventory_sha256, inventory_status, policy_file, deny_licenses, deny_packages, packages_path, exceptions_file, exceptions_applied_path, output = sys.argv[1:]
 
 items = []
 with open(packages_path, "r", encoding="utf-8") as fh:
@@ -120,6 +144,25 @@ with open(packages_path, "r", encoding="utf-8") as fh:
             "status": pkg_status,
         })
 
+exceptions_applied = []
+try:
+    with open(exceptions_applied_path, "r", encoding="utf-8") as fh:
+        for line in fh:
+            line = line.rstrip("\n")
+            if not line:
+                continue
+            fields = line.split("\t")
+            fields += [""] * (4 - len(fields))
+            package, reason, approved_by, approved_date = fields[:4]
+            exceptions_applied.append({
+                "package": package,
+                "reason": reason,
+                "approved_by": approved_by,
+                "approved_date": approved_date,
+            })
+except FileNotFoundError:
+    pass
+
 obj = {
     "schema_version": 1,
     "status": status,
@@ -128,8 +171,10 @@ obj = {
     "inventory_sha256": inventory_sha256,
     "inventory_status": inventory_status,
     "policy": policy_file,
+    "exceptions_file": exceptions_file,
     "deny_licenses": deny_licenses,
     "deny_packages": deny_packages,
+    "exceptions_applied": exceptions_applied,
     "review_required_for_unknown_license": True,
     "packages": items,
 }
@@ -137,6 +182,6 @@ raw = json.dumps(obj, sort_keys=True, separators=(",", ":"))
 with open(output, "w") as fh:
     fh.write(raw + "\n")
 print(raw)
-' "$status" "$failures" "$unknowns" "$inventory_sha256" "$inventory_status" "$POLICY_FILE" "$DENY_LICENSES" "$DENY_PACKAGES" "$packages_json" "$OUTPUT"
+' "$status" "$failures" "$unknowns" "$inventory_sha256" "$inventory_status" "$POLICY_FILE" "$DENY_LICENSES" "$DENY_PACKAGES" "$packages_json" "$EXCEPTIONS_FILE" "$exceptions_applied" "$OUTPUT"
 
 [ "$status" = PASS ]
