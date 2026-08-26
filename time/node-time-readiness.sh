@@ -26,7 +26,12 @@ if m:
 ' 2>/dev/null || true)
   if [ -n "$offset" ]; then add offset PASS "$offset"; else add offset UNKNOWN not-reported; fi
 
-  sources=$(chronyc sources -n 2>/dev/null | awk 'NR>2 && $1 ~ /^[\^=#]/ {print}' | wc -l)
+  # pipefail 아래서 chronyc가 데몬에 연결 못 하면(FAIL만이 아니라) 이 파이프
+  # 자체가 죽어 스크립트가 JSON을 아예 출력하지 못한다(#13 negative test로
+  # 실제 발견됨 - chronyd를 실제로 멈추기 전엔 드러나지 않았던 결함). wc -l은
+  # chronyc가 아무것도 못 내놔도 정상적으로 0을 세므로, 파이프 실패만 흡수하면
+  # sources 값 자체는 이미 올바르게 "0"이 된다.
+  sources=$(chronyc sources -n 2>/dev/null | awk 'NR>2 && $1 ~ /^[\^=#]/ {print}' | wc -l) || true
   if [ "$sources" -gt 0 ]; then add sources PASS "$sources"; else add sources FAIL zero-configured-sources; fi
 
   best_line=$(chronyc sources -v 2>/dev/null | awk '/^\^\*/{print; exit}' || true)
