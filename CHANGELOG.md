@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Rocky-0.1.0] - 2026-08-26
+
+`dasomel/rocky-9-ext4` 0.1.0 (VMware / arm64) 최초 배포 (#15). Rocky Linux 9 Packer
+빌드 파이프라인의 첫 슬라이스 — Rocky 9 · ARM64 · VMware · ext4 조합만 포함. 실제
+`vagrant up` + 게스트 내 `rocky/preflight.sh` 실행으로 `"status":"PASS"` 확인 후 배포.
+
+### Added
+- Rocky 9 Kickstart, `packer/rocky-vmware-arm64.pkr.hcl`, Rocky 전용 프로비저닝 스크립트 6종
+- `generate-sbom.sh`/`license-info.sh`/`99-cleanup.sh`의 dpkg/rpm 분기 (Ubuntu 경로 무변경)
+- `packer/build.sh --os=rocky` 옵션
+
+### Not included (후속 작업)
+- Rocky 10, xfs, AMD64, VirtualBox ARM64
+
+## [1.1.0] - 2026-07-18 (virtualbox/arm64 재검증 - 2026-08-26)
+
+`dasomel/ubuntu-26.04-ext4` virtualbox/arm64 provider를 동일 버전(1.1.0)에 재배포.
+`restrict_build_egress=1`로 실제 Packer 빌드를 재검증하며 dpkg-lock 레이스 버그를
+발견/수정(#30) — `00-egress-restrict.sh`가 `01-base.sh`와 동일한 cloud-init 대기
+가드를 사용하도록 함. 박스 산출물 자체는 1.1.0과 기능적으로 동일.
+
 ## [NixOS-0.1.1] - 2026-08-11
 
 `dasomel/nixos-kube-ready` 0.1.1 (libvirt / arm64) 배포. 0.1.0은 어떤 프로바이더로도 `vagrant up`이
