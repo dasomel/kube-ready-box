@@ -356,6 +356,10 @@ jobs:
           }
 
           # node-readiness-attest: actual swap activation must be reported as FAIL.
+          # GitHub-hosted ubuntu-latest runners ship with swap already enabled by
+          # default (confirmed by this job's first real run: baseline was FAIL, not
+          # the assumed PASS) -- force a known-clean baseline instead of assuming one.
+          run_or_fail "could not disable pre-existing swap for a clean baseline" sudo swapoff -a
           run_json /tmp/attest-swap-baseline.json env READINESS_OUTPUT=/tmp/readiness-attest.json bash tools/node-readiness-attest.sh
           require_status /tmp/attest-swap-baseline.json swap PASS
           swap_file=/tmp/readiness-negative.swap
@@ -369,9 +373,12 @@ jobs:
           swap_file=
 
           # All ip_forward checks read the runner's real procfs sysctl value.
+          # Force a known-clean baseline (=1) rather than assume one -- the swap
+          # test above just proved GH-hosted runner defaults aren't safe to assume.
           if ! ip_forward_before=$(sysctl -n net.ipv4.ip_forward); then
             fail "could not read net.ipv4.ip_forward before mutation"
           fi
+          run_or_fail "could not set net.ipv4.ip_forward=1 for a clean baseline" sudo sysctl -w net.ipv4.ip_forward=1 >/dev/null
           run_json /tmp/attest-forward-baseline.json env READINESS_OUTPUT=/tmp/readiness-attest.json bash tools/node-readiness-attest.sh
           require_status /tmp/attest-forward-baseline.json sysctl_ip_forward PASS
           run_or_fail "could not set net.ipv4.ip_forward=0 for attest test" sudo sysctl -w net.ipv4.ip_forward=0 >/dev/null
@@ -379,6 +386,7 @@ jobs:
           require_status /tmp/attest-forward-mutated.json sysctl_ip_forward FAIL
           run_or_fail "could not restore net.ipv4.ip_forward after attest test" sudo sysctl -w "net.ipv4.ip_forward=$ip_forward_before" >/dev/null
 
+          run_or_fail "could not set net.ipv4.ip_forward=1 for a clean baseline" sudo sysctl -w net.ipv4.ip_forward=1 >/dev/null
           run_json /tmp/network-forward-baseline.json bash network/node-network-readiness.sh
           require_status /tmp/network-forward-baseline.json ip_forward PASS
           run_or_fail "could not set net.ipv4.ip_forward=0 for network test" sudo sysctl -w net.ipv4.ip_forward=0 >/dev/null
@@ -424,6 +432,7 @@ jobs:
 
           # Rocky/NixOS scripts can fail unrelated Ubuntu OS checks; capture JSON and
           # assert only the targeted check rather than their aggregate exit status.
+          run_or_fail "could not set net.ipv4.ip_forward=1 for a clean baseline" sudo sysctl -w net.ipv4.ip_forward=1 >/dev/null
           run_json /tmp/rocky-forward-baseline.json bash rocky/preflight.sh
           require_status /tmp/rocky-forward-baseline.json sysctl_ip_forward PASS
           run_or_fail "could not set net.ipv4.ip_forward=0 for Rocky test" sudo sysctl -w net.ipv4.ip_forward=0 >/dev/null
@@ -431,6 +440,7 @@ jobs:
           require_status /tmp/rocky-forward-mutated.json sysctl_ip_forward FAIL
           run_or_fail "could not restore net.ipv4.ip_forward after Rocky test" sudo sysctl -w "net.ipv4.ip_forward=$ip_forward_before" >/dev/null
 
+          run_or_fail "could not set net.ipv4.ip_forward=1 for a clean baseline" sudo sysctl -w net.ipv4.ip_forward=1 >/dev/null
           run_json /tmp/nixos-forward-baseline.json bash nixos/preflight.sh
           require_status /tmp/nixos-forward-baseline.json ip_forward PASS
           run_or_fail "could not set net.ipv4.ip_forward=0 for NixOS test" sudo sysctl -w net.ipv4.ip_forward=0 >/dev/null
