@@ -226,3 +226,214 @@ jobs:
             exit 1
           fi
           echo "Correctly refused to install dool with a mismatched checksum (script exit=$rc)"
+
+  # These tests intentionally mutate the GitHub-hosted runner itself.  The
+  # readiness scripts inspect real procfs/sysfs and systemd state, so a Docker
+  # container would not prove that they fail closed when a node is misconfigured.
+  readiness-negative-tests:
+    name: Readiness negative tests (#13)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Real host-state readiness checks fail closed
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          swap_file=
+          ip_forward_before=
+          ntp_before=
+
+          fail() {
+            echo "::error::$*" >&2
+            exit 1
+          }
+
+          run_or_fail() {
+            local description=$1
+            shift
+            if ! "$@"; then
+              fail "$description"
+            fi
+            return 0
+          }
+
+          cleanup() {
+            local cleanup_failed=0
+            if [ -n "$swap_file" ]; then
+              if ! sudo swapoff "$swap_file"; then
+                echo "::error::cleanup could not disable swap file $swap_file" >&2
+                cleanup_failed=1
+              fi
+              if ! sudo rm -f "$swap_file"; then
+                echo "::error::cleanup could not remove swap file $swap_file" >&2
+                cleanup_failed=1
+              fi
+            fi
+            if [ -n "$ip_forward_before" ]; then
+              if ! sudo sysctl -w "net.ipv4.ip_forward=$ip_forward_before" >/dev/null; then
+                echo "::error::cleanup could not restore net.ipv4.ip_forward" >&2
+                cleanup_failed=1
+              fi
+            fi
+            if [ "$ntp_before" = yes ]; then
+              if ! sudo timedatectl set-ntp true; then
+                echo "::error::cleanup could not re-enable NTP" >&2
+                cleanup_failed=1
+              fi
+            fi
+            return "$cleanup_failed"
+          }
+          trap cleanup EXIT
+
+          run_json() {
+            local output=$1
+            shift
+            set +e
+            "$@" >"$output"
+            local rc=$?
+            set -e
+            if ! python3 - "$output" <<'PY'
+          import json
+          import sys
+
+          path = sys.argv[1]
+          try:
+              with open(path, encoding="utf-8") as handle:
+                  json.load(handle)
+          except Exception as exc:
+              print(f"::error::{path} did not produce parseable JSON: {exc}")
+              raise SystemExit(1)
+          PY
+            then
+              exit 1
+            fi
+            echo "Captured JSON from $* (exit=$rc)"
+          }
+
+          require_status() {
+            local path=$1 id=$2 expected=$3
+            if ! python3 - "$path" "$id" "$expected" <<'PY'
+          import json
+          import sys
+
+          path, check_id, expected = sys.argv[1:]
+          checks = json.load(open(path, encoding="utf-8")).get("checks", [])
+          matches = [check for check in checks if check.get("id") == check_id]
+          if len(matches) != 1:
+              print(f"::error::{path}: expected exactly one check id={check_id!r}, found {len(matches)}")
+              raise SystemExit(1)
+          actual = matches[0].get("status")
+          if actual != expected:
+              print(f"::error::{path}: check {check_id!r} expected {expected}, got {actual!r}")
+              raise SystemExit(1)
+          PY
+            then
+              exit 1
+            fi
+          }
+
+          require_non_fail() {
+            local path=$1 id=$2
+            if ! python3 - "$path" "$id" <<'PY'
+          import json
+          import sys
+
+          path, check_id = sys.argv[1:]
+          checks = json.load(open(path, encoding="utf-8")).get("checks", [])
+          matches = [check for check in checks if check.get("id") == check_id]
+          if len(matches) != 1:
+              print(f"::error::{path}: expected exactly one check id={check_id!r}, found {len(matches)}")
+              raise SystemExit(1)
+          if matches[0].get("status") == "FAIL":
+              print(f"::error::{path}: baseline check {check_id!r} is unexpectedly FAIL")
+              raise SystemExit(1)
+          PY
+            then
+              exit 1
+            fi
+          }
+
+          # node-readiness-attest: actual swap activation must be reported as FAIL.
+          run_json /tmp/attest-swap-baseline.json env READINESS_OUTPUT=/tmp/readiness-attest.json bash tools/node-readiness-attest.sh
+          require_status /tmp/attest-swap-baseline.json swap PASS
+          swap_file=/tmp/readiness-negative.swap
+          run_or_fail "could not allocate negative-test swap file" sudo fallocate -l 64M "$swap_file"
+          run_or_fail "could not format negative-test swap file" sudo mkswap "$swap_file" >/dev/null
+          run_or_fail "could not enable negative-test swap file" sudo swapon "$swap_file"
+          run_json /tmp/attest-swap-mutated.json env READINESS_OUTPUT=/tmp/readiness-attest.json bash tools/node-readiness-attest.sh
+          require_status /tmp/attest-swap-mutated.json swap FAIL
+          run_or_fail "could not disable negative-test swap file" sudo swapoff "$swap_file"
+          run_or_fail "could not remove negative-test swap file" sudo rm -f "$swap_file"
+          swap_file=
+
+          # All ip_forward checks read the runner's real procfs sysctl value.
+          if ! ip_forward_before=$(sysctl -n net.ipv4.ip_forward); then
+            fail "could not read net.ipv4.ip_forward before mutation"
+          fi
+          run_json /tmp/attest-forward-baseline.json env READINESS_OUTPUT=/tmp/readiness-attest.json bash tools/node-readiness-attest.sh
+          require_status /tmp/attest-forward-baseline.json sysctl_ip_forward PASS
+          run_or_fail "could not set net.ipv4.ip_forward=0 for attest test" sudo sysctl -w net.ipv4.ip_forward=0 >/dev/null
+          run_json /tmp/attest-forward-mutated.json env READINESS_OUTPUT=/tmp/readiness-attest.json bash tools/node-readiness-attest.sh
+          require_status /tmp/attest-forward-mutated.json sysctl_ip_forward FAIL
+          run_or_fail "could not restore net.ipv4.ip_forward after attest test" sudo sysctl -w "net.ipv4.ip_forward=$ip_forward_before" >/dev/null
+
+          run_json /tmp/network-forward-baseline.json bash network/node-network-readiness.sh
+          require_status /tmp/network-forward-baseline.json ip_forward PASS
+          run_or_fail "could not set net.ipv4.ip_forward=0 for network test" sudo sysctl -w net.ipv4.ip_forward=0 >/dev/null
+          run_json /tmp/network-forward-mutated.json bash network/node-network-readiness.sh
+          require_status /tmp/network-forward-mutated.json ip_forward FAIL
+          run_or_fail "could not restore net.ipv4.ip_forward after network test" sudo sysctl -w "net.ipv4.ip_forward=$ip_forward_before" >/dev/null
+
+          # Disabling NTP should turn timedatectl's synchronization evidence UNKNOWN,
+          # never leave this check falsely PASS.
+          if ! ntp_before=$(timedatectl show -p NTP --value); then
+            fail "could not read NTP state before time test"
+          fi
+          run_json /tmp/time-baseline.json bash time/node-time-readiness.sh
+          require_non_fail /tmp/time-baseline.json timedatectl_sync
+          run_or_fail "could not disable NTP for time test" sudo timedatectl set-ntp false
+          if ! ntp_synchronized_after=$(timedatectl show -p NTPSynchronized --value); then
+            fail "could not read NTPSynchronized after disabling NTP for time test"
+          fi
+          case "$ntp_synchronized_after" in
+            [Yy][Ee][Ss])
+              fail "NTPSynchronized remained yes after disabling NTP; negative condition was not induced"
+              ;;
+          esac
+          run_json /tmp/time-mutated.json bash time/node-time-readiness.sh
+          require_status /tmp/time-mutated.json timedatectl_sync UNKNOWN
+          if [ "$ntp_before" = yes ]; then
+            run_or_fail "could not restore NTP after time test" sudo timedatectl set-ntp true
+          fi
+          ntp_before=
+
+          # /dev/null is a real devfs character-device input, not a mock; it exercises
+          # the documented live-expansion input validation path.
+          run_json /tmp/storage-baseline.json bash storage/node-storage-readiness.sh
+          require_non_fail /tmp/storage-baseline.json expansion_test
+          run_json /tmp/storage-mutated.json env STORAGE_TEST_DEVICE=/dev/null bash storage/node-storage-readiness.sh
+          require_status /tmp/storage-mutated.json expansion_test FAIL
+
+          # WORKLOAD_PRIVILEGED is the security script's documented runtime workload declaration.
+          run_json /tmp/security-baseline.json env WORKLOAD_PRIVILEGED=0 bash security/workload-security-check.sh
+          require_status /tmp/security-baseline.json privileged_workload PASS
+          run_json /tmp/security-mutated.json env WORKLOAD_PRIVILEGED=1 bash security/workload-security-check.sh
+          require_status /tmp/security-mutated.json privileged_workload FAIL
+
+          # Rocky/NixOS scripts can fail unrelated Ubuntu OS checks; capture JSON and
+          # assert only the targeted check rather than their aggregate exit status.
+          run_json /tmp/rocky-forward-baseline.json bash rocky/preflight.sh
+          require_status /tmp/rocky-forward-baseline.json sysctl_ip_forward PASS
+          run_or_fail "could not set net.ipv4.ip_forward=0 for Rocky test" sudo sysctl -w net.ipv4.ip_forward=0 >/dev/null
+          run_json /tmp/rocky-forward-mutated.json bash rocky/preflight.sh
+          require_status /tmp/rocky-forward-mutated.json sysctl_ip_forward FAIL
+          run_or_fail "could not restore net.ipv4.ip_forward after Rocky test" sudo sysctl -w "net.ipv4.ip_forward=$ip_forward_before" >/dev/null
+
+          run_json /tmp/nixos-forward-baseline.json bash nixos/preflight.sh
+          require_status /tmp/nixos-forward-baseline.json ip_forward PASS
+          run_or_fail "could not set net.ipv4.ip_forward=0 for NixOS test" sudo sysctl -w net.ipv4.ip_forward=0 >/dev/null
+          run_json /tmp/nixos-forward-mutated.json bash nixos/preflight.sh
+          require_status /tmp/nixos-forward-mutated.json ip_forward FAIL
+          run_or_fail "could not restore net.ipv4.ip_forward after NixOS test" sudo sysctl -w "net.ipv4.ip_forward=$ip_forward_before" >/dev/null
