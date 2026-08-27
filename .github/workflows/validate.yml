@@ -40,7 +40,7 @@ jobs:
     strategy:
       matrix: { filesystem: [ext4, xfs] }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: hashicorp/setup-packer@v3
         with: { version: '1.15.4' }
       - name: Format
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Shellcheck
         run: |
           find packer/scripts nixos rocky security network storage time observability tools rust -type f -name '*.sh' -print0 | xargs -0 -r shellcheck --severity=warning
@@ -80,7 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Reject floating downloads / open plugin version constraints
         run: bash tools/unpinned-input-guard.sh
 
@@ -89,7 +89,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with: { targets: aarch64-unknown-linux-gnu }
       - name: Native offline build/check/test
@@ -123,7 +123,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - name: Syntax
         run: |
@@ -159,7 +159,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: License gate
         # Defaults to /etc/vagrant-box (the real in-guest evidence path) --
         # needs root on an unprivileged CI runner, same as the aggregator
@@ -171,7 +171,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # GitHub-hosted ubuntu-latest runners are real systemd VMs, unlike the
       # containers used to develop/spot-check this script locally -- this is
       # the first real end-to-end exercise of 00-egress-restrict.sh's
@@ -235,7 +235,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Real host-state readiness checks fail closed
         shell: bash
         run: |
