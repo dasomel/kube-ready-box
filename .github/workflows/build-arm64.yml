@@ -213,7 +213,7 @@ jobs:
     steps:
       - name: Download VMware Box
         if: needs.build-vmware-arm64.result == 'success'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-vmware-arm64
           path: ./boxes
@@ -221,7 +221,7 @@ jobs:
 
       - name: Download VirtualBox Box
         if: needs.build-virtualbox-arm64.result == 'success'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-arm64
           path: ./boxes
