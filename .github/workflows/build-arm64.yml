@@ -101,7 +101,7 @@ jobs:
           ls -lh packer/output-vagrant/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-vmware-arm64.box
 
       - name: Upload Box Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-vmware-arm64
           path: packer/output-vagrant/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-vmware-arm64.box
@@ -177,7 +177,7 @@ jobs:
           echo "Box verified OK: $BOX"
 
       - name: Upload Box Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-arm64
           path: packer/output-vagrant/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-arm64.box
