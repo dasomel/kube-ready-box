@@ -135,7 +135,7 @@ jobs:
           echo "Box verified OK: $BOX"
 
       - name: Upload Box Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-amd64
           path: packer/output-vagrant/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-amd64.box

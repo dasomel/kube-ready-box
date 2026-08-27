@@ -41,7 +41,7 @@ jobs:
             -o ./nixos/output-vagrant/nixos-kube-ready-${{ github.event.inputs.format }}.box
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nixos-kube-ready-${{ github.event.inputs.format }}
           path: ./nixos/output-vagrant/*.box
