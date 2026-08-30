@@ -88,9 +88,6 @@ autoinstall:
           match:
             name: "en*"
           dhcp4: true
-          # 26.04(systemd 259)에서 설치 후 DHCP DUID가 바뀌어 다른 IP를 받으면
-          # packer가 설치 단계의 낡은 리스 IP만 폴링해 SSH 타임아웃 발생 - MAC 고정으로 동일 IP 유지
-          dhcp-identifier: mac
 
   user-data:
     package_upgrade: true
@@ -98,6 +95,27 @@ autoinstall:
     timezone: UTC
 
   late-commands:
+    - mkdir -p /target/etc/kube-ready
+    - >-
+      ip -4 -o addr show scope global | awk '$2 ~ /^en/ && $4 !~ /^127\./ { print "PACKER_INSTALLER_IFACE=" $2; print "PACKER_INSTALLER_CIDR=" $4; exit }' > /target/etc/kube-ready/packer-installer-ip.env && test -s /target/etc/kube-ready/packer-installer-ip.env
+    - |
+      cat > /target/etc/systemd/system/kube-ready-packer-lease-bridge.service <<'EOF'
+      [Unit]
+      Description=Temporarily restore the Packer installer DHCP address
+      Wants=network-online.target
+      After=network-online.target
+      ConditionPathExists=/etc/kube-ready/packer-installer-ip.env
+
+      [Service]
+      Type=oneshot
+      EnvironmentFile=/etc/kube-ready/packer-installer-ip.env
+      ExecStart=/bin/sh -c '/usr/sbin/ip address add "$PACKER_INSTALLER_CIDR" dev "$PACKER_INSTALLER_IFACE" 2>/dev/null || true'
+      RemainAfterExit=yes
+
+      [Install]
+      WantedBy=multi-user.target
+      EOF
+    - curtin in-target -- systemctl enable kube-ready-packer-lease-bridge.service
     - sed -i 's/#LogLevel INFO/LogLevel DEBUG/' /target/etc/ssh/sshd_config
     - sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /target/etc/ssh/sshd_config
     - sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /target/etc/ssh/sshd_config

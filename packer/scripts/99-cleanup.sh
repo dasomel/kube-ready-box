@@ -45,6 +45,15 @@ unset HISTFILE
 rm -f /root/.bash_history
 rm -f /home/*/.bash_history
 
+# The Packer-only lease bridge restores the installer address so the build can
+# keep its SSH connection after the target receives a new DHCP address. Stop
+# and remove its persistent pieces, but do not delete the live secondary IP:
+# Packer still needs it until the guest shuts down.
+systemctl disable --now kube-ready-packer-lease-bridge.service 2>/dev/null || true
+rm -f /etc/systemd/system/kube-ready-packer-lease-bridge.service
+rm -f /etc/kube-ready/packer-installer-ip.env
+systemctl daemon-reload
+
 # Host keys are generated uniquely by the first-boot identity service.
 echo "Removing SSH host keys from the image; first boot regenerates them..."
 rm -f /etc/ssh/ssh_host_*

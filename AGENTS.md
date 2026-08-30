@@ -291,9 +291,9 @@ Agent 4: shellcheck packer/scripts/04-k8s-prereq.sh
     - 해결: 빌드 실패 보고 시 `ls -lh packer/output-vagrant/*.box`로 아티팩트 존재/크기부터 확인 후 재빌드 판단
 
 12. **26.04 VMware 빌드 SSH 타임아웃: 설치 후 IP 변경이 원인일 수 있음**
-    - systemd 259(26.04)는 설치 후 DHCP DUID가 바뀌어 설치 단계와 다른 IP를 받음 → packer가 낡은 리스 IP만 폴링해 "Timeout waiting for SSH" (VirtualBox는 NAT 포워딩이라 무관)
+    - systemd 259(26.04)에서 target이 설치 단계와 다른 DHCP IP를 받으면 packer가 낡은 리스 IP만 폴링해 "Timeout waiting for SSH" (VirtualBox는 NAT 포워딩이라 무관)
     - 진단: `/var/db/vmware/vmnet-dhcpd-vmnet8.leases` 리스 갱신 여부 + Fusion 콘솔에서 `ip a`로 실제 IP 확인. 게스트가 login 프롬프트에 떠 있으면 vagrant/vagrant 로그인 → `sudo ip addr add <리스IP>/24 dev enp2s0`로 빌드 구출 가능
-    - 영구 해결: autoinstall 시드 netplan에 `dhcp-identifier: mac` (두 시드 모두 적용됨)
+    - 영구 해결: autoinstall 두 시드는 late-command에서 설치기의 IPv4 CIDR/interface를 기록하고, target의 `network-online.target` 뒤에 그 주소를 secondary IP로 추가하는 build-only service를 활성화한다. `99-cleanup.sh`는 Packer SSH가 종료/guest shutdown 전까지 살아 있도록 runtime secondary IP는 남기고 service/state만 disable·삭제한다. 패키징된 box에는 bridge/state가 남지 않으며 shutdown이 runtime IP를 정리한다.
 
 13. **`output-vagrant/`는 빌드마다 초기화되는 공유 작업 디렉터리**
     - 다음 빌드의 패키징 단계가 디렉터리를 재생성하며 이전 빌드의 box를 삭제함 (버전/프로바이더 무관)

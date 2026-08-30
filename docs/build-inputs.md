@@ -105,16 +105,33 @@ the plan's explicit scope.
 
 Pinned to exact versions in `packer/plugins.pkr.hcl`'s `required_plugins`
 block (not `>=`), resolved against the versions actually installed and
-tested in this repo's CI:
+validated in this repo's CI where noted below; VMware 2.1.4 has additionally
+been initialized and syntax-validated locally, with a real Fusion build
+recorded separately below:
 
 | Plugin | Version |
 |---|---|
 | virtualbox | 1.1.3 |
-| vmware | 1.2.0 |
-| vagrant | 1.1.6 |
+| vmware | 2.1.4 (`github.com/vmware/vmware`) |
+| vagrant | 1.1.7 |
 
 Bumping any of these is a deliberate, reviewed change to the pin, not a
 silent `packer init` re-resolve.
+
+The VMware pin was upgraded from 1.2.0 to 2.1.4 for the maintained plugin.
+In the real Fusion build, Packer remained on the pre-install DHCP address
+after the Ubuntu 26.04 guest changed addresses; adding that old address as a
+temporary secondary guest IP through VMware guest operations restored SSH, and
+the build then completed.
+The durable fix captures the installer's IPv4 CIDR and interface during
+autoinstall, then starts a build-only service after the target network is
+online to add that former address as a secondary IP. `99-cleanup.sh` disables
+and removes the service and its state before packaging, while deliberately
+leaving the live secondary IP in place until shutdown so Packer's SSH session
+survives. The packaged box contains neither the bridge nor its captured state.
+The Vagrant post-processor is pinned to 1.1.7 because it recognizes VMware
+2.x's `vmware.desktop` artifact builder ID and packages it as the `vmware`
+box provider.
 
 ## Downloaded binaries/scripts (packer/scripts/)
 

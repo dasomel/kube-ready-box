@@ -10,11 +10,13 @@ packer {
       source  = "github.com/hashicorp/virtualbox"
     }
     vmware = {
-      version = "= 1.2.0"
-      source  = "github.com/hashicorp/vmware"
+      version = "= 2.1.4"
+      source  = "github.com/vmware/vmware"
     }
     vagrant = {
-      version = "= 1.1.6"
+      # VMware plugin 2.x emits the `vmware.desktop` builder ID.  Vagrant
+      # post-processor 1.1.7 maps that ID to the `vmware` box provider.
+      version = "= 1.1.7"
       source  = "github.com/hashicorp/vagrant"
     }
   }
