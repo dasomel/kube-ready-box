@@ -58,6 +58,7 @@ build {
       "scripts/generate-sbom.sh",
       "scripts/09-k8s-node-preflight.sh",
       "scripts/10-sandbox-runtime.sh",
+      "scripts/98-first-boot-identity.sh",
       "scripts/99-cleanup.sh"
     ]
     environment_vars = [
