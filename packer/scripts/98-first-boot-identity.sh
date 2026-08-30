@@ -23,14 +23,25 @@ fi
 
 # Secure Boot and TPM/vTPM are capability evidence, not requirements: report
 # supported/partial/unavailable rather than assuming a provider exposes them
-# (docs/identity-security.md).
+# (docs/identity-security.md). Paths are overridable so
+# tools/test-identity-capability-detection.sh can exercise this exact block
+# against fixtures instead of real /sys (which a container/CI can't fake).
+# --- BEGIN CAPABILITY DETECTION ---
+KUBE_READY_EFIVARS_DIR="${KUBE_READY_EFIVARS_DIR:-/sys/firmware/efi/efivars}"
+KUBE_READY_TPM_DEVICES="${KUBE_READY_TPM_DEVICES:-/dev/tpmrm0 /dev/tpm0}"
+KUBE_READY_TPM_VERSION_FILE="${KUBE_READY_TPM_VERSION_FILE:-/sys/class/tpm/tpm0/tpm_version_major}"
+
 secure_boot_status=unavailable
 secure_boot_detail="not booted via UEFI (BIOS/legacy boot)"
-if [ -d /sys/firmware/efi/efivars ]; then
-  sb_var=/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c
+if [ -d "$KUBE_READY_EFIVARS_DIR" ]; then
+  sb_var="$KUBE_READY_EFIVARS_DIR/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"
   if [ -r "$sb_var" ]; then
     # First 4 bytes are the EFI variable attributes; byte 5 is the value.
-    sb_byte=$(od -An -tu1 -j4 -N1 "$sb_var" 2>/dev/null | tr -d ' ')
+    # od can still fail here (e.g. the path is a directory, or a transient
+    # efivarfs read error) even though -r reported it readable; `|| true`
+    # keeps a read failure routed to the "unreadable" branch below instead
+    # of aborting the whole first-boot service under set -e.
+    sb_byte=$(od -An -tu1 -j4 -N1 "$sb_var" 2>/dev/null | tr -d ' ') || true
     if [ "$sb_byte" = "1" ]; then
       secure_boot_status=supported
       secure_boot_detail="UEFI Secure Boot enabled"
@@ -50,13 +61,13 @@ fi
 tpm_status=unavailable
 tpm_detail="no TPM/vTPM device exposed by hypervisor"
 tpm_dev=""
-for cand in /dev/tpmrm0 /dev/tpm0; do
+for cand in $KUBE_READY_TPM_DEVICES; do
   if [ -e "$cand" ]; then tpm_dev="$cand"; break; fi
 done
 if [ -n "$tpm_dev" ]; then
   ver=""
-  if [ -r /sys/class/tpm/tpm0/tpm_version_major ]; then
-    ver=$(tr -d '\n' </sys/class/tpm/tpm0/tpm_version_major 2>/dev/null || true)
+  if [ -r "$KUBE_READY_TPM_VERSION_FILE" ]; then
+    ver=$(tr -d '\n' <"$KUBE_READY_TPM_VERSION_FILE" 2>/dev/null || true)
   fi
   if [ -n "$ver" ]; then
     tpm_status=supported
@@ -66,6 +77,7 @@ if [ -n "$tpm_dev" ]; then
     tpm_detail="TPM/vTPM device node present ($tpm_dev) but sysfs did not report a version; driver may not be fully bound"
   fi
 fi
+# --- END CAPABILITY DETECTION ---
 
 install -d -m 0755 /etc/vagrant-box
 SECURE_BOOT_STATUS="$secure_boot_status" SECURE_BOOT_DETAIL="$secure_boot_detail" \
