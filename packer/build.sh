@@ -79,7 +79,7 @@ UBUNTU VERSION:
 
 OS SELECTION:
   --os=NAME           OS to build: ubuntu (default) or rocky
-                      rocky currently only supports: vmware-arm64 (ext4)
+                      rocky currently only supports arm64: vmware-arm64, virtualbox-arm64 (ext4/xfs)
 
 EXAMPLES:
   $0 init                           # Install Packer plugins

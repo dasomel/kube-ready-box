@@ -14,7 +14,7 @@ This document separates repository-side implementation from host-side validation
 | #12 Rust | offline verifier CLI, deterministic evidence, x86_64/aarch64 build contract | Real native/ARM64 binary execution benchmark |
 | #13 Conformance | node readiness attestation and aggregate evidence contracts | Real runtime/storage/time/security drift scenarios |
 | #14 Identity | first-boot identity attestation, SSH regeneration/hardened profile | Two-clone, snapshot/revert, Secure Boot/TPM provider tests |
-| #15 Rocky | Rocky 9/10 profile and common readiness contract | Rocky provider/arch/ext4/xfs matrix |
+| #15 Rocky | Rocky 9/10 profile and common readiness contract; VMware ARM64 (ext4/xfs) and VirtualBox ARM64 (ext4) real `vagrant up` boot-verified | AMD64 (either provider, needs x86 host), VirtualBox ARM64 xfs, Rocky 10 |
 | #16 MAC security | AppArmor/SELinux common security evidence | Effective workload enforcement on Ubuntu/Rocky |
 | #17 Network | distro-neutral network readiness schema/checks | CNI/kube-proxy/MTU/dual-stack live scenarios |
 | #18 Storage | common storage readiness/evidence | NFS/iSCSI/expansion/full-disk/reboot scenarios |

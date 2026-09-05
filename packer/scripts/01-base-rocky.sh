@@ -37,7 +37,18 @@ dnf install -y \
   rsync \
   net-tools \
   open-vm-tools
-systemctl enable --now vmtoolsd
+
+# This script is shared by every Rocky provider template (#15), not just
+# VMware. `systemctl enable --now vmtoolsd` fails when there's no VMware
+# backdoor device to attach to, and under `set -e` that would abort the
+# whole build on VirtualBox/other providers -- only enable it when actually
+# running under VMware (matches 01-base.sh's Ubuntu path, which installs the
+# same package for both providers but never force-enables/starts it).
+if [ "$(systemd-detect-virt --vm 2>/dev/null)" = "vmware" ]; then
+  systemctl enable --now vmtoolsd
+else
+  echo "  -> not running under VMware (detected: $(systemd-detect-virt --vm 2>/dev/null || echo unknown)), skipping vmtoolsd enable"
+fi
 
 # 불필요한 패키지 제거
 echo "Cleaning up unnecessary packages..."
