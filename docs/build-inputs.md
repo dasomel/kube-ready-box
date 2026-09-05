@@ -218,7 +218,26 @@ Korean NTP servers `01-base.sh` configures).
 - **Update, real Packer build confirmed**: ran `packer build -only=virtualbox-iso.ubuntu-vbox-arm64 -var restrict_build_egress=1 -var ubuntu_version=26.04 -var filesystem=ext4` twice, end to end, on this machine. Both times `00-egress-restrict.sh` set up the restriction, every provisioning script from `00-vagrant-setup.sh` through `10-sandbox-runtime.sh` completed successfully with egress restricted (real `apt-get`/`curl` traffic to the allowed domains, including the dool/yq checksum-verified downloads), `99-cleanup.sh` reverted it ("egress restriction reverted" in both logs), and a valid `.box` was produced (`tar -tzf` confirms `metadata.json`/`Vagrantfile`/`box.ovf`/disk image, ~1.8GB). One real bug was found and fixed by this: the script ran `apt-get install` immediately as the very first provisioner, before cloud-init's own first-boot package work had released the dpkg lock, and died with `Could not get lock /var/lib/dpkg/lock-frontend` — fixed by adding the same `cloud-init status --wait || true` guard `01-base.sh` already uses.
   - Both runs also hit a `packer build` exit code of "errored" — but this is **CLAUDE.md mistake pattern #11** (VirtualBox ARM64's ISO-detach step races the local-shell packaging script's VM unregister, `VBOX_E_OBJECT_NOT_FOUND`), a pre-existing, already-documented Packer/VirtualBox interaction with no relation to this script — confirmed unrelated by reproducing it identically on both the restricted-egress run and by it being pattern #11's known, generic behavior. The box artifact was valid both times regardless of Packer's reported exit code, per that pattern's own documented remedy (check `output-vagrant/*.box` directly rather than trust the reported exit code).
   - Still not covered: the other 7 provider/arch/OS/filesystem combinations (only virtualbox-arm64 × 26.04 × ext4 was run), and VMware specifically (untested with this option). `restrict_build_egress` stays opt-in (default `0`) until more combinations are confirmed — one verified target doesn't retire the "verify the rest before flipping the default" caveat, it just means the mechanism itself is no longer hypothetical.
-- **VMware attempt — inconclusive, not a failure of this feature**: tried `packer build -only=vmware-iso.ubuntu-vmware-arm64 -var restrict_build_egress=1 -var ubuntu_version=26.04 -var filesystem=ext4` on this machine while 4 unrelated VMware VMs from another local project were already running and heavily using the same disk (individual guest NVMe writes were taking 1.5s+ each, confirmed via the build VM's own `vmware.log`). The base Ubuntu autoinstall never finished booting to SSH within the template's 2h `ssh_timeout` and Packer tore the VM down — `00-egress-restrict.sh` (or any provisioner script) never got a chance to run, since that only happens after SSH becomes available. This result says nothing about whether the egress mechanism works on VMware; it needs a retry on an otherwise-idle host before it counts as covered either way.
+- **VMware — now confirmed** (previously inconclusive due to host resource contention). Retried the same
+  `packer build -only=vmware-iso.ubuntu-vmware-arm64 -var restrict_build_egress=1 -var ubuntu_version=26.04 -var filesystem=ext4`
+  on this machine once VirtualBox/VMware were both idle (`vmrun list` / `VBoxManage list runningvms` both
+  empty first). First retry connected over SSH fine but the shell provisioner disconnected mid-script
+  after ~19 minutes with Packer's generic "Script disconnected unexpectedly" — no script echo had been
+  captured yet, so this could not be pinned on `00-egress-restrict.sh` specifically; a `PACKER_LOG=1`
+  re-retry immediately after completed cleanly in 14m47s with no disconnect, which points to a one-off
+  VNC/boot-command timing hiccup rather than a reproducible defect (see mistakes-log #7 for the same
+  Fusion-instability pattern on a different symptom). The verbose log confirms, in order:
+  `00-egress-restrict.sh: restricting build-time egress to 18 allowed domains` →
+  `00-egress-restrict.sh: complete (allowlist ipset=kube_ready_build_allowlist, 18 domains)` → all 16
+  remaining provisioners (`00-vagrant-setup.sh` through `99-cleanup.sh`, including `98-first-boot-identity.sh`)
+  ran to completion with no provisioning-time network error — the one error line in the whole run,
+  `E: Unable to locate package linux-modules-extra-generic`, is a pre-existing, already-handled skip
+  (`-> some packages were not present (skipped)`) unrelated to egress, present regardless of this flag
+  → `99-cleanup.sh` logged `-> egress restriction reverted` → a valid `.box` was produced and `tar -tzf`
+  confirms `Vagrantfile` + sequential `disk-sNNN.vmdk` parts (evacuated to
+  `packer/dist/ubuntu-26.04-ext4-vmware-arm64-egress-verified-real.box`, ~1.8GB). VirtualBox ARM64 and
+  VMware ARM64 (both 26.04/ext4) are now verified; still not covered: AMD64 (either provider), 24.04,
+  and xfs with this flag.
 - The OS *installer* phase (autoinstall/subiquity, before any provisioner
   script runs) is not covered — that phase's network access is controlled
   by the ISO's own installer config, not by anything in `packer/scripts/`.
