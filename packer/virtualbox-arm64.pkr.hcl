@@ -83,6 +83,21 @@ build {
     ]
     execute_command = "echo '${var.ssh_password}' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
   }
+  provisioner "file" {
+    sources = [
+      "../tools/image-identity-security-check.sh",
+      "../tools/sbom-license-gate.sh",
+      "../etc/license-policy.conf",
+      "../etc/license-exceptions.tsv"
+    ]
+    destination = "/tmp/"
+  }
+
+  provisioner "shell" {
+    script          = "scripts/100-image-security-evidence.sh"
+    execute_command = "echo '${var.ssh_password}' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+  }
+
   provisioner "shell-local" {
     environment_vars = [
       "VM_NAME=ubuntu-${var.ubuntu_version}-virtualbox-arm64",

@@ -15,8 +15,14 @@ fi
 
 fail=0
 
-for f in "$ROOT/etc/ssh/ssh_host_rsa_key" "$ROOT/etc/ssh/ssh_host_ed25519_key" "$ROOT/etc/machine-id" "$ROOT/var/lib/dbus/machine-id"; do
+for f in "$ROOT/etc/ssh/ssh_host_rsa_key" "$ROOT/etc/ssh/ssh_host_ed25519_key"; do
   if [ -e "$f" ]; then echo "FAIL private/identity artifact present: $f"; fail=1; fi
+done
+
+# An empty /etc/machine-id is the expected first-boot reset state. The dbus
+# compatibility path must likewise be absent or empty; a populated ID leaks.
+for f in "$ROOT/etc/machine-id" "$ROOT/var/lib/dbus/machine-id"; do
+  if [ -s "$f" ]; then echo "FAIL private/identity artifact present: $f"; fail=1; fi
 done
 
 # Detect obvious private-key material without traversing runtime mounts.

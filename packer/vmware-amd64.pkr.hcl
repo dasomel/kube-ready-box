@@ -63,6 +63,21 @@ build {
     execute_command = "echo '${var.ssh_password}' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
   }
 
+  provisioner "file" {
+    sources = [
+      "../tools/image-identity-security-check.sh",
+      "../tools/sbom-license-gate.sh",
+      "../etc/license-policy.conf",
+      "../etc/license-exceptions.tsv"
+    ]
+    destination = "/tmp/"
+  }
+
+  provisioner "shell" {
+    script          = "scripts/100-image-security-evidence.sh"
+    execute_command = "echo '${var.ssh_password}' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+  }
+
   post-processor "vagrant" {
     output              = "output-vagrant/ubuntu-${var.ubuntu_version}-${var.filesystem}-vmware-amd64.box"
     compression_level   = 9
