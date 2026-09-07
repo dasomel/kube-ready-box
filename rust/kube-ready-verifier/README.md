@@ -29,3 +29,16 @@ The source is Linux/Unix oriented and has no third-party dependencies. Release C
 - `aarch64-unknown-linux-gnu`
 
 The runtime checks are evaluated inside the target node, not inferred from the build host.
+
+## Release downloads
+
+Download the binary matching the target node and the `SHA256SUMS` asset from the same GitHub
+release. Verify before making it executable or running it:
+
+```sh
+sha256sum -c SHA256SUMS --ignore-missing
+chmod +x kube-ready-verifier-x86_64-unknown-linux-gnu
+```
+
+Release assets are checksum-verified for integrity. This repository does not currently publish
+Cosign or GPG signatures, so the checksum alone does not establish signer authenticity.
