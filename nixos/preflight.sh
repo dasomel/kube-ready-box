@@ -1,27 +1,101 @@
 #!/usr/bin/env bash
 set -euo pipefail
-checks=(); failures=0; unknowns=0
-add(){ local id=$1 st=$2 d=$3; checks+=("{\"id\":\"$id\",\"status\":\"$st\",\"detail\":$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$d")}"); case "$st" in FAIL) failures=$((failures+1));; UNKNOWN) unknowns=$((unknowns+1));; esac; }
 
-[ -r /etc/os-release ] && . /etc/os-release
+checks=()
+failures=0
+unknowns=0
+
+json_string() {
+  local value=$1
+  value=${value//\\/\\\\}
+  value=${value//\"/\\\"}
+  value=${value//$'\n'/\\n}
+  value=${value//$'\r'/\\r}
+  value=${value//$'\t'/\\t}
+  # Remaining C0 control characters cannot be expressed with bash substitution
+  # escapes; drop them so the evidence JSON stays parseable for any detail text.
+  value=$(printf '%s' "$value" | tr -d '\000-\010\013\014\016-\037')
+  printf '"%s"' "$value"
+}
+
+add() {
+  local id=$1 status=$2 detail=$3
+  checks+=("{\"id\":\"$id\",\"status\":\"$status\",\"detail\":$(json_string "$detail")}")
+  case "$status" in
+    FAIL) failures=$((failures + 1));;
+    UNKNOWN) unknowns=$((unknowns + 1));;
+  esac
+}
+
+sysctl_check() {
+  local id=$1 path=$2 expected=${3:-}
+  if [ ! -r "$path" ]; then
+    add "$id" UNKNOWN missing
+  elif [ -n "$expected" ] && [ "$(cat "$path")" != "$expected" ]; then
+    add "$id" FAIL "$(cat "$path")"
+  else
+    add "$id" PASS "$(cat "$path")"
+  fi
+}
+
+if [ -r /etc/os-release ]; then
+  . /etc/os-release
+fi
+
+kernel=$(uname -r)
+architecture=$(uname -m)
+provider=${VAGRANT_PROVIDER:-${PROVIDER:-unknown}}
+root_filesystem=$(findmnt -n -o FSTYPE / 2>/dev/null || echo unknown)
+
 [ "${ID:-}" = nixos ] && add os PASS "NixOS ${VERSION_ID:-unknown}" || add os FAIL "not NixOS"
 [ -r /etc/os-release ] && add os_id PASS "${ID:-unknown}" || add os_id UNKNOWN "/etc/os-release missing"
-add architecture PASS "$(uname -m)"
+add architecture PASS "$architecture"
 stat -fc %T /sys/fs/cgroup 2>/dev/null | grep -q cgroup2fs && add cgroup_v2 PASS enabled || add cgroup_v2 FAIL missing
 swapon --show --noheadings 2>/dev/null | grep -q . && add swap FAIL enabled || add swap PASS disabled
-for m in overlay br_netfilter; do grep -q "^$m " /proc/modules 2>/dev/null && add module_$m PASS loaded || add module_$m FAIL not-loaded; done
-[ -r /proc/sys/net/ipv4/ip_forward ] && [ "$(cat /proc/sys/net/ipv4/ip_forward)" = 1 ] && add ip_forward PASS 1 || add ip_forward FAIL 0
-[ -r /proc/sys/net/bridge/bridge-nf-call-iptables ] && { [ "$(cat /proc/sys/net/bridge/bridge-nf-call-iptables)" = 1 ] && add bridge_nf_iptables PASS 1 || add bridge_nf_iptables FAIL "$(cat /proc/sys/net/bridge/bridge-nf-call-iptables)"; } || add bridge_nf_iptables UNKNOWN not-readable
-[ -r /proc/sys/net/bridge/bridge-nf-call-ip6tables ] && { [ "$(cat /proc/sys/net/bridge/bridge-nf-call-ip6tables)" = 1 ] && add bridge_nf_ip6tables PASS 1 || add bridge_nf_ip6tables FAIL "$(cat /proc/sys/net/bridge/bridge-nf-call-ip6tables)"; } || add bridge_nf_ip6tables UNKNOWN not-readable
+
+for module in overlay br_netfilter; do
+  grep -q "^$module " /proc/modules 2>/dev/null && add "module_$module" PASS loaded || add "module_$module" FAIL not-loaded
+done
+grep -q '^iscsi_tcp ' /proc/modules 2>/dev/null && add module_iscsi_tcp PASS loaded || add module_iscsi_tcp UNKNOWN not-loaded
+
+sysctl_check sysctl_ip_forward /proc/sys/net/ipv4/ip_forward 1
+sysctl_check sysctl_bridge_nf_call_iptables /proc/sys/net/bridge/bridge-nf-call-iptables 1
+sysctl_check sysctl_bridge_nf_call_ip6tables /proc/sys/net/bridge/bridge-nf-call-ip6tables 1
+sysctl_check network_nf_conntrack_max /proc/sys/net/netfilter/nf_conntrack_max
+sysctl_check network_tcp_syncookies /proc/sys/net/ipv4/tcp_syncookies
 mountpoint -q /sys/fs/bpf 2>/dev/null && add bpffs PASS mounted || add bpffs UNKNOWN not-mounted
-systemctl cat containerd >/dev/null 2>&1 && add containerd PASS installed || add containerd UNKNOWN not-installed
-command -v runc >/dev/null && add runc PASS installed || add runc UNKNOWN missing
-command -v chronyc >/dev/null && add chrony PASS installed || add chrony UNKNOWN missing
-command -v iscsiadm >/dev/null && add iscsi PASS installed || add iscsi UNKNOWN missing
-command -v cryptsetup >/dev/null && add cryptsetup PASS installed || add cryptsetup UNKNOWN missing
-fs=$(findmnt -n -o FSTYPE / 2>/dev/null || echo unknown); case "$fs" in ext4|xfs) add filesystem PASS "$fs";; *) add filesystem UNKNOWN "$fs";; esac
+
+if systemctl cat containerd >/dev/null 2>&1; then
+  grep -Rqs 'SystemdCgroup[[:space:]]*=[[:space:]]*true' /etc/containerd 2>/dev/null && add containerd_systemdcgroup PASS enabled || add containerd_systemdcgroup FAIL not-enabled
+else
+  add containerd_systemdcgroup UNKNOWN containerd-not-installed
+fi
+for runtime in runc ctr; do command -v "$runtime" >/dev/null 2>&1 && add "runtime_$runtime" PASS installed || add "runtime_$runtime" UNKNOWN missing; done
+
+if command -v chronyc >/dev/null 2>&1; then
+  chronyc tracking 2>/dev/null | grep -Eq 'Leap status[[:space:]]*:[[:space:]]*Normal' && add time_sync PASS synchronized || add time_sync UNKNOWN chrony-not-synchronized
+else
+  add time_sync UNKNOWN chronyc-missing
+fi
+for dependency in iscsiadm cryptsetup dmsetup; do command -v "$dependency" >/dev/null 2>&1 && add "csi_$dependency" PASS installed || add "csi_$dependency" UNKNOWN missing; done
+
+[ -d /sys/module/apparmor ] && add apparmor PASS loaded || add apparmor UNKNOWN facility-absent
+if [ -r /proc/self/status ] && grep -q '^Seccomp:' /proc/self/status; then
+  add seccomp PASS "kernel-interface mode=$(awk '/^Seccomp:/ { print $2 }' /proc/self/status)"
+else
+  add seccomp UNKNOWN facility-absent
+fi
+ulimit_n=$(ulimit -n)
+[ "$ulimit_n" -ge 65536 ] && add nofile PASS "$ulimit_n" || add nofile UNKNOWN "$ulimit_n below-65536"
+
+case "$root_filesystem" in ext4|xfs) add filesystem PASS "$root_filesystem";; *) add filesystem UNKNOWN "$root_filesystem";; esac
 if systemctl cat sshd.service >/dev/null 2>&1; then systemctl is-active --quiet sshd && add ssh PASS active || add ssh UNKNOWN inactive; else add ssh UNKNOWN missing; fi
 
-status=PASS; [ "$failures" -gt 0 ] && status=FAIL
-printf '{"schema":"kube-ready-readiness/v1","kind":"nixos-node-readiness","status":"%s","checks":[%s],"failures":%d,"unknowns":%d}\n' "$status" "$(IFS=,; echo "${checks[*]}")" "$failures" "$unknowns"
+status=PASS
+[ "$failures" -gt 0 ] && status=FAIL
+checks_json=$(IFS=,; echo "${checks[*]}")
+printf '{"schema":"kube-ready-readiness/v1","kind":"nixos-node-readiness","status":"%s","os":{"id":%s,"version":%s},"kernel":%s,"architecture":%s,"provider":%s,"root_filesystem":%s,"checks":[%s],"failures":%d,"unknowns":%d}\n' \
+  "$status" "$(json_string "${ID:-unknown}")" "$(json_string "${VERSION_ID:-unknown}")" \
+  "$(json_string "$kernel")" "$(json_string "$architecture")" "$(json_string "$provider")" \
+  "$(json_string "$root_filesystem")" "$checks_json" "$failures" "$unknowns"
 [ "$status" = PASS ]
