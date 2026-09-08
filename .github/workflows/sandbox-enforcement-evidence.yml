@@ -1,0 +1,31 @@
+name: Sandbox Enforcement Evidence
+
+on:
+  pull_request:
+    paths:
+      - "sandbox/**"
+      - "docs/evidence-contracts.md"
+      - ".github/workflows/sandbox-enforcement-evidence.yml"
+  push:
+    branches: [main]
+    paths:
+      - "sandbox/**"
+      - "docs/evidence-contracts.md"
+      - ".github/workflows/sandbox-enforcement-evidence.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Static checks
+        run: |
+          set -euo pipefail
+          bash -n sandbox/verify-sandbox-evidence.sh sandbox/test-enforcement-evidence-contract.sh
+          shellcheck --severity=warning sandbox/verify-sandbox-evidence.sh sandbox/test-enforcement-evidence-contract.sh
+      - name: Enforcement evidence contract test
+        run: bash sandbox/test-enforcement-evidence-contract.sh
