@@ -6,7 +6,7 @@ compatibility: Requires the Kube Ready Box checkout and relevant Packer/Vagrant/
 metadata:
   openforge-scope: project
   openforge-owner: dasomel/kube-ready-box
-  openforge-maturity: verified
+  openforge-maturity: draft
   openforge-version: "1"
 ---
 
