@@ -4,6 +4,8 @@
 > stays short and high-priority. Detailed model/tool routing → [docs/agent-playbook.md](docs/agent-playbook.md).
 > Historical failure patterns → [docs/mistakes-log.md](docs/mistakes-log.md) (add new ones there, not here).
 
+Inspect only the source-map entries relevant to the current task. Do not preload the full technical reference or unrelated project documentation.
+
 ## Product boundary
 
 Kubernetes-ready Ubuntu 24.04 / 26.04 Vagrant Box build project. Packer generates multi-arch
@@ -50,7 +52,7 @@ reproduce -> failing test/evidence -> minimal fix -> same check passes -> regres
 ```
 
 Linux-targeted scripts cannot be verified by syntax-checking on macOS alone (no `/proc`/`/sys`) —
-reproduce and verify inside a container (see mistakes-log #23):
+reproduce and verify inside a container when that runtime behavior is affected (see mistakes-log #23):
 
 ```bash
 docker run --rm --entrypoint bash -v "$PWD:/w" -w /w <image-with-python3> -c 'bash /w/<script>'
@@ -65,8 +67,9 @@ find packer/scripts nixos rocky security network storage time observability tool
 bash -n <script>                                               # syntax only, not sufficient alone
 ```
 
-Do not claim a fix works without running the relevant command above and, for Linux-runtime-shaped
-changes, real container/VM execution evidence.
+Choose verification proportional to task risk and affected runtime. Do not claim a fix works without running the relevant command above and, for Linux-runtime-shaped changes, real container/VM execution evidence.
+
+Safe local/disposable inspect-edit-build-test-fix-retest work may proceed within scope. Shared/production/destructive/release/credential/permission/external mutations require explicit authorization unless already granted.
 
 ## Convergence states
 
@@ -91,3 +94,8 @@ Every substantive task ends in one of three states (report which one, don't just
 - Box 파일 직접 수정 (`.box`)
 - Vagrant Cloud 인증정보 노출
 - 키 파일 수정 (`*.pem`, `*.key`)
+
+References:
+- https://github.com/dasomel/openforge/blob/main/docs/agent-engineering.md
+- https://github.com/dasomel/openforge/blob/main/docs/model-agnostic-agent-instructions.md
+- https://github.com/dasomel/openforge/blob/main/docs/user-centric-validation.md
