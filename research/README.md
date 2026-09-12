@@ -3,12 +3,16 @@
 Kube Ready Box follows the OpenForge Research Evidence Collection Standard:
 https://github.com/dasomel/openforge/blob/main/docs/research-evidence.md
 
-Collect sanitized machine-readable evidence during normal development when practical. Useful project evidence includes build/validation duration and result by provider/architecture, provisioning/install duration, retry/recovery counts, artifact/version metadata, failures by stage, and agent-assisted attempts, elapsed time, human interventions, review corrections, CI retries, and final verification.
+Collect machine-readable evidence during normal development when practical. Useful evidence includes build/validation duration and result by provider/architecture, provisioning/install duration, retry/recovery counts, artifact/version metadata, failures by stage, and agent-assisted attempts/interventions/review corrections/CI retries/final verification. Preserve failed builds and partial provisioning runs.
 
-Preserve failed builds and partial provisioning runs as well as successes. Use normalized environment labels rather than machine identity.
+## Legacy evidence on discovery
+
+Evidence collection is prospective and retrospective. While implementing, fixing, verifying, releasing, or documenting the project, catalog historical build logs/results, validation reports, profiling outputs, compatibility records, CI results, release evidence, and other measurements encountered during the work. Tooling that could produce a metric is not itself a historical measurement; only classify an output as measured when the output actually exists.
+
+Use `dasomel/openforge#89` as the portfolio-level legacy catalog source of truth. Record source/path, known date, evidence class/strength, environment scope, metrics/facts, limitations, and likely paper use. Do not fabricate missing historical measurements. Preserve failures, partial runs, and obsolete provider/version results when useful longitudinally.
 
 ## Public-data rule
 
-Only sanitized records may be committed publicly. Never publish credentials/tokens, Vagrant Cloud secrets, private URLs/IPs/hostnames, user-specific paths, personal/customer/employer data, confidential prompts/source, raw environment dumps, or security-sensitive host/network details. Raw Packer/VM logs and CI artifacts are sensitive-by-default.
+This is a personal OSS/test project. Provider/architecture labels, local VM names, RFC1918 addresses, test hostnames, provisioning topology, and reproducibility-relevant machine/runtime details may remain when intentionally public test data.
 
-Before public storage: validate against the OpenForge schema, run secret/pattern checks, review free-form fields, and publish normalized or aggregate measurements when safe redaction cannot be proven.
+Never publish credentials/tokens/private keys/Vagrant Cloud secrets or accidental personal data. Review future third-party/non-public artifacts separately. Validate structured evidence against the OpenForge schema and run secret/pattern checks before publication.
