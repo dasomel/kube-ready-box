@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last verified: 2026-09-09 against `main`
+Last verified: 2026-09-14 against `main`
 
 This is a snapshot of behavior present on the default branch, not a roadmap.
 
