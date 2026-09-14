@@ -155,6 +155,7 @@ vagrant ssh -c "/bin/bash /etc/vagrant-box/check-tuning.sh"
 
 ## 문서
 
+- [아키텍처](docs/architecture.md) - 빌드 파이프라인, 산출물 매트릭스, 런타임 경계 및 불변 조건
 - [Box 사용 가이드](docs/usage.md) - 상세 사용 방법
 - [K8s 설치 후 설정](docs/k8s-post-install.md) - containerd/kubelet 튜닝
 - [Packer 빌드 가이드](packer/README.md) - 소스에서 Box 빌드하기
