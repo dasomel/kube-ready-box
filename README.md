@@ -5,7 +5,7 @@
 [![Vagrant Cloud - 26.04 ext4](https://img.shields.io/badge/Vagrant-26.04--ext4-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-26.04-ext4)
 [![Vagrant Cloud - 26.04 xfs](https://img.shields.io/badge/Vagrant-26.04--xfs-green)](https://app.vagrantup.com/dasomel/boxes/ubuntu-26.04-xfs)
 
-**Languages**: [English](README.md) | [한국어](README.ko.md)
+**Languages**: [English](README.md) | [한국어](README-ko.md)
 
 Kubernetes-ready Ubuntu Vagrant Box with OS-level optimizations. Supports **24.04 LTS** (Noble Numbat, default) and **26.04 LTS** (Resolute Raccoon, kernel Linux 7.0).
 
