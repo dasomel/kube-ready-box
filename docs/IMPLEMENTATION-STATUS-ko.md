@@ -1,6 +1,6 @@
 # 구현 상태
 
-Last verified: 2026-09-09 against `main`
+Last verified: 2026-09-14 against `main`
 
 이 문서는 default branch에 실제 존재하는 동작의 snapshot이며 roadmap이 아닙니다.
 
