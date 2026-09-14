@@ -128,7 +128,7 @@ sudo chmod +x /etc/update-motd.d/99-vagrant-box
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
 
 ### Third-party Licenses
 
