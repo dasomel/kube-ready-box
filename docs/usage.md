@@ -1,7 +1,7 @@
 # dasomel/ubuntu-24.04 Box 사용 가이드
 
 > **참고**: 이 문서는 `dasomel/ubuntu-24.04` Box 사용법입니다.
-> Box 빌드는 [claude.md](claude.md) 참조.
+> Box 빌드는 [CLAUDE.md](../CLAUDE.md) 참조.
 
 ## 1. Vagrantfile 예시
 
