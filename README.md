@@ -158,6 +158,7 @@ vagrant ssh -c "/bin/bash /etc/vagrant-box/check-tuning.sh"
 
 ## Documentation
 
+- [Architecture](docs/architecture.md) - Build pipeline, artifact matrix, runtime boundary, and invariants
 - [Box Usage Guide](docs/usage.md) - Detailed usage instructions
 - [K8s Post-Install](docs/k8s-post-install.md) - containerd/kubelet tuning
 - [Packer Build Guide](packer/README.md) - Building boxes from source
