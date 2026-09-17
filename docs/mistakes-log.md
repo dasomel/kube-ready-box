@@ -137,3 +137,8 @@
     - macOS 에서는 `/proc` `/sys` 가 없어 검증이 불가능하고, 문법 검사만으로는 위 20번 같은 결함이 안 잡힌다
     - `docker run --rm --entrypoint bash -v "$PWD:/w" -w /w <python3 있는 이미지> -c 'bash 스크립트'`
     - 주의: macOS 의 `/tmp` 는 Docker Desktop 공유 경로가 아니다. `-v /tmp/x:/w` 는 조용히 빈 마운트가 되어 "No such file or directory" 로 오판하게 된다. 비교용 사본은 **리포 하위**에 만들 것
+
+24. **`kube-ready-box-build-validation` 스킬 검증(#41)은 컨테이너 실행 증거 없이 `verified` 로 승격됐다**
+    - 재현(fresh-session replay) 시 로컬 colima/docker 데몬이 꺼져 있어 런타임 엣지케이스(컨테이너 실행이 필요한 스크립트)를 실제로 통과시키지 못했다 — 대신 스킬 자체의 "환경 부재 시 에스컬레이션" 조항이 올바르게 발동하는지만 확인했다
+    - four-template invariant / 프로비저닝 순번 체크도 실제로 하나를 깨뜨렸다 고쳐본 것이 아니라 grep 으로 참조 관계만 확인했다
+    - 다음에 이 스킬로 Linux 런타임 의존 변경(예: `/proc` `/sys` 읽는 스크립트)을 검증할 때는, 먼저 `docker ps` 로 데몬이 떠 있는지 확인하고 23번의 컨테이너 명령으로 실제 실행 증거를 남길 것. 그 전까지 이 스킬의 "runtime evidence" 단계는 부분 검증 상태로 취급
