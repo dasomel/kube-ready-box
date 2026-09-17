@@ -39,19 +39,25 @@ not assumed.
 
 ### "CIS/Kubernetes hardening의 적용 가능 항목 목록화"
 
-**Partially covered, not itemized.** The box already applies several
-controls that map to CIS-style host hardening categories — swap disabled,
-auditd installed (disabled by default per EKS/GKE/AKS convention, see
+**Itemized now.** [`docs/cis-control-mapping.md`](cis-control-mapping.md) walks
+the CIS Kubernetes Benchmark worker-node and policy control IDs one by one,
+sourced verbatim from kube-bench's public check definitions
+(`aquasecurity/kube-bench`, `cfg/cis-1.24/{node,policies}.yaml`, fetched
+2026-09-07) rather than cited from memory. Result: of the 37 controls in
+scope (4.1.x, 4.2.x, 5.2.x, 5.7.2), 0 are `image-enforced`, 2 are
+`image-prepared (needs post-join verification)` (kernel sysctls for
+`--protect-kernel-defaults`, seccomp kernel interface availability), and 35
+are `not-applicable-at-image-layer` — this image doesn't install
+kubelet/kubeadm, so most worker-node controls only become meaningful after
+`kubeadm join`. The box still applies several controls that map to
+CIS-style host hardening categories — swap disabled, auditd installed
+(disabled by default per EKS/GKE/AKS convention, see
 `packer/scripts/03-os-packages.sh`), AppArmor/SELinux baseline, kernel
 module and sysctl enforcement, SSH key regeneration path
-(`packer/scripts/98-first-boot-identity.sh`) — but there is no document
-that walks the actual CIS Kubernetes Benchmark or CIS Distribution
-Independent Linux Benchmark control IDs one by one and marks each
-applicable/not-applicable/covered. Producing that mapping accurately
-requires checking each control against the current benchmark text control
-ID by control ID, which is a dedicated review pass in its own right (not
-attempted here to avoid citing benchmark section numbers from memory that
-could be wrong) — tracked as a follow-up, not done in this pass.
+(`packer/scripts/98-first-boot-identity.sh`) — those are real hardening but
+outside the specific CIS Kubernetes Benchmark control IDs the mapping
+covers (see the mapping doc's scope note). No actual `kube-bench` run
+against a joined node exists yet — that's the real remaining evidence gap.
 
 ### "air-gapped 패키지 설치 검증 모드 제공"
 
@@ -105,9 +111,9 @@ work, not attempted in this pass.
 
 - No code changes — this is a documentation/mapping artifact only, zero
   behavioral risk.
-- Did not author a CIS Benchmark control-ID-level checklist (see above —
-  needs a dedicated accuracy-checked pass against the actual benchmark
-  text).
+- Did not run kube-bench against an actual joined node — the CIS mapping
+  (see `docs/cis-control-mapping.md`) is a sourced control-ID checklist,
+  not execution evidence.
 - Did not implement box artifact signing.
 - Did not build a real Narwhal integration (no access to Narwhal's
   interface).

@@ -25,6 +25,14 @@ proceed if the downloaded ISO doesn't match.
 `tools/airgap-bundle.sh` derives its point-release from `plugins.pkr.hcl` at
 runtime rather than holding an independent copy, so the two can't drift.
 
+`tools/airgap-bundle.sh`'s cross-architecture apt source for Ubuntu 26.04
+uses suite `resolute` (the 26.04 LTS codename, "Resolute Raccoon"). This was
+previously an unverified assumption; confirmed live on 2026-09-07 with
+`curl -sI http://archive.ubuntu.com/ubuntu/dists/resolute/Release` and
+`curl -sI http://ports.ubuntu.com/ubuntu-ports/dists/resolute/Release`, both
+returning `HTTP/1.1 200 OK` (matching the `noble`/24.04 control check run the
+same way).
+
 Pinned by `iso_checksum` in `packer/plugins.pkr.hcl`'s `rocky_iso_data`
 local (#15 — Rocky 9, ARM64, VMware; ext4 boot-verified, xfs added and
 statically verified):

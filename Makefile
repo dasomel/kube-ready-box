@@ -58,6 +58,7 @@ test:
 	cd rust/kube-ready-verifier && cargo check --locked --offline && cargo test --locked --offline && cargo build --release --locked --offline && bash tests/cli_contract.sh
 	CONTRACT_OUTPUT=/tmp/kube-ready-contracts.json bash tools/kube-ready-contracts.sh
 	python3 -m json.tool /tmp/kube-ready-contracts.json >/dev/null
+	bash tools/tests/openforge-project-status-test.sh
 
 # ROOT optionally points at a mounted/extracted box image to audit for leaked
 # SSH host keys and machine identity residue after the input guard passes.

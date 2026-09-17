@@ -25,8 +25,8 @@ honestly — not every stage is CI-automated:
 |---|---|---|
 | `validate` | `.github/workflows/validate.yml`: `packer` (packer validate x4 provider/arch x2 filesystem), `shellcheck` (shellcheck + actionlint) | automated, every PR |
 | `test` | `validate.yml`: `rust` (cargo check/build/test), `contract-syntax` (JSON schema smoke + aggregator) | automated, every PR |
-| `security` | `validate.yml`: `supply-chain-guard` (#30 unpinned-input static check), `supply-chain-negative-tests` (live egress-block + checksum-substitution tests) | automated, every PR |
-| `license` | `validate.yml`: `license` job (`tools/sbom-license-gate.sh`) | automated, every PR (added this pass — the script was previously orphaned, wired to nothing) |
+| `security` | `validate.yml`: `supply-chain-guard` (#30 unpinned-input static check), `supply-chain-negative-tests` (live egress-block + checksum-substitution tests); all four Ubuntu Packer builds run `tools/image-identity-security-check.sh` after final cleanup, retain `identity-security-report.json`, and remove the uploaded check inputs before packaging | PR checks automated; image check runs only during a real box build |
+| `license` | `validate.yml`: `license` job (`tools/sbom-license-gate.sh`); all four Ubuntu Packer builds run the same gate against the guest package database and retain `license-report.json` (or explicit `UNKNOWN` / `no-dpkg` evidence on a non-dpkg image) | PR checks automated; image check runs only during a real box build |
 | `sbom` | `packer/scripts/generate-sbom.sh`, runs **inside the guest** during a real box build | NOT CI-automated — only exercised when an actual Packer build runs (`build-amd64.yml`/`build-arm64.yml`/`build-nixos.yml`), which validate.yml deliberately doesn't do (too slow/resource-heavy for a PR gate) |
 | `build` / `package` | `.github/workflows/build-amd64.yml`, `build-arm64.yml`, `build-nixos.yml` | automated, but as separate on-demand/scheduled workflows, not part of the PR-gating `validate.yml` |
 | `e2e` | `test-vm/matrix.sh` (boots built boxes and runs `verify_box.sh`) | **manual/local only** — needs a real hypervisor with the actual box files present, not wired into any GitHub Actions workflow |
@@ -136,3 +136,33 @@ exception appears in evidence.
   (unlike #30's egress-restriction work, which did get a real build run).
 
 See issue #28 (and Narwhal #161) for the full requirement list.
+
+## Portfolio status publication
+
+The evidence path is **OpenForge dashboard ← PR ← this workflow ← aggregator
+evidence**. `.github/workflows/publish-project-status.yml` first runs the
+same `tools/kube-ready-contracts.sh` aggregator used by tests, writes an
+`openforge-project-status/v1` payload, and always uploads it as an artifact.
+Publication through the reusable OpenForge workflow is opt-in: the
+`OPENFORGE_STATUS_TOKEN` secret is not configured yet, so the workflow
+successfully stops after artifact upload until a maintainer explicitly adds it.
+
+| Aggregator report | OpenForge capability | Status without boot evidence | Security verification |
+|---|---|---|---|
+| `readiness`, `network`, `storage`, `time`, `observability`, `rust_verifier` | `node-readiness`, `node-network`, `node-storage`, `node-time`, `node-observability`, `rust-verifier` | `verifying` | not applicable |
+| `security` | `workload-security` | `verifying` | CI security status |
+| `license` | `license-gate` | `verifying` | CI security status |
+| `sandbox` | `sandbox` | `verifying` | CI security status |
+
+Only reports present in the aggregator become capability claims. The published
+`capabilities` value is an object keyed by capability ID; each value contains
+only its status, optional standard, and verification map. Runtime verification
+remains `not-run` until `release-evidence/` contains matching JSON from a real
+box boot; a matching `PASS` makes that capability `implemented`, while a
+matching `FAIL` remains `verifying`. The evidence walk is sorted; if several
+release-report directories match a capability, it uses the lexicographically
+newest directory (and filename only as a deterministic tie-breaker). The
+`workload-security` and `sandbox` capabilities alone declare
+`openforge/agent-execution-security`.
+
+SPDX/CycloneDX interchange guidance (extraction, spec versions, consumer commands, known gaps): [docs/sbom-interchange.md](sbom-interchange.md).

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dasomel/openforge/portfolio/status.schema.json",
+  "title": "OpenForge Project Status Publication",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "project", "repository", "revision", "updated_at", "development", "evidence"],
+  "properties": {
+    "version": {"const": "openforge-project-status/v1"},
+    "project": {"type": "string", "minLength": 1},
+    "repository": {"type": "string", "pattern": "^[^/]+/[^/]+$"},
+    "revision": {"type": "string", "minLength": 1},
+    "updated_at": {"type": "string", "format": "date"},
+    "development": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {"enum": ["planned", "designing", "implementing", "verifying", "implemented", "adopted", "active", "maintenance", "blocked", "deprecated"]},
+        "milestone": {"type": ["string", "null"]},
+        "progress_percent": {"type": ["number", "null"], "minimum": 0, "maximum": 100}
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": {"enum": ["planned", "designing", "implementing", "verifying", "implemented", "adopted", "blocked", "deprecated"]},
+          "standard": {"type": ["string", "null"]},
+          "verification": {
+            "type": "object",
+            "additionalProperties": {"enum": ["pass", "fail", "partial", "not-run", "not-applicable"]}
+          }
+        }
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["target", "type"],
+        "properties": {
+          "target": {"type": "string"},
+          "type": {"type": "string"},
+          "scope": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit"],
+      "properties": {
+        "issue": {"type": ["integer", "null"]},
+        "pull_request": {"type": ["integer", "null"]},
+        "commit": {"type": "string", "minLength": 7},
+        "ci": {"enum": ["pass", "fail", "partial", "not-run"]},
+        "security": {"enum": ["pass", "fail", "partial", "not-run", "not-applicable"]},
+        "runtime": {"enum": ["pass", "fail", "partial", "not-run", "not-applicable"]}
+      }
+    }
+  }
+}

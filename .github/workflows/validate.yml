@@ -144,6 +144,7 @@ jobs:
           sudo env CONTRACT_OUTPUT=/tmp/kube-ready-contracts.json RUN_OBSERVABILITY_PROFILE=1 RUN_LICENSE_GATE=1 RUN_RUST_VERIFIER=1 KUBE_READY_VERIFIER_BIN="$PWD/rust/kube-ready-verifier/target/release/kube-ready-verifier" DIAGNOSTIC_DURATION_SECONDS=1 bash tools/kube-ready-contracts.sh
           python3 -m json.tool /tmp/kube-ready-contracts.json >/dev/null
           python3 -c "import json; d=json.load(open('/tmp/kube-ready-contracts.json')); assert any(r['name']=='rust_verifier' for r in d['reports']), d['reports']"
+          bash tools/tests/openforge-project-status-test.sh
       - name: Benchmark Rust verifier vs shell (informational, non-blocking)
         continue-on-error: true
         run: |

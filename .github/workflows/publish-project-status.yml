@@ -1,0 +1,77 @@
+name: Publish OpenForge project status
+
+on:
+  workflow_dispatch:
+    inputs:
+      development_status:
+        description: OpenForge development status
+        required: false
+        default: active
+        type: choice
+        options: [active, planned, designing, implementing, verifying, implemented, adopted, maintenance, blocked, deprecated]
+      milestone:
+        description: Optional current milestone
+        required: false
+        type: string
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    outputs:
+      capabilities_json: ${{ steps.payload.outputs.capabilities_json }}
+      revision: ${{ steps.payload.outputs.revision }}
+      has_token: ${{ steps.gate.outputs.has_token }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build Rust verifier release binary
+        working-directory: rust/kube-ready-verifier
+        run: |
+          cargo build --release --locked --offline
+          ./target/release/kube-ready-verifier --help
+      - name: Aggregate contract evidence
+        run: sudo env CONTRACT_OUTPUT=/tmp/kube-ready-contracts.json RUN_OBSERVABILITY_PROFILE=1 RUN_LICENSE_GATE=1 RUN_RUST_VERIFIER=1 KUBE_READY_VERIFIER_BIN="$PWD/rust/kube-ready-verifier/target/release/kube-ready-verifier" DIAGNOSTIC_DURATION_SECONDS=1 bash tools/kube-ready-contracts.sh
+      - name: Build OpenForge status payload
+        env:
+          CONTRACT: /tmp/kube-ready-contracts.json
+          OUTPUT: openforge-project-status.json
+          CI_STATUS: pass
+          DEVELOPMENT_STATUS: ${{ inputs.development_status || 'active' }}
+          MILESTONE: ${{ inputs.milestone || '' }}
+          REVISION: ${{ github.sha }}
+        run: bash tools/openforge-project-status.sh
+      - id: payload
+        name: Export reusable-workflow inputs
+        run: |
+          echo "capabilities_json=$(python3 -c 'import json; print(json.dumps(json.load(open("openforge-project-status.json"))["capabilities"], separators=(",", ":")))')" >> "$GITHUB_OUTPUT"
+          echo "revision=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - id: gate
+        name: Detect opt-in publication token
+        run: echo "has_token=${{ secrets.OPENFORGE_STATUS_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: openforge-project-status
+          path: openforge-project-status.json
+          if-no-files-found: error
+
+  publish:
+    needs: status
+    if: needs.status.outputs.has_token == 'true'
+    uses: dasomel/openforge/.github/workflows/publish-project-status.yml@d702363e24bbb56d5e28aec9e7fb20a56c1ea519 # main 2026-09-07
+    with:
+      project: kube-ready-box
+      repository: dasomel/kube-ready-box
+      development_status: ${{ inputs.development_status || 'active' }}
+      milestone: ${{ inputs.milestone || '' }}
+      progress_percent: ''
+      capabilities_json: ${{ needs.status.outputs.capabilities_json }}
+      relationships_json: '[]'
+      revision: ${{ needs.status.outputs.revision }}
+      evidence_workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      OPENFORGE_STATUS_TOKEN: ${{ secrets.OPENFORGE_STATUS_TOKEN }}
