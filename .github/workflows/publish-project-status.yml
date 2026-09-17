@@ -27,7 +27,7 @@ jobs:
       revision: ${{ steps.payload.outputs.revision }}
       has_token: ${{ steps.gate.outputs.has_token }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@stable
       - name: Build Rust verifier release binary
         working-directory: rust/kube-ready-verifier
