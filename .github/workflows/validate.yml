@@ -437,8 +437,8 @@ jobs:
 
           run_or_fail "could not set net.ipv4.ip_forward=1 for a clean baseline" sudo sysctl -w net.ipv4.ip_forward=1 >/dev/null
           run_json /tmp/nixos-forward-baseline.json bash nixos/preflight.sh
-          require_status /tmp/nixos-forward-baseline.json ip_forward PASS
+          require_status /tmp/nixos-forward-baseline.json sysctl_ip_forward PASS
           run_or_fail "could not set net.ipv4.ip_forward=0 for NixOS test" sudo sysctl -w net.ipv4.ip_forward=0 >/dev/null
           run_json /tmp/nixos-forward-mutated.json bash nixos/preflight.sh
-          require_status /tmp/nixos-forward-mutated.json ip_forward FAIL
+          require_status /tmp/nixos-forward-mutated.json sysctl_ip_forward FAIL
           run_or_fail "could not restore net.ipv4.ip_forward after NixOS test" sudo sysctl -w "net.ipv4.ip_forward=$ip_forward_before" >/dev/null

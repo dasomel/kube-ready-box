@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "openforge-agent-skill-verification/v1",
+  "skill": "kube-ready-box-build-validation",
+  "skillVersion": "1",
+  "verifiedAt": "2026-09-17",
+  "freshSession": true,
+  "agentRuntime": "Claude Sonnet 5 (oh-my-claudecode executor + verifier subagents, isolated git worktree replay)",
+  "happyPath": {
+    "status": "pass",
+    "evidence": [
+      "./packer/build.sh validate -> \"The configuration is valid. / All templates are valid\" (independently re-run, exit 0)",
+      "shellcheck --severity=warning packer/scripts/01-base.sh -> exit 0, no findings (independently re-run)"
+    ]
+  },
+  "edgeCase": {
+    "status": "pass",
+    "evidence": [
+      "bash -n packer/scripts/02-os-tuning.sh passed while the script reads /proc/sys/vm/max_map_count, which does not exist on macOS, demonstrating that bash -n alone is insufficient runtime evidence",
+      "docker ps failed (colima daemon not running), correctly triggering the skill's 'no representative Linux/provider environment can be exercised' Stop/Escalate clause instead of a false pass"
+    ]
+  },
+  "deterministicChecks": [
+    {
+      "command": "./packer/build.sh validate",
+      "status": "pass"
+    },
+    {
+      "command": "shellcheck --severity=warning packer/scripts/01-base.sh",
+      "status": "pass"
+    },
+    {
+      "command": "git status --short (main worktree, post-replay)",
+      "status": "pass"
+    }
+  ],
+  "unverified": [
+    "Actual container/VM execution of a /proc or /sys dependent script (docker/colima was unavailable in the replay environment; only the skill's escalation-clause behavior was confirmed)",
+    "Four-template coherent-update mechanic was confirmed by grep/inspection across the four .pkr.hcl templates, not by deliberately introducing and then fixing a one-template-only divergence",
+    "Numeric provisioning-order violation detection was reasoned about, not exercised by adding or renumbering a script"
+  ]
+}
