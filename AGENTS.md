@@ -27,6 +27,7 @@ Kubernetes-ready Ubuntu 24.04 / 26.04 Vagrant Box build project. Packer generate
 | Historical mistake log | [docs/mistakes-log.md](docs/mistakes-log.md) |
 | Usage guide | [docs/usage.md](docs/usage.md) |
 | K8s post-install | [docs/k8s-post-install.md](docs/k8s-post-install.md) |
+| Research evidence collection (OpenForge standard) | [research/README.md](research/README.md) |
 
 ## High-risk invariants
 
