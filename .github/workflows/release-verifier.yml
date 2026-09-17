@@ -40,7 +40,7 @@ jobs:
           cp target/release/kube-ready-verifier "dist/kube-ready-verifier-${{ matrix.target }}"
           sha256sum "dist/kube-ready-verifier-${{ matrix.target }}" > "dist/SHA256SUMS-${{ matrix.target }}"
       # actions/upload-artifact v4.6.2
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: kube-ready-verifier-${{ matrix.target }}
           path: rust/kube-ready-verifier/dist/
@@ -71,7 +71,7 @@ jobs:
             sha256sum kube-ready-verifier-* > SHA256SUMS
           )
       # actions/upload-artifact v4.6.2
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: kube-ready-verifier-release-${{ github.ref_name }}
           path: release-assets/
