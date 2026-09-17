@@ -167,7 +167,7 @@ jobs:
 
     steps:
       - name: Download Box Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-amd64
           path: ./boxes
