@@ -20,6 +20,14 @@ if command -v nft >/dev/null 2>&1; then
   rules=$(nft list ruleset 2>/dev/null || true); add firewall_backend PASS nftables
   [ -n "$rules" ] && add firewall_rules PASS present || add firewall_rules UNKNOWN empty
 elif command -v firewall-cmd >/dev/null 2>&1; then add firewall_backend PASS firewalld; firewall-cmd --state >/dev/null 2>&1 && add firewall_state PASS running || add firewall_state UNKNOWN inactive
+elif command -v ufw >/dev/null 2>&1; then
+  add firewall_backend PASS ufw
+  ufw_status=$(ufw status 2>/dev/null | head -n1 || echo "")
+  case "$ufw_status" in
+    "Status: active") add firewall_state PASS running ;;
+    "Status: inactive") add firewall_state UNKNOWN inactive ;;
+    *) add firewall_state UNKNOWN "$ufw_status" ;;
+  esac
 else add firewall_backend UNKNOWN unavailable; fi
 
 if command -v iptables >/dev/null 2>&1; then

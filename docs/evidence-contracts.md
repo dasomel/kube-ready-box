@@ -8,7 +8,7 @@ All readiness/security/diagnostic validators emit versioned JSON rather than hum
 | `kube-ready-readiness/v1` | node readiness / NixOS / Rocky | Kubernetes node readiness |
 | `kube-ready-sandbox/v1` | sandbox artifact tooling | sandbox runtime/effective-enforcement evidence |
 | `kube-ready-security/v1` | workload security tooling | AppArmor/SELinux/security intent |
-| `kube-ready-network/v1` | network profile | effective network state |
+| `kube-ready-network/v1` | network profile | effective network state (includes firewall provider/state) |
 | `kube-ready-storage/v1` | storage profile | storage/backend capability |
 | `kube-ready-time/v1` | time profile | clock synchronization |
 | `kube-ready-observability/v1` | diagnostic profile | bounded telemetry evidence |

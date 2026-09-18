@@ -395,6 +395,10 @@ jobs:
           require_status /tmp/network-forward-mutated.json ip_forward FAIL
           run_or_fail "could not restore net.ipv4.ip_forward after network test" sudo sysctl -w "net.ipv4.ip_forward=$ip_forward_before" >/dev/null
 
+          # #44: firewall provider/state must be inventoried (PASS/UNKNOWN), never
+          # silently absent from the read-only report.
+          require_non_fail /tmp/network-forward-baseline.json firewall_backend
+
           # timedatectl_sync (NTPSynchronized) is UNKNOWN-only by this script's own
           # design -- it never FAILs, and NTPSynchronized was empirically confirmed
           # (this job's 2nd real run) to stay "yes" for a while after `timedatectl
