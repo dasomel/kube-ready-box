@@ -151,3 +151,6 @@ hardened-configuration.nix
 
 # Rust 빌드 산출물
 rust/**/target/
+
+# tools/airgap-bundle.sh 산출물 (ISO/패키지 번들, 수GB)
+build-inputs/

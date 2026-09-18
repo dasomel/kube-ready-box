@@ -157,8 +157,13 @@ prepare() {
   local deb_arch="$ARCH"
   configure_foreign_architecture "$deb_arch"
   while IFS= read -r pkg; do
-    (cd "$BUNDLE_DIR/debs" && apt-get download "${pkg}:${deb_arch}")
-done < "$PACKAGE_LIST"
+    # Architecture:-all 패키지는 host 와 다른 target arch 로 크로스 빌드할 때
+    # foreign-arch Packages 인덱스(ports.ubuntu.com)에 실리지 않는다 - "all" 패키지는
+    # native arch 인덱스에만 있다. 따라서 "${pkg}:${deb_arch}" 조회가 실패하면
+    # arch 한정자 없이(native/all 후보로) 재시도한다.
+    (cd "$BUNDLE_DIR/debs" && apt-get download "${pkg}:${deb_arch}") \
+      || (cd "$BUNDLE_DIR/debs" && apt-get download "${pkg}")
+  done < "$PACKAGE_LIST"
 
   curl -fL --retry 3 -o "$BUNDLE_DIR/keys/ubuntu-archive-keyring.gpg" \
     https://archive.ubuntu.com/ubuntu/project/ubuntu-archive-keyring.gpg
