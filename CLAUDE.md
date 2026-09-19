@@ -1,5 +1,7 @@
 @AGENTS.md
 
+> Project slash commands, hooks, and settings under `.claude/` make this adapter intentionally retained; do not remove it merely because Claude Code can fall back to `AGENTS.md`.
+
 # Kube Ready Box Claude adapter
 
 Repository-wide build/security boundaries live in `AGENTS.md`. Detailed technical material lives in `.agent/AGENT.md`; historical failures live in `docs/mistakes-log.md`. Do not duplicate those sources here.
