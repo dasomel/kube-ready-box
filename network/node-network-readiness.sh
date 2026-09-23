@@ -22,10 +22,15 @@ if command -v nft >/dev/null 2>&1; then
 elif command -v firewall-cmd >/dev/null 2>&1; then add firewall_backend PASS firewalld; firewall-cmd --state >/dev/null 2>&1 && add firewall_state PASS running || add firewall_state UNKNOWN inactive
 elif command -v ufw >/dev/null 2>&1; then
   add firewall_backend PASS ufw
+  # ufw reports its failures on stderr and leaves stdout empty (e.g. it cannot
+  # read the ruleset without privileges), so an empty result here means "ufw
+  # could not answer", not "no firewall". Say which one it is -- an UNKNOWN
+  # carrying an empty detail is unactionable evidence.
   ufw_status=$(ufw status 2>/dev/null | head -n1 || echo "")
   case "$ufw_status" in
     "Status: active") add firewall_state PASS running ;;
     "Status: inactive") add firewall_state UNKNOWN inactive ;;
+    "") add firewall_state UNKNOWN status-unavailable ;;
     *) add firewall_state UNKNOWN "$ufw_status" ;;
   esac
 else add firewall_backend UNKNOWN unavailable; fi
