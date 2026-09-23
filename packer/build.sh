@@ -117,6 +117,9 @@ init_packer() {
 validate_templates() {
   echo "=== Validating Packer Templates (Ubuntu ${UBUNTU_VERSION}) ==="
   packer validate -var "ubuntu_version=${UBUNTU_VERSION}" .
+  # packer validate reads each template in isolation and cannot see a
+  # provisioner wired into only some templates of a family (#47).
+  bash "$SCRIPT_DIR/../tools/template-consistency-check.sh"
   echo "All templates are valid"
 }
 

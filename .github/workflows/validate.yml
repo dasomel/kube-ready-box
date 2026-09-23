@@ -70,6 +70,14 @@ jobs:
       - name: Shellcheck
         run: |
           find packer/scripts nixos rocky security network storage time observability tools rust -type f -name '*.sh' -print0 | xargs -0 -r shellcheck --severity=warning
+      - name: Template provisioner consistency (#47)
+        # packer validate reads each template alone, so a provisioner wired
+        # into only some templates of a family passes it. Runs here rather
+        # than in the packer job: it needs no packer, and that job is a
+        # filesystem matrix that would run this twice.
+        run: |
+          bash tools/template-consistency-check.sh
+          bash tools/tests/template-consistency-check-test.sh
       - name: actionlint
         run: |
           ACTIONLINT_VERSION=1.7.12
