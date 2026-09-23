@@ -31,10 +31,13 @@ Kubernetes-ready Ubuntu 24.04 / 26.04 Vagrant Box build project. Packer generate
 
 ## High-risk invariants
 
-- **4-template rule**: the four `pkr.hcl` templates (virtualbox/vmware × amd64/arm64) share
-  structure. Changing one requires updating all four and running `packer validate`.
-- Provisioning scripts run in numeric order; do not reorder, skip, or add one without wiring it
-  into all four templates.
+- **Template-family rule**: templates of one OS family share a provisioner sequence — Ubuntu has
+  four (`{virtualbox,vmware}-{amd64,arm64}.pkr.hcl`), Rocky has two (`rocky-{virtualbox,vmware}-arm64.pkr.hcl`).
+  Changing one requires updating every template in that family.
+- Provisioning scripts run in the order the template lists them (not alphabetically); do not
+  reorder, skip, or add one without wiring it into every template of the family.
+- `packer validate` reads each template alone and cannot see this drift. `tools/template-consistency-check.sh`
+  is the gate that can — it runs inside `./packer/build.sh validate`, `make lint`, and CI (#47).
 - Never tweak a working 0.1.0-era build setting (`boot_wait`, `boot_command`, `http_directory`, ...)
   without cause — check `git show 327f8dc:packer/<file>` first (see mistakes-log #6).
 - Never hardcode SSH keys/passwords (use vars), modify a `.box` artifact directly, expose Vagrant

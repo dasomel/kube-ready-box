@@ -48,6 +48,8 @@ lint:
 	find packer/scripts nixos rocky security network storage time observability tools rust \
 	  -type f -name '*.sh' -print0 | xargs -0 -r shellcheck --severity=warning
 	bash -n tools/*.sh network/*.sh storage/*.sh time/*.sh security/*.sh observability/*.sh rocky/*.sh nixos/*.sh packer/scripts/*.sh
+	bash tools/template-consistency-check.sh
+	bash tools/tests/template-consistency-check-test.sh
 	@if command -v actionlint >/dev/null 2>&1; then \
 	  actionlint .github/workflows/*.yml; \
 	else \
