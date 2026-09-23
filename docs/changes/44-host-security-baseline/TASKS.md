@@ -29,12 +29,22 @@ Each implementation PR covers one requirement group and states the checks it act
 
 ## Implement: reclassification (PR 2, separate for clean revert)
 
-- [ ] `T-020` (`REQ-003`) AppArmor disabled on a capable kernel → `FAIL` in `workload-security-check.sh`,
-      `packer/scripts/07-check-tuning.sh` and `09-k8s-node-preflight.sh`. Gate this on the Q1 decision.
+- [ ] `T-020` (`REQ-003`, `D4`) AppArmor disabled on a capable kernel → `FAIL` in `workload-security-check.sh`,
+      `packer/scripts/07-check-tuning.sh` and `09-k8s-node-preflight.sh`. Decided (D4, 2026-09-24):
+      unconditional, not gated by `KUBE_READY_SECURITY_PROFILE` or any other input.
 - [ ] `T-021` (`REQ-003`) Remove the false PASS for MAC in `storage/node-storage-readiness.sh:39-45`.
       Make `nixos/preflight.sh:82` and `tools/node-readiness-attest.sh:60` read `/sys/module/apparmor/parameters/enabled`.
-- [ ] `T-022` (`REQ-009`, `C-09`) Implement the NixOS decision from Q2: either the exception record or
-      `security.apparmor.enable` with its own allow/deny/rollback evidence.
+- [ ] `T-022` (`REQ-003`, `REQ-004`, `D5`) Enable AppArmor on NixOS: add
+      `security.apparmor.enable = true` to `nixos/configuration.nix` (and `hardened-profile.nix` if it
+      overrides LSM settings). No exception record is created for C-09 (decided, D5, 2026-09-24).
+  - Verification: build the NixOS image and confirm `apparmor=PASS enabled`, `mac_backend=PASS
+    AppArmor`, and `lsm_stack` contains `apparmor` (allow case, AC-003); build a fixture/VM with
+    AppArmor left disabled and confirm `apparmor=FAIL disabled` (deny case, AC-003); record both
+    JSON outputs per T-036.
+  - Rollback: revert the enablement commit only (kept separate from the reporting-only REQ-003/004
+    changes per rollout order). Reverting returns NixOS to no-LSM, which then `FAIL`s under
+    REQ-003/004 with no exception route — call this out explicitly in the PR so it is not mistaken
+    for a CI regression.
 - [ ] `T-023` (`REQ-010`) Bump the schema, or document it as compatible, per Q3.
 
 ## Verify
@@ -66,5 +76,6 @@ Each implementation PR covers one requirement group and states the checks it act
 - [ ] Every REQ maps to an AC with both allow and deny results.
 - [ ] Material scope changes were reflected here and re-reviewed.
 - [ ] VM-only paths have recorded evidence, not just a claim.
-- [ ] N/A items (C-03, C-11, C-12) and the C-09 exception have owner and review date.
+- [ ] N/A items (C-03, C-11, C-12) have owner and review date. C-09 is no longer an exception
+      (D5) — confirm NixOS AppArmor enablement evidence (T-022) is attached instead.
 - [ ] Each PR states the checks actually run and any unverified path.

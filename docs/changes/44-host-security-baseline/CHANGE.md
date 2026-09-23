@@ -48,7 +48,7 @@ inherits and what it must provide.
 | Ubuntu 24.04 (default) / 26.04 | `packer/{virtualbox,vmware}-{amd64,arm64}.pkr.hcl`, ISO map `packer/plugins.pkr.hcl:85-100` | amd64+arm64 / VirtualBox+VMware | **AppArmor**: packages pinned in `packer/scripts/01-base.sh:66-74` and `03-os-packages.sh:49` | No policy from kube-ready-box. The distro default is `ufw` installed but inactive (**to verify on a built box**, T-002) |
 | Rocky 9 | `packer/rocky-{virtualbox,vmware}-arm64.pkr.hcl`, `packer/http/rocky-9-{ext4,xfs}/ks.cfg` | arm64 / VirtualBox+VMware | **SELinux `Enforcing`**: `ks.cfg:11` and `packer/scripts/rocky-tuning.sh:13-22` | `firewalld` active and **ssh only**: `ks.cfg:12` and `rocky-tuning.sh:28-37`. Inbound is effectively default-deny for kubelet, API server and CNI ports |
 | Rocky 10 | reserved, rejected by validation (`packer/plugins.pkr.hcl:106-110`) | — | N/A until built (SELinux when added) | N/A |
-| NixOS | `nixos/configuration.nix` (+ `hardened-profile.nix`) | per `build-nixos.yml` | **None enabled**: no `security.apparmor` in either file | Firewall disabled (`configuration.nix:106`, "K8s CNI manages iptables/nftables") |
+| NixOS | `nixos/configuration.nix` (+ `hardened-profile.nix`) | per `build-nixos.yml` | **AppArmor, enabled (D5, 2026-09-24)**: `security.apparmor.enable = true` is required in `configuration.nix`; currently absent — T-022 adds it | Firewall disabled (`configuration.nix:106`, "K8s CNI manages iptables/nftables") |
 | Debian / RHEL / Alma / Fedora (bring-your-own host running the validators) | not built here | — | Debian = AppArmor; RHEL/Alma/Fedora = SELinux `Enforcing` | Classified, never configured |
 
 LSM rule (`REQ-004`): the model is chosen by OS family from `ID`/`ID_LIKE`. It is never
@@ -67,7 +67,7 @@ LSM rule (`REQ-004`): the model is chosen by OS family from `ID`/`ID_LIKE`. It i
 | C-06 | No false-green in secondary validators | `storage/node-storage-readiness.sh:39-45`: `PASS apparmor:disabled` and `PASS selinux:Permissive/Disabled`. `nixos/preflight.sh:82` and `tools/node-readiness-attest.sh:60` treat the existence of `/sys/module/apparmor` as "loaded", even when AppArmor is disabled at boot | Same classification as C-05. If the check stays informational, the ID is renamed so it cannot be read as a policy PASS | Gap → REQ-003 |
 | C-07 | SELinux `Enforcing` on SELinux-native images | Already correct in `workload-security-check.sh:11-15` and `rocky/preflight.sh:11-32` (`Permissive`/`Disabled` → `FAIL`, config/runtime drift → `FAIL`). The family match is limited to `rocky`/`rhel` | Keep. Widen the family detection to `ID_LIKE` (alma, fedora, centos) | Gap (partial) → REQ-004 |
 | C-08 | OS-family classification | Only `ubuntu`, `rocky` and `rhel` are recognized (`workload-security-check.sh:8-16`). `debian` and `nixos` → `mac_backend UNKNOWN` | Explicit mapping, with NixOS classified on purpose (see C-09) | Gap → REQ-004 |
-| C-09 | NixOS LSM | No LSM is enabled. The validators report it as UNKNOWN or as a misleading "loaded" (C-06) | Report `FAIL` or a recorded **exception** (owner, reason, expiry). Enabling `security.apparmor` is an enforcement change and needs a human decision (Q2) | **Exception pending decision.** Time bound: decide before NixOS is next published or by 2026-12-31, whichever comes first |
+| C-09 | NixOS LSM | No LSM is enabled. The validators report it as UNKNOWN or as a misleading "loaded" (C-06) | **Decided (D5, 2026-09-24): enable `security.apparmor.enable = true`.** Enabled → `PASS` under the same REQ-003 rule as Ubuntu; no exception is recorded for this state | Gap → REQ-003, REQ-004. Enablement is an enforcement change, not reporting-only; needs its own allow/deny/rollback evidence (T-022) |
 | C-10 | seccomp node prerequisite | `workload-security-check.sh`: `seccomp` checks only for the `Seccomp:` line; `seccomp_capability` lists `actions_avail` | Also assert filter mode (`CONFIG_SECCOMP_FILTER`: the `Seccomp_filters:` field or `actions_avail` contains `errno` and `kill_process`). Missing → `FAIL` when the kernel is known | Gap → REQ-005 |
 | C-11 | seccomp `RuntimeDefault` **effective** | Covered only by the pod-level path in `sandbox/verify-sandbox-evidence.sh:74-92`, which needs a cluster | Keep at pod level and link from the host evidence. A node-only image cannot prove it (`security/README.md`) | **N/A at image level.** Covered by the cluster path, per the existing `declared→…→verified` contract |
 | C-12 | Runtime LSM integration (containerd AppArmor default profile, `enable_selinux`, `container-selinux`) | containerd is not in the base box (`packer/scripts/07-check-tuning.sh:234`) | Check it when a runtime is present. Otherwise it is an installer obligation in the hand-off contract | **N/A at image level.** Installer obligation (REQ-008). Re-evaluate if the base box ever ships containerd |
@@ -88,8 +88,8 @@ LSM rule (`REQ-004`): the model is chosen by OS family from `ID`/`ID_LIKE`. It i
 
 - No firewall rule generation, enabling, flushing or port opening on any image. Rocky's existing
   ssh-only `firewalld` stays unchanged.
-- No SELinux or AppArmor mode toggling, except the existing Rocky enforcing-preservation.
-  NixOS AppArmor enablement is **not** in scope unless Q2 says so.
+- No SELinux or AppArmor mode toggling, except the existing Rocky enforcing-preservation and the
+  NixOS AppArmor enablement decided in D5 (Q2, 2026-09-24) — see REQ-004 and T-022.
 - No CNI, Cilium Host Firewall or NetworkPolicy work. That belongs to the cluster/installer
   repositories (see narwhal#190, kubemetal#74).
 - No change to `.agents/skills/kube-ready-box-build-validation/`. #47 is working there.
@@ -106,9 +106,15 @@ LSM rule (`REQ-004`): the model is chosen by OS family from `ID`/`ID_LIKE`. It i
 - `REQ-003`: AppArmor-native hosts: *enabled* → `PASS`; *kernel-capable but disabled* → `FAIL`;
   *cannot determine* → `UNKNOWN <reason>`. SELinux-native hosts keep `Enforcing` → `PASS` and
   `Permissive`/`Disabled`/drift → `FAIL`. No validator in scope may emit `PASS` for a disabled or
-  permissive LSM. The kernel LSM stack is recorded.
+  permissive LSM. The kernel LSM stack is recorded. This classification is unconditional and does
+  not vary by `KUBE_READY_SECURITY_PROFILE` or any other input (**D4**, decided 2026-09-24): there
+  is no `standard`-profile fallback to `UNKNOWN` for a disabled or permissive LSM on a capable
+  kernel.
 - `REQ-004`: The LSM model is chosen by OS family (`ID`, then `ID_LIKE`) using this package's
   matrix. `nixos` and unknown families are classified explicitly, never defaulted to healthy.
+  NixOS is AppArmor-native (**D5**, decided 2026-09-24): the image enables
+  `security.apparmor.enable = true`, and the NixOS branch is classified by the same REQ-003 rule
+  as Ubuntu (enabled → `PASS`, disabled → `FAIL`), not carried as a permanent exception.
 - `REQ-005`: seccomp filter-mode support is verified at node level, and missing support on a known
   kernel is `FAIL`. Effective `RuntimeDefault` stays at the pod-level sandbox path and is linked
   from the host evidence.
@@ -122,8 +128,9 @@ LSM rule (`REQ-004`): the model is chosen by OS family from `ID`/`ID_LIKE`. It i
   image guarantees, Rocky's default-deny inbound, the containerd LSM integration the installer must
   configure, custom AppArmor profile distribution, workload-scoped `seLinuxOptions`, the evidence
   the installer should gate on, and rollback expectations.
-- `REQ-009`: Production-profile exceptions (for example NixOS without an LSM, or a host that
-  cannot run a firewall) are recorded as evidence with owner, reason and expiry, not as `PASS`.
+- `REQ-009`: Exceptions (for example a host that cannot run a firewall) are recorded as evidence
+  with owner, reason and expiry, not as `PASS`. NixOS without an enabled LSM is no longer an
+  eligible exception (**D5**, decided 2026-09-24): see REQ-004.
 - `REQ-010`: The evidence schema change is backward-compatible or versioned (Q3). Downstream
   consumers are told before any `UNKNOWN`→`FAIL` reclassification ships.
 
@@ -143,21 +150,28 @@ Each enforcement or classification change has an **allow** case and a **deny** c
 - Deny: Given an unprivileged run, then the detail is `permission-denied`/`status-unavailable`, never
   empty and never `empty`. Given `ufw` inactive, then `UNKNOWN inactive` (PR #53 table unchanged).
 
-### `AC-003`: AppArmor truthfulness (REQ-003, REQ-004)
+### `AC-003`: AppArmor truthfulness (REQ-003, REQ-004, D4, D5)
 - Allow: Given an Ubuntu box booted normally, then `apparmor=PASS enabled`, `mac_backend=PASS AppArmor`,
   and `lsm_stack` contains `apparmor`.
 - Deny: Given an Ubuntu kernel booted with `apparmor=0` (VM) or a fixture reporting disabled, then
   `apparmor=FAIL disabled`, and every other in-scope validator (storage, attest, preflight) is
-  non-PASS for MAC.
+  non-PASS for MAC. This holds regardless of `KUBE_READY_SECURITY_PROFILE` (D4) — there is no
+  `standard`-profile run that reports `UNKNOWN` or `PASS` instead.
 - Deny: Given a container without `/sys/kernel/security`, then `UNKNOWN <reason>`, not `FAIL` and
   not `PASS`.
+- Allow: Given a NixOS box built with `security.apparmor.enable = true` (D5), then
+  `apparmor=PASS enabled`, `mac_backend=PASS AppArmor`, and `lsm_stack` contains `apparmor` — the
+  same classification path as Ubuntu, with no NixOS-specific exception branch.
+- Deny: Given a NixOS box without AppArmor enabled (the pre-D5 default, or a build regression),
+  then `apparmor=FAIL disabled` and `mac_backend=FAIL` — never `UNKNOWN` and never a recorded
+  exception.
 
-### `AC-004`: SELinux preserved (REQ-003, REQ-004)
+### `AC-004`: SELinux preserved (REQ-003, REQ-004, D4)
 - Allow: Given Rocky 9 as built, then `selinux=PASS Enforcing` and `selinux_policy` shows
   `config=enforcing runtime=Enforcing`.
 - Deny: Given `setenforce 0` on a disposable Rocky VM, then `selinux=FAIL Permissive` in the security,
-  storage and Rocky preflight validators. Given an `almalinux`/`fedora` `os-release` fixture, then
-  the SELinux branch runs (not `mac_backend UNKNOWN`).
+  storage and Rocky preflight validators, regardless of `KUBE_READY_SECURITY_PROFILE` (D4). Given an
+  `almalinux`/`fedora` `os-release` fixture, then the SELinux branch runs (not `mac_backend UNKNOWN`).
 
 ### `AC-005`: seccomp prerequisites (REQ-005)
 - Allow: Given a GitHub Ubuntu runner, then `seccomp=PASS` and `seccomp_filter=PASS` with an
@@ -189,10 +203,27 @@ Each enforcement or classification change has an **allow** case and a **deny** c
   - **D1**: Observe and preserve, and never generate firewall policy. Cost: Ubuntu and NixOS ship
     with no active host firewall. Escape hatch: C-03 re-review date.
   - **D2**: A disabled LSM on a native-capable kernel is `FAIL`, not `UNKNOWN`. Cost: some existing
-    runs turn red. Escape hatch: profile switch (Q1) or a schema bump (Q3).
+    runs turn red. Escape hatch: a schema bump (Q3) or a recorded REQ-009 exception; **no profile
+    switch** — D4 (2026-09-24) forecloses that option and makes this unconditional.
   - **D3**: Paths CI cannot reach are proven with recorded container/VM evidence rather than
     test-only hooks in production scripts. This follows the PR #53 precedent. The alternative is
     PATH-shim fixtures (Q4).
+  - **D4** (decided 2026-09-24, resolves Q1): A disabled LSM (AppArmor not enabled, or SELinux
+    permissive/disabled) is `FAIL` **always**, regardless of `KUBE_READY_SECURITY_PROFILE` or any
+    other input. Reason: gating this on a profile would let a `standard` run mask an unenforced
+    MAC on a capable kernel, reproducing the false-green problem #44 exists to fix. Cost: existing
+    green runs on hosts with a disabled/permissive LSM turn `FAIL` immediately, with no `standard`
+    fallback to `UNKNOWN` (see Rollout, rollback and recovery — migration note). Escape hatch: no
+    profile switch; only a recorded, time-bound REQ-009 exception (owner, reason, expiry) or
+    reverting the reclassification commit, which stays separate per rollout order.
+  - **D5** (decided 2026-09-24, resolves Q2): NixOS images enable `security.apparmor.enable = true`
+    rather than carrying a permanent C-09 exception. Reason: AppArmor is available on NixOS, so the
+    same LSM rule (REQ-004) applied to Ubuntu/Rocky applies to NixOS — enable and enforce, don't
+    except. Cost: this is an enforcement change to the shipped NixOS image (not reporting-only), so
+    it carries its own build/compatibility risk (module availability, hardened-kernel interaction)
+    and needs allow/deny/rollback evidence like REQ-003's reclassification (T-022). Escape hatch:
+    revert the NixOS-enablement commit, kept separate from the reporting-only changes; no permanent
+    exception route remains for C-09 afterward.
 - Alternatives rejected: shipping a "Kubernetes ports" firewall profile in the image (breaks unknown
   CNI topologies, and #44 forbids it explicitly); disabling SELinux on Rocky for runtime
   compatibility (forbidden by #44 and OpenForge #77 §6).
@@ -218,7 +249,7 @@ Each enforcement or classification change has an **allow** case and a **deny** c
 |---|---|---|---|
 | AC-001 | `bash network/node-network-readiness.sh \| jq '.checks[]\|select(.id\|test("firewall"))'` | Rocky 9 Vagrant box (firewalld up/stopped); `ubuntu:24.04` container with `ufw` + `nft` (`--privileged`) | JSON before/after, recorded in PR |
 | AC-002 | Same, unprivileged vs `--privileged` | `ubuntu:24.04` container (PR #53 method) and GitHub runner | Detail table as in PR #53 |
-| AC-003 | `bash security/workload-security-check.sh`; storage/attest/preflight | GitHub Ubuntu runner (allow); Ubuntu Vagrant box booted `apparmor=0` (deny); plain container (UNKNOWN) | JSON per case |
+| AC-003 | `bash security/workload-security-check.sh`; storage/attest/preflight | GitHub Ubuntu runner (allow); Ubuntu Vagrant box booted `apparmor=0` (deny); NixOS build with `security.apparmor.enable = true` (allow, D5) and without it (deny, D5); plain container (UNKNOWN) | JSON per case |
 | AC-004 | `getenforce; bash security/workload-security-check.sh; bash rocky/preflight.sh`, then `sudo setenforce 0` and rerun, then `sudo setenforce 1` | Disposable Rocky 9 VM only | JSON per case + restored `Enforcing` |
 | AC-005 | Validator + `sandbox/verify-sandbox-evidence.sh` | Runner; `sandbox-enforcement-evidence.yml` cluster path | JSON + sandbox evidence link |
 | AC-006 | `make lint` on the tree; the same on a throwaway commit that adds `ufw enable` | Local + CI | Pass, then fail naming file:line |
@@ -236,7 +267,8 @@ disposable-VM toggles used as test fixtures.
 | Change | Fail-closed behavior | Rollback trigger | Rollback / recovery |
 |---|---|---|---|
 | REQ-001/002 firewall reporting | An undeterminable provider/state is `UNKNOWN <reason>`, never `PASS` | A consumer breaks on a new check ID | `git revert`; IDs are additive, so old consumers ignore them |
-| REQ-003/004 LSM reclassification | A disabled LSM becomes `FAIL` (**behavior change**) | Previously green release/CI runs turn red on hosts that are healthy by policy | Revert the reclassification commit (kept separate from the additive checks), or switch the profile (Q1). The host is never touched |
+| REQ-003/004 LSM reclassification | A disabled LSM becomes `FAIL` (**behavior change**, unconditional per D4 — no profile fallback) | Previously green release/CI runs turn red on hosts with a disabled or permissive LSM that were previously reported healthy. **Migration note**: any host or CI run that was `PASS`/`UNKNOWN` for MAC before this reclassification and has AppArmor disabled or SELinux permissive/disabled will `FAIL` after this ships; there is no profile input to opt back into the old behavior | Revert the reclassification commit (kept separate from the additive checks). The host is never touched |
+| D5 NixOS AppArmor enablement | AppArmor is enabled at build time; the build should fail loudly if `security.apparmor.enable` cannot take effect, rather than shipping silently unenforced | AppArmor causes a boot or workload regression on a built NixOS box | Revert the enablement commit only (kept separate from the reporting-only REQ-003/004 changes). The NixOS image reverts to its pre-D5 state, which then `FAIL`s under REQ-003/004 with no exception route — call this out in the PR so it is not mistaken for a new regression |
 | REQ-005 seccomp filter | Missing filter mode on a known kernel → `FAIL` | False FAIL on a supported kernel | Revert; the fixture reproduces it |
 | REQ-007 mutation guard | Unknown mutation → CI fail | Legitimate new scoped mutation | Add it to the reviewed allowlist in the same PR, with justification |
 | AC-004 test toggle | Disposable VM only | `setenforce 1` fails | Destroy the VM (`vagrant destroy -f`). Never run on a shared host |
@@ -266,12 +298,14 @@ reclassification in its own PR, announced to downstream consumers (REQ-010).
 ## Review record
 
 - Accepted scope/requirements: — (pending)
+- Decisions accepted by reviewer: **D4** (Q1) and **D5** (Q2), dated 2026-09-24 — see Architecture
+  and decisions. Package acceptance as a whole remains pending; Q3–Q7 are still open.
 - Material changes after acceptance and re-review: —
 - Open questions for the reviewer:
-  - **Q1**: Should `FAIL` for a disabled LSM apply always, or only when a
-    `KUBE_READY_SECURITY_PROFILE=production` input is set (with `UNKNOWN` under `standard`)?
-  - **Q2**: NixOS: enable `security.apparmor.enable = true` (an enforcement change with its own
-    rollback) or record a time-bound exception (C-09)?
+  - **Q1 — DECIDED (D4, 2026-09-24)**: A disabled LSM (AppArmor not enabled, or SELinux
+    permissive/disabled) is `FAIL` always, regardless of `KUBE_READY_SECURITY_PROFILE`. See D4.
+  - **Q2 — DECIDED (D5, 2026-09-24)**: NixOS images enable `security.apparmor.enable = true`;
+    C-09 is not a permanent exception. See D5.
   - **Q3**: Is reclassifying existing check IDs a `kube-ready-security/v1` compatible change, or does
     it need `v2`?
   - **Q4**: For unreachable deny paths, accept PATH-shim/`os-release` fixtures in CI, or keep the PR #53
