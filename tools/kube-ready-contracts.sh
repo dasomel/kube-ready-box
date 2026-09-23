@@ -8,9 +8,17 @@ declare -a reports=()
 # 예전에는 그래도 집계기가 0 으로 끝나 CI 가 초록이었다. 이제는 실패로 본다.
 declare -a missing=()
 run_report(){
-  local name=$1 cmd=$2 tmp rc=0 last
+  local name=$1 cmd=$2 tmp rc=0 last start elapsed
   tmp=$(mktemp)
+  # 리포트별 진행 상황을 stderr 로 남긴다. 예전에는 집계가 끝날 때까지 아무
+  # 출력이 없어서, CI 에서 10 분 타임아웃으로 죽었을 때 어느 리포트가 붙잡고
+  # 있었는지 로그만 보고는 알 수 없었다. stdout 은 마지막 줄이 JSON 이어야
+  # 하므로 진행 로그는 반드시 stderr 로 보낸다.
+  start=$(date +%s)
+  printf '==> %s 실행 중\n' "$name" >&2
   if bash -c "$cmd" >"$tmp" 2>&1; then rc=0; else rc=$?; fi
+  elapsed=$(( $(date +%s) - start ))
+  printf '<== %s 완료 (exit=%s, %ss)\n' "$name" "$rc" "$elapsed" >&2
   last=$(tail -n 1 "$tmp" || true)
   if python3 -c 'import json,sys; json.loads(sys.argv[1])' "$last" >/dev/null 2>&1; then
     reports+=("{\"name\":\"$name\",\"exit_code\":$rc,\"evidence\":$last}")

@@ -121,7 +121,13 @@ jobs:
   contract-syntax:
     name: Contract syntax and JSON smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # This job really takes ~5m30s-6m20s, so a 10-minute cap left under 40%
+    # headroom and one slow run (2026-09-22, PR #50) was killed mid-aggregate
+    # with no output to diagnose from; the same commit passed on re-run in
+    # 5m25s. 15 minutes keeps a genuine hang bounded while a normal run no
+    # longer sits close to the limit. The aggregator now logs per-report
+    # progress to stderr, so a future timeout names the report that hung.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
