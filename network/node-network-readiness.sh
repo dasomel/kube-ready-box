@@ -16,24 +16,77 @@ done
 
 [ -r /proc/sys/net/bridge/bridge-nf-call-iptables ] && add bridge_nf PASS "$(cat /proc/sys/net/bridge/bridge-nf-call-iptables)" || add bridge_nf UNKNOWN unavailable
 
+# firewall_backend: legacy packet-filter-backend precedence (nft > firewalld > ufw),
+# unchanged for existing consumers -- see firewall_provider below for the manager
+# that actually owns enforcement (#44 C-01: firewalld/ufw are nft-backed and would
+# otherwise be masked as "nftables" here).
+if command -v nft >/dev/null 2>&1; then add firewall_backend PASS nftables
+elif command -v firewall-cmd >/dev/null 2>&1; then add firewall_backend PASS firewalld
+elif command -v ufw >/dev/null 2>&1; then add firewall_backend PASS ufw
+else add firewall_backend UNKNOWN unavailable; fi
+
+# firewall-cmd --state prints "running" on stdout but "not running" on stderr
+# (exit 252, verified on rockylinux:9), so both streams are read.
+fw_state=""; command -v firewall-cmd >/dev/null 2>&1 && fw_state=$(firewall-cmd --state 2>&1 | head -n1 || true)
+firewalld_running=0; [ "$fw_state" = running ] && firewalld_running=1
+ufw_status=""; command -v ufw >/dev/null 2>&1 && ufw_status=$(ufw status 2>/dev/null | head -n1 || echo "")
+ufw_active=0; [ "$ufw_status" = "Status: active" ] && ufw_active=1
+
+nft_rc=1; nft_rules=""; nft_err=""
 if command -v nft >/dev/null 2>&1; then
-  rules=$(nft list ruleset 2>/dev/null || true); add firewall_backend PASS nftables
-  [ -n "$rules" ] && add firewall_rules PASS present || add firewall_rules UNKNOWN empty
-elif command -v firewall-cmd >/dev/null 2>&1; then add firewall_backend PASS firewalld; firewall-cmd --state >/dev/null 2>&1 && add firewall_state PASS running || add firewall_state UNKNOWN inactive
+  # On failure, re-run once for stderr only: no temp file that could fail or leak.
+  nft_rules=$(nft list ruleset 2>/dev/null) && nft_rc=0 || {
+    nft_rc=$?; nft_err=$(nft list ruleset 2>&1 >/dev/null || true); }
+fi
+
+# firewall_provider (#44 D-a): name the manager that actually owns enforcement --
+# check firewalld/ufw before raw nft. Precedence: firewalld running > ufw active >
+# a non-empty external nft ruleset (UNKNOWN, never a nftables PASS) > empty/absent.
+if [ "$firewalld_running" = 1 ]; then add firewall_provider PASS firewalld
+elif [ "$ufw_active" = 1 ]; then add firewall_provider PASS ufw
+elif command -v nft >/dev/null 2>&1; then
+  if [ "$nft_rc" -eq 0 ]; then
+    [ -n "$nft_rules" ] && add firewall_provider UNKNOWN external || add firewall_provider UNKNOWN none
+  else
+    add firewall_provider UNKNOWN status-unavailable
+  fi
+else add firewall_provider UNKNOWN none; fi
+
+# firewall_state (#44 D-b): always emitted, for the active provider or else the
+# highest-precedence installed manager (firewalld > ufw). PR #53's ufw table
+# (active/inactive/empty-stdout/other) is unchanged.
+if [ "$firewalld_running" = 1 ] || [ "$ufw_active" = 1 ]; then
+  add firewall_state PASS running
+elif command -v firewall-cmd >/dev/null 2>&1; then
+  case "$fw_state" in
+    "not running") add firewall_state UNKNOWN inactive ;;
+    *) add firewall_state UNKNOWN status-unavailable ;;
+  esac
 elif command -v ufw >/dev/null 2>&1; then
-  add firewall_backend PASS ufw
   # ufw reports its failures on stderr and leaves stdout empty (e.g. it cannot
   # read the ruleset without privileges), so an empty result here means "ufw
   # could not answer", not "no firewall". Say which one it is -- an UNKNOWN
   # carrying an empty detail is unactionable evidence.
-  ufw_status=$(ufw status 2>/dev/null | head -n1 || echo "")
   case "$ufw_status" in
-    "Status: active") add firewall_state PASS running ;;
     "Status: inactive") add firewall_state UNKNOWN inactive ;;
     "") add firewall_state UNKNOWN status-unavailable ;;
     *) add firewall_state UNKNOWN "$ufw_status" ;;
   esac
-else add firewall_backend UNKNOWN unavailable; fi
+else add firewall_state UNKNOWN tool-absent; fi
+
+# firewall_rules (#44 D-c/C-02): the raw nft ruleset, independent of which manager
+# owns it -- distinguishes an absent tool, a permission-denied query, any other
+# query failure, a deliberately empty ruleset, and a populated one.
+if ! command -v nft >/dev/null 2>&1; then
+  add firewall_rules UNKNOWN tool-absent
+elif [ "$nft_rc" -eq 0 ]; then
+  [ -n "$nft_rules" ] && add firewall_rules PASS present || add firewall_rules UNKNOWN empty-ruleset
+else
+  case "$nft_err" in
+    *"Operation not permitted"*|*"Permission denied"*) add firewall_rules UNKNOWN permission-denied ;;
+    *) add firewall_rules UNKNOWN status-unavailable ;;
+  esac
+fi
 
 if command -v iptables >/dev/null 2>&1; then
   # --display lists the whole alternatives registry (both entries always
