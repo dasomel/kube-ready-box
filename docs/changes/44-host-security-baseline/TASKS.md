@@ -23,19 +23,19 @@ Each implementation PR covers one requirement group and states the checks it act
 matching contract-doc updates (`docs/evidence-contracts.md`) in the same PR; they add fields and
 never flip an existing check's status.
 
-- [ ] `T-010` (`REQ-001`) Add `firewall_provider` to `network/node-network-readiness.sh`. Check the
+- [x] `T-010` (#56) (`REQ-001`) Add `firewall_provider` to `network/node-network-readiness.sh`. Check the
       `firewalld`/`ufw` managers before raw `nft`, and keep `firewall_backend` for compatibility.
-- [ ] `T-011` (`REQ-002`) Give the nftables branch an enumerated `firewall_state`/`firewall_rules`
+- [x] `T-011` (#56) (`REQ-002`) Give the nftables branch an enumerated `firewall_state`/`firewall_rules`
       detail (`permission-denied` vs `empty-ruleset`). Absorb PR #53's case if #53 is not merged.
-- [ ] `T-012` (`REQ-003`) Add `lsm_stack` from `/sys/kernel/security/lsm` to `security/workload-security-check.sh`.
-- [ ] `T-015` (`REQ-007`) Add the host-mutation guard script to `make lint` and CI, matched per
+- [x] `T-012` (#58) (`REQ-003`) Add `lsm_stack` from `/sys/kernel/security/lsm` to `security/workload-security-check.sh`.
+- [x] `T-015` (#59) (`REQ-007`) Add the host-mutation guard script to `make lint` and CI, matched per
       line/form (not by exempting whole allowlisted files), with the allowlist
       `packer/scripts/rocky-tuning.sh`, `packer/http/rocky-9-*/ks.cfg`, `packer/scripts/00-egress-restrict.sh`
       and `packer/scripts/99-cleanup.sh`. Also cover declarative NixOS settings that disable
       enforcement (e.g. `security.apparmor.enable`/`networking.firewall.enable` toggles in
       `nixos/configuration.nix`; the existing `:106` firewall-disable line stays allowlisted).
-- [ ] `T-016` (`REQ-007`) Add an artifact check: no `KUBE_READY_EGRESS` chain after `99-cleanup.sh`.
-- [ ] `T-017` (`REQ-005`, `AC-005`) Tighten `sandbox/verify-sandbox-evidence.sh:92`'s regex from
+- [x] `T-016` (#59) (`REQ-007`) Add an artifact check: no `KUBE_READY_EGRESS` chain after `99-cleanup.sh`.
+- [x] `T-017` (#58) (`REQ-005`, `AC-005`) Tighten `sandbox/verify-sandbox-evidence.sh:92`'s regex from
       `Seccomp:[[:space:]]*[12]` to require `Seccomp: 2` for `RuntimeDefault`; add a deny case for a
       pod stuck at `Seccomp: 1`.
 
