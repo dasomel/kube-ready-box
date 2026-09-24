@@ -50,6 +50,8 @@ lint:
 	bash -n tools/*.sh network/*.sh storage/*.sh time/*.sh security/*.sh observability/*.sh rocky/*.sh nixos/*.sh packer/scripts/*.sh
 	bash tools/template-consistency-check.sh
 	bash tools/tests/template-consistency-check-test.sh
+	bash tools/host-mutation-guard.sh
+	bash tools/tests/host-mutation-guard-test.sh
 	@if command -v actionlint >/dev/null 2>&1; then \
 	  actionlint .github/workflows/*.yml; \
 	else \
