@@ -1,6 +1,6 @@
 # Tasks: Host security baseline — firewall, AppArmor, SELinux and seccomp evidence (#44)
 
-Linked package: [`CHANGE.md`](CHANGE.md). **No task starts until the package is accepted.**
+Linked package: [`CHANGE.md`](CHANGE.md). **Accepted 2026-09-24 at revision `41582e4`; tasks may start.**
 Each implementation PR covers one requirement group and states the checks it actually ran.
 
 ## Inspect and establish evidence

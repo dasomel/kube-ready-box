@@ -5,8 +5,8 @@
   boundary between kube-ready-box and cluster installers.
 - Owner: @dasomel
 - Related issue: #44 (source of truth: dasomel/openforge#77, `docs/kubernetes-zero-trust-security-baseline.md`)
-- Status: `Draft` — **awaiting acceptance; no implementation in this package**
-- Accepted by / date: —
+- Status: `Accepted` — implementation proceeds per `TASKS.md`; this package itself contains no implementation
+- Accepted by / date: @dasomel / 2026-09-24 (revision `41582e4`)
 
 This package follows the OpenForge short-lived Change Package lifecycle
 (`docs/change-management.md` in dasomel/openforge). It is a working artifact for review.
@@ -407,10 +407,11 @@ reclassification in its own PR, announced to downstream consumers (REQ-010).
 
 ## Review record
 
-- Accepted scope/requirements: — (pending)
+- Accepted scope/requirements: the package as a whole — Scope, REQ-001..010, AC-001..008 and
+  D1–D10 — accepted by @dasomel on 2026-09-24 at revision `41582e4`.
 - Decisions accepted by reviewer: **D4** (Q1), **D5** (Q2), **D6** (Q3), **D7** (Q4), **D8** (Q5),
   **D9** (Q6) and **D10** (Q7), all dated 2026-09-24 — see Architecture and decisions. Package
-  acceptance as a whole remains pending.
+  accepted as a whole on 2026-09-24 (above).
 - Material changes after acceptance and re-review: —
 - Open questions for the reviewer:
   - **Q1 — DECIDED (D4, 2026-09-24)**: A disabled LSM (AppArmor not enabled, or SELinux
