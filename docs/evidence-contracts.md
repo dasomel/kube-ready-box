@@ -62,3 +62,33 @@ The `missing-runtime-class` negative probe demonstrates the Kubernetes/runtime e
 - `firewall_rules` (detail vocabulary expanded by T-011): the raw `nft` ruleset, independent of which manager owns it. `nft` absent -> `UNKNOWN tool-absent`; query fails with a permission error (stderr matching `Operation not permitted`/`Permission denied`) -> `UNKNOWN permission-denied`; any other query failure -> `UNKNOWN status-unavailable`; query succeeds with an empty ruleset -> `UNKNOWN empty-ruleset` (a successful check of nothing, distinct from a failed query); query succeeds non-empty -> `PASS present`.
 
 Deterministic fixture coverage lives in `tools/tests/network-firewall-detection-test.sh` (wired into `make test` and CI); container evidence for unprivileged vs `--privileged` runs is recorded per-PR per T-032.
+
+## Kernel LSM stack evidence (`kube-ready-security/v1`, #44 T-012)
+
+`security/workload-security-check.sh` reports `lsm_stack`, an additive-only check that reads the
+kernel's active LSM stack from securityfs. It is independent of the existing `mac_backend`/
+`apparmor`/`selinux` classification and **never emits `FAIL`** -- adding it does not change any
+other check's status or the overall `status`/exit code.
+
+- Readable and non-empty (`/sys/kernel/security/lsm`, e.g. `lockdown,capability,landlock,yama,apparmor,integrity`) -> `PASS <raw comma list>`.
+- Path absent (securityfs not mounted, or the kernel predates this file) -> `UNKNOWN securityfs-absent`.
+- Path exists but cannot be read (permission denied, or a read that returns nothing) -> `UNKNOWN permission-denied`.
+
+`KUBE_READY_LSM_STACK_PATH` overrides the securityfs path read for this one check; it defaults to
+the real kernel path and exists only to make the above cases reproducible in tests, not to bypass
+or reconfigure any security control. Deterministic fixture coverage lives in
+`tools/tests/workload-lsm-stack-test.sh` (wired into `make test` and CI).
+
+## Seccomp `RuntimeDefault` effective mode (`kube-ready-sandbox/v1`, #44 T-017)
+
+`sandbox/verify-sandbox-evidence.sh`'s pod-level `seccompNoNewPrivs` check now requires
+`Seccomp: 2` (filtering, the kernel's enforced-default mode) in `/proc/self/status` inside the
+pod, alongside `NoNewPrivs: 1`. It previously accepted `Seccomp:[[:space:]]*[12]`, which let a pod
+stuck at mode `1` (strict) report `PASS` even though it never actually applied the
+`RuntimeDefault` seccomp profile. A pod stuck at mode `1` now reports `checks.seccompNoNewPrivs`,
+`lifecycle.verified` and the overall `status` as `FAIL`, not `PASS`.
+
+Deterministic fixture coverage (both the mode-`2` allow case and the mode-`1` deny case) lives in
+`tools/tests/sandbox-seccomp-mode-test.sh` against a PATH-stubbed `kubectl`, wired into `make test`
+and CI; no cluster is required. The cluster-level `Seccomp: 2` allow case is also linked from
+`security/README.md` per T-035.

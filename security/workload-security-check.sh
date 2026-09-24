@@ -55,6 +55,24 @@ if [ -r /etc/selinux/config ]; then
   fi
 else add selinux_policy UNKNOWN "no-selinux"; fi
 
+# lsm_stack (#44 T-012, REQ-003): report the kernel's active LSM stack from
+# securityfs. Additive-only -- readable and non-empty -> PASS with the raw
+# comma list as detail; anything else -> UNKNOWN with an enumerated reason.
+# This check must never FAIL and never changes another check's status.
+# KUBE_READY_LSM_STACK_PATH overrides the securityfs path for deterministic
+# test fixtures; it defaults to the real kernel path.
+lsm_stack_path="${KUBE_READY_LSM_STACK_PATH:-/sys/kernel/security/lsm}"
+if [ -e "$lsm_stack_path" ]; then
+  if [ -r "$lsm_stack_path" ]; then
+    lsm_list=$(cat "$lsm_stack_path" 2>/dev/null || echo "")
+    if [ -n "$lsm_list" ]; then add lsm_stack PASS "$lsm_list"; else add lsm_stack UNKNOWN permission-denied; fi
+  else
+    add lsm_stack UNKNOWN permission-denied
+  fi
+else
+  add lsm_stack UNKNOWN securityfs-absent
+fi
+
 [ -r /proc/self/status ] && grep -q '^Seccomp:' /proc/self/status && add seccomp PASS kernel-interface || add seccomp UNKNOWN unavailable
 
 if [ -r /proc/sys/kernel/seccomp/actions_avail ]; then
