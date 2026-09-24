@@ -72,7 +72,8 @@ other check's status or the overall `status`/exit code.
 
 - Readable and non-empty (`/sys/kernel/security/lsm`, e.g. `lockdown,capability,landlock,yama,apparmor,integrity`) -> `PASS <raw comma list>`.
 - Path absent (securityfs not mounted, or the kernel predates this file) -> `UNKNOWN securityfs-absent`.
-- Path exists but cannot be read (permission denied, or a read that returns nothing) -> `UNKNOWN permission-denied`.
+- Path exists but cannot be read -> `UNKNOWN permission-denied`.
+- Read succeeds but returns nothing -> `UNKNOWN empty-stack`.
 
 The securityfs path is not overridable by any environment variable (D7: no production-settable
 evidence-source bypass). Deterministic fixture coverage lives in

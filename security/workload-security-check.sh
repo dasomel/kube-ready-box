@@ -63,7 +63,7 @@ else add selinux_policy UNKNOWN "no-selinux"; fi
 # evidence-source bypass) -- test coverage shims the `cat` command on PATH
 # instead, matching nft_err's re-run-for-stderr pattern above.
 if lsm_list=$(cat /sys/kernel/security/lsm 2>/dev/null); then
-  if [ -n "$lsm_list" ]; then add lsm_stack PASS "$lsm_list"; else add lsm_stack UNKNOWN permission-denied; fi
+  if [ -n "$lsm_list" ]; then add lsm_stack PASS "$lsm_list"; else add lsm_stack UNKNOWN empty-stack; fi
 else
   lsm_err=$(cat /sys/kernel/security/lsm 2>&1 >/dev/null || true)
   case "$lsm_err" in

@@ -131,4 +131,9 @@ unreadable_out=$(run_case lsm-unreadable permission-denied "")
 assert_check "$unreadable_out" lsm_stack UNKNOWN permission-denied
 assert_other_checks_unchanged "$allow_out" "$unreadable_out"
 
+# --- deny: readable but empty -> UNKNOWN empty-stack, not permission-denied ---
+empty_out=$(run_case lsm-empty present "")
+assert_check "$empty_out" lsm_stack UNKNOWN empty-stack
+assert_other_checks_unchanged "$allow_out" "$empty_out"
+
 echo "workload-lsm-stack-test.sh: all scenarios passed"
