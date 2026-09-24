@@ -61,6 +61,7 @@ test:
 	CONTRACT_OUTPUT=/tmp/kube-ready-contracts.json bash tools/kube-ready-contracts.sh
 	python3 -m json.tool /tmp/kube-ready-contracts.json >/dev/null
 	bash tools/tests/openforge-project-status-test.sh
+	bash tools/tests/network-firewall-detection-test.sh
 
 # ROOT optionally points at a mounted/extracted box image to audit for leaked
 # SSH host keys and machine identity residue after the input guard passes.

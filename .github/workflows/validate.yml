@@ -163,6 +163,7 @@ jobs:
           python3 -m json.tool /tmp/kube-ready-contracts.json >/dev/null
           python3 -c "import json; d=json.load(open('/tmp/kube-ready-contracts.json')); assert any(r['name']=='rust_verifier' for r in d['reports']), d['reports']"
           bash tools/tests/openforge-project-status-test.sh
+          bash tools/tests/network-firewall-detection-test.sh
       - name: Benchmark Rust verifier vs shell (informational, non-blocking)
         continue-on-error: true
         run: |
@@ -416,6 +417,9 @@ jobs:
           # #44: firewall provider/state must be inventoried (PASS/UNKNOWN), never
           # silently absent from the read-only report.
           require_non_fail /tmp/network-forward-baseline.json firewall_backend
+          # #44 T-010: firewall_provider (firewalld/ufw named ahead of raw nft)
+          # must likewise never FAIL -- it is additive, read-only evidence.
+          require_non_fail /tmp/network-forward-baseline.json firewall_provider
 
           # timedatectl_sync (NTPSynchronized) is UNKNOWN-only by this script's own
           # design -- it never FAILs, and NTPSynchronized was empirically confirmed

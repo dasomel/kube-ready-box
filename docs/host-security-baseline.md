@@ -12,14 +12,18 @@ two existing read-only validators, registered in `docs/evidence-contracts.md`.
 
 | Property | Producer | Schema | Checks |
 |---|---|---|---|
-| Firewall provider/state | `network/node-network-readiness.sh` | `kube-ready-network/v1` | `firewall_backend` (`nftables` / `firewalld` / `ufw` / `UNKNOWN`), `firewall_rules`, `firewall_state` |
+| Firewall provider/state | `network/node-network-readiness.sh` | `kube-ready-network/v1` | `firewall_backend` (`nftables` / `firewalld` / `ufw` / `UNKNOWN`), `firewall_provider`, `firewall_rules`, `firewall_state` |
 | MAC (AppArmor/SELinux) | `security/workload-security-check.sh` | `kube-ready-security/v1` | `mac_backend`, `apparmor`, `apparmor_profiles`, `selinux`, `selinux_policy` |
 | seccomp/runtime | `security/workload-security-check.sh` | `kube-ready-security/v1` | `seccomp`, `seccomp_capability`, `runtime_probe`, `runtime_version` |
 
 Both scripts are wired into `tools/kube-ready-contracts.sh` (reports `network`,
 `security`) and run unconditionally as part of `make validate` / CI's
 `contract-syntax` job. `ufw` detection in `firewall_backend` was added for #44 —
-previously only `nftables`/`firewalld` were recognized.
+previously only `nftables`/`firewalld` were recognized. `firewall_backend` still
+only reports the packet-filter *backend* (`nft` wins over `firewalld`/`ufw`
+whenever it's present); `firewall_provider` names the manager that actually
+owns enforcement (`firewalld`/`ufw` checked before raw `nft`) — see
+`docs/evidence-contracts.md`'s network section for the full detail vocabulary.
 
 ## Distro/LSM matrix
 
