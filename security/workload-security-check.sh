@@ -58,19 +58,18 @@ else add selinux_policy UNKNOWN "no-selinux"; fi
 # lsm_stack (#44 T-012, REQ-003): report the kernel's active LSM stack from
 # securityfs. Additive-only -- readable and non-empty -> PASS with the raw
 # comma list as detail; anything else -> UNKNOWN with an enumerated reason.
-# This check must never FAIL and never changes another check's status.
-# KUBE_READY_LSM_STACK_PATH overrides the securityfs path for deterministic
-# test fixtures; it defaults to the real kernel path.
-lsm_stack_path="${KUBE_READY_LSM_STACK_PATH:-/sys/kernel/security/lsm}"
-if [ -e "$lsm_stack_path" ]; then
-  if [ -r "$lsm_stack_path" ]; then
-    lsm_list=$(cat "$lsm_stack_path" 2>/dev/null || echo "")
-    if [ -n "$lsm_list" ]; then add lsm_stack PASS "$lsm_list"; else add lsm_stack UNKNOWN permission-denied; fi
-  else
-    add lsm_stack UNKNOWN permission-denied
-  fi
+# This check must never FAIL and never changes another check's status. The
+# path is not overridable by any env var (D7: no production-settable
+# evidence-source bypass) -- test coverage shims the `cat` command on PATH
+# instead, matching nft_err's re-run-for-stderr pattern above.
+if lsm_list=$(cat /sys/kernel/security/lsm 2>/dev/null); then
+  if [ -n "$lsm_list" ]; then add lsm_stack PASS "$lsm_list"; else add lsm_stack UNKNOWN permission-denied; fi
 else
-  add lsm_stack UNKNOWN securityfs-absent
+  lsm_err=$(cat /sys/kernel/security/lsm 2>&1 >/dev/null || true)
+  case "$lsm_err" in
+    *"No such file or directory"*) add lsm_stack UNKNOWN securityfs-absent ;;
+    *) add lsm_stack UNKNOWN permission-denied ;;
+  esac
 fi
 
 [ -r /proc/self/status ] && grep -q '^Seccomp:' /proc/self/status && add seccomp PASS kernel-interface || add seccomp UNKNOWN unavailable

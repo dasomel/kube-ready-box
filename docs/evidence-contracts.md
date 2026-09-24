@@ -74,10 +74,10 @@ other check's status or the overall `status`/exit code.
 - Path absent (securityfs not mounted, or the kernel predates this file) -> `UNKNOWN securityfs-absent`.
 - Path exists but cannot be read (permission denied, or a read that returns nothing) -> `UNKNOWN permission-denied`.
 
-`KUBE_READY_LSM_STACK_PATH` overrides the securityfs path read for this one check; it defaults to
-the real kernel path and exists only to make the above cases reproducible in tests, not to bypass
-or reconfigure any security control. Deterministic fixture coverage lives in
-`tools/tests/workload-lsm-stack-test.sh` (wired into `make test` and CI).
+The securityfs path is not overridable by any environment variable (D7: no production-settable
+evidence-source bypass). Deterministic fixture coverage lives in
+`tools/tests/workload-lsm-stack-test.sh` (wired into `make test` and CI), which drives the allow
+and deny cases via a PATH-shimmed `cat` rather than a script input.
 
 ## Seccomp `RuntimeDefault` effective mode (`kube-ready-sandbox/v1`, #44 T-017)
 

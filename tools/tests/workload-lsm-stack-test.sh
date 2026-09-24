@@ -3,17 +3,53 @@
 # `lsm_stack` check in security/workload-security-check.sh must be additive
 # only -- readable+non-empty -> PASS with the raw list, absent/unreadable ->
 # UNKNOWN with an enumerated reason -- and must never FAIL or change any
-# other check's status/count. Drives the real script via
-# KUBE_READY_LSM_STACK_PATH, a minimal override that defaults to the real
-# kernel path (/sys/kernel/security/lsm) and only redirects the securityfs
-# read for this one check; it does not toggle or bypass any security
-# control. Must pass on both macOS and Linux.
+# other check's status/count. The production script has no env override for
+# the securityfs path (D7: no production-settable evidence-source bypass),
+# so this drives the allow/deny cases via a PATH-shimmed `cat`: a wrapper
+# that answers only the literal `cat /sys/kernel/security/lsm` call with
+# fixture content/errors and passes every other invocation through to the
+# real `cat` -- the same PATH-shim pattern as
+# tools/tests/network-firewall-detection-test.sh. Must pass on both macOS
+# and Linux.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT/security/workload-security-check.sh"
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
+
+real_cat=$(command -v cat)
+
+# write_lsm_cat_shim <bindir> <mode> <content>
+# mode: present (fixture content), absent (No such file or directory),
+# permission-denied (Permission denied). Any other `cat` invocation is
+# passed through to the real binary unchanged.
+write_lsm_cat_shim() {
+  local bindir=$1 mode=$2 content=$3
+  mkdir -p "$bindir"
+  cat > "$bindir/cat" <<SHIM
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "\$#" -eq 1 ] && [ "\$1" = "/sys/kernel/security/lsm" ]; then
+  case "$mode" in
+    present)
+      printf '%s\n' "$content"
+      exit 0
+      ;;
+    permission-denied)
+      echo "cat: /sys/kernel/security/lsm: Permission denied" >&2
+      exit 1
+      ;;
+    absent)
+      echo "cat: /sys/kernel/security/lsm: No such file or directory" >&2
+      exit 1
+      ;;
+  esac
+fi
+exec "$real_cat" "\$@"
+SHIM
+  chmod +x "$bindir/cat"
+}
 
 assert_check() {
   local out=$1 id=$2 status=$3 detail=$4
@@ -35,10 +71,9 @@ PY
 
 # assert_other_checks_unchanged <baseline.json> <candidate.json>
 # Every check id other than lsm_stack keeps the same status, and the
-# failures/unknowns counts (minus lsm_stack's own UNKNOWN contribution,
-# which is always 0 since it never counts as a failure) match -- proof
-# that lsm_stack is additive-only and never flips another check or the
-# overall status/exit code.
+# failures/unknowns counts and overall status match -- proof that
+# lsm_stack is additive-only and never flips another check or the overall
+# status/exit code.
 assert_other_checks_unchanged() {
   local baseline=$1 candidate=$2
   python3 - "$baseline" "$candidate" <<'PY'
@@ -64,10 +99,12 @@ PY
 }
 
 run_case() {
-  local name=$1 lsm_path=$2
+  local name=$1 mode=$2 content=$3
+  local bindir="$WORKDIR/bin-$name"
+  write_lsm_cat_shim "$bindir" "$mode" "$content"
   local out="$WORKDIR/$name.json"
   set +e
-  KUBE_READY_LSM_STACK_PATH="$lsm_path" bash "$SCRIPT" >"$out" 2>"$WORKDIR/$name.stderr"
+  PATH="$bindir:$PATH" bash "$SCRIPT" >"$out" 2>"$WORKDIR/$name.stderr"
   set -e
   python3 -m json.tool "$out" >/dev/null || {
     echo "::error::$name did not produce parseable JSON" >&2
@@ -78,13 +115,11 @@ run_case() {
 }
 
 # --- allow: securityfs readable and non-empty -> PASS with the raw list ---
-lsm_fixture="$WORKDIR/lsm-enabled"
-printf 'lockdown,capability,landlock,yama,apparmor,integrity\n' > "$lsm_fixture"
-allow_out=$(run_case lsm-enabled "$lsm_fixture")
+allow_out=$(run_case lsm-enabled present "lockdown,capability,landlock,yama,apparmor,integrity")
 assert_check "$allow_out" lsm_stack PASS "lockdown,capability,landlock,yama,apparmor,integrity"
 
 # --- deny: securityfs path absent -> UNKNOWN securityfs-absent, never FAIL ---
-deny_out=$(run_case lsm-absent "$WORKDIR/does-not-exist")
+deny_out=$(run_case lsm-absent absent "")
 assert_check "$deny_out" lsm_stack UNKNOWN securityfs-absent
 
 # lsm_stack must never contribute a FAIL, and adding/removing it must not
@@ -92,18 +127,8 @@ assert_check "$deny_out" lsm_stack UNKNOWN securityfs-absent
 assert_other_checks_unchanged "$allow_out" "$deny_out"
 
 # --- deny: path exists but is unreadable -> UNKNOWN permission-denied ---
-# Skipped when running as root (e.g. inside a Docker container by default),
-# since root bypasses file-mode read permission and the case cannot be
-# reproduced deterministically there.
-if [ "$(id -u)" != 0 ]; then
-  unreadable_fixture="$WORKDIR/lsm-unreadable"
-  printf 'apparmor\n' > "$unreadable_fixture"
-  chmod 000 "$unreadable_fixture"
-  unreadable_out=$(run_case lsm-unreadable "$unreadable_fixture")
-  assert_check "$unreadable_out" lsm_stack UNKNOWN permission-denied
-  assert_other_checks_unchanged "$allow_out" "$unreadable_out"
-else
-  echo "workload-lsm-stack-test.sh: skipping permission-denied case (running as root)"
-fi
+unreadable_out=$(run_case lsm-unreadable permission-denied "")
+assert_check "$unreadable_out" lsm_stack UNKNOWN permission-denied
+assert_other_checks_unchanged "$allow_out" "$unreadable_out"
 
 echo "workload-lsm-stack-test.sh: all scenarios passed"
