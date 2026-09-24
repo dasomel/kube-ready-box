@@ -78,6 +78,10 @@ jobs:
         run: |
           bash tools/template-consistency-check.sh
           bash tools/tests/template-consistency-check-test.sh
+      - name: Host firewall/LSM mutation guard (#44 REQ-007)
+        run: |
+          bash tools/host-mutation-guard.sh
+          bash tools/tests/host-mutation-guard-test.sh
       - name: actionlint
         run: |
           ACTIONLINT_VERSION=1.7.12

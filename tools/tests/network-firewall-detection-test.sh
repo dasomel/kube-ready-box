@@ -17,6 +17,7 @@ trap 'rm -rf "$WORKDIR"' EXIT
 # Symlink farm of the real, unconditionally-needed utilities (grep/cut/tr/cat/
 # basename/uname/mktemp/head/rm/python3). Deliberately excludes nft/ufw/
 # firewall-cmd/iptables so scenarios control their presence exactly.
+# grep is also relied on directly by egress_chain_removed's nft-fallback path.
 essentials_dir="$WORKDIR/essentials"
 mkdir -p "$essentials_dir"
 for tool in bash grep cut tr cat basename uname mktemp head rm python3; do
@@ -182,5 +183,80 @@ exit 1'
 }
 out=$(run_scenario ufw-unavailable writer_ufw_unavailable)
 assert_check "$out" firewall_state UNKNOWN status-unavailable
+
+# --- scenario K: residual KUBE_READY_EGRESS chain, detected via iptables -S (#44 T-016) ---
+writer_egress_chain_present() {
+  mock "$1/iptables" '#!/usr/bin/env bash
+if [ "$1" = "-S" ] && [ "$2" = "KUBE_READY_EGRESS" ]; then
+  echo "-N KUBE_READY_EGRESS"
+  echo "-A KUBE_READY_EGRESS -j DROP"
+  exit 0
+fi
+exit 1'
+}
+out=$(run_scenario egress-chain-present writer_egress_chain_present)
+assert_check "$out" egress_chain_removed FAIL present
+
+# --- scenario L: egress chain properly removed, detected via iptables -S (allow case) ---
+writer_egress_chain_absent() {
+  mock "$1/iptables" '#!/usr/bin/env bash
+if [ "$1" = "-S" ] && [ "$2" = "KUBE_READY_EGRESS" ]; then
+  echo "iptables: No chain/target/match by that name." >&2
+  exit 1
+fi
+exit 1'
+}
+out=$(run_scenario egress-chain-absent writer_egress_chain_absent)
+assert_check "$out" egress_chain_removed PASS absent
+
+# --- scenario M: iptables present but unprivileged (must be UNKNOWN, never FAIL) ---
+writer_egress_chain_permission_denied() {
+  mock "$1/iptables" '#!/usr/bin/env bash
+if [ "$1" = "-S" ] && [ "$2" = "KUBE_READY_EGRESS" ]; then
+  echo "iptables: Permission denied (you must be root)." >&2
+  exit 4
+fi
+exit 1'
+}
+out=$(run_scenario egress-chain-permission-denied writer_egress_chain_permission_denied)
+assert_check "$out" egress_chain_removed UNKNOWN permission-denied
+
+# --- scenario M2: iptables fails for an unrelated reason (locale/mixed-in text
+# is not the no-chain message and not a permission error) -> UNKNOWN, never
+# PASS and never FAIL. Guards against matching on stderr content alone
+# without the exit code, per #44 T-015/T-016 review (Codex, locale finding).
+writer_egress_chain_other_failure() {
+  mock "$1/iptables" '#!/usr/bin/env bash
+if [ "$1" = "-S" ] && [ "$2" = "KUBE_READY_EGRESS" ]; then
+  echo "iptables: Resource temporarily unavailable." >&2
+  exit 1
+fi
+exit 1'
+}
+out=$(run_scenario egress-chain-other-failure writer_egress_chain_other_failure)
+assert_check "$out" egress_chain_removed UNKNOWN status-unavailable
+
+# --- scenario N: neither iptables nor nft readable -> UNKNOWN, never FAIL ---
+writer_egress_chain_tool_absent() { :; }
+out=$(run_scenario egress-chain-tool-absent writer_egress_chain_tool_absent)
+assert_check "$out" egress_chain_removed UNKNOWN tool-absent
+
+# --- scenario O: no iptables, nft fallback shows the chain still present ---
+writer_egress_chain_nft_fallback() {
+  mock "$1/nft" '#!/usr/bin/env bash
+[ "$1" = "list" ] && [ "$2" = "ruleset" ] && { echo "table ip filter { chain KUBE_READY_EGRESS { } }"; exit 0; }
+exit 1'
+}
+out=$(run_scenario egress-chain-nft-fallback writer_egress_chain_nft_fallback)
+assert_check "$out" egress_chain_removed FAIL present
+
+# --- scenario P: no iptables, nft present but unreadable (permission denied) ---
+writer_egress_chain_nft_permission_denied() {
+  mock "$1/nft" '#!/usr/bin/env bash
+[ "$1" = "list" ] && [ "$2" = "ruleset" ] && { echo "Error: Could not process rule: Operation not permitted" >&2; exit 1; }
+exit 1'
+}
+out=$(run_scenario egress-chain-nft-permission-denied writer_egress_chain_nft_permission_denied)
+assert_check "$out" egress_chain_removed UNKNOWN permission-denied
 
 echo "network-firewall-detection-test.sh: all scenarios passed"

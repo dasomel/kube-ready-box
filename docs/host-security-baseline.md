@@ -33,6 +33,20 @@ owns enforcement (`firewalld`/`ufw` checked before raw `nft`) — see
 | Rocky / RHEL / Alma / Fedora | SELinux (`mac_backend=SELinux`), required `Enforcing` | `firewalld` | `rocky/preflight.sh` and `packer/scripts/rocky-tuning.sh` require and actively preserve SELinux `Enforcing`; `rocky-tuning.sh` is the repo's only firewall **mutation** (installs/enables `firewalld`), scoped to the Rocky image build only — it is not a generic policy applied to unknown topologies. |
 | Other/unrecognized | `mac_backend=UNKNOWN` | `firewall_backend=UNKNOWN` | Never reported as healthy; `UNKNOWN` is a real evidence state, not a false PASS. |
 
+## Blind-mutation guard (#44 C-15/REQ-007)
+
+`tools/host-mutation-guard.sh` statically fails `make lint`/CI on any
+`iptables`/`nft`/`ufw`/`firewall-cmd`/`setenforce`/`aa-disable`/apparmor-disabling
+`systemctl`/declarative-NixOS-disable form outside a per-line allowlist
+(`rocky-tuning.sh`, the Rocky kickstarts, `00-egress-restrict.sh`,
+`99-cleanup.sh`, `nixos/configuration.nix`'s one documented firewall-disable
+line). It scans shell, Nix, Kickstart, HCL, Rust, YAML and `.conf` sources
+under the tracked tree, but **not `.github/workflows/`**: a workflow's
+`run:` steps execute on the ephemeral GitHub Actions runner, never on a
+kube-ready-box image, so a negative-test job there (e.g. `validate.yml`'s
+`iptables -D/-F/-X` teardown of a *test* egress chain) is CI test infra, not
+the host-image mutation this guard exists to catch.
+
 ## Seccomp/runtime prerequisites
 
 `security/workload-security-check.sh` verifies, per node:

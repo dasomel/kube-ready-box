@@ -35,8 +35,10 @@ ufw_active=0; [ "$ufw_status" = "Status: active" ] && ufw_active=1
 nft_rc=1; nft_rules=""; nft_err=""
 if command -v nft >/dev/null 2>&1; then
   # On failure, re-run once for stderr only: no temp file that could fail or leak.
-  nft_rules=$(nft list ruleset 2>/dev/null) && nft_rc=0 || {
-    nft_rc=$?; nft_err=$(nft list ruleset 2>&1 >/dev/null || true); }
+  # LC_ALL=C keeps nft_err's text locale-independent -- it's classified by
+  # substring below and by egress_chain_removed's nft fallback.
+  nft_rules=$(LC_ALL=C nft list ruleset 2>/dev/null) && nft_rc=0 || {
+    nft_rc=$?; nft_err=$(LC_ALL=C nft list ruleset 2>&1 >/dev/null || true); }
 fi
 
 # firewall_provider (#44 D-a): name the manager that actually owns enforcement --
@@ -86,6 +88,53 @@ else
     *"Operation not permitted"*|*"Permission denied"*) add firewall_rules UNKNOWN permission-denied ;;
     *) add firewall_rules UNKNOWN status-unavailable ;;
   esac
+fi
+
+# egress_chain_removed (#44 REQ-007/T-016): packer/scripts/00-egress-restrict.sh
+# creates the build-only KUBE_READY_EGRESS chain via `iptables -N`, and
+# 99-cleanup.sh removes it the same way -- this proves it stayed removed on a
+# provisioned/booted node. Queried with `iptables -S <chain>` (the tool the
+# chain was actually created with: exits non-zero with "No chain/target/match
+# by that name" when absent, the expected/allow state) rather than nft, since
+# an nft-only view can miss a chain built through the legacy iptables
+# backend. Falls back to the nft ruleset already queried above only when
+# iptables itself cannot answer. Never FAILs when neither tool is readable.
+#
+# LC_ALL=C forces that "No chain/target/match by that name" message (and
+# every other iptables/nft message classified below) to a fixed, English
+# string regardless of the host's locale: a translated locale would
+# otherwise either fail to match the absent-chain text (masking a real
+# absent chain as an unhelpful UNKNOWN) or, if some *other* failure's
+# translated text happened to coincide with a different branch's substring,
+# misclassify it. The verdict is still anchored on the exit code first
+# (0 = present, matching iptables -S's own contract) and the C-locale text
+# only disambiguates *why* a non-zero exit happened.
+if command -v iptables >/dev/null 2>&1; then
+  ipt_egress_out=$(LC_ALL=C iptables -S KUBE_READY_EGRESS 2>&1) && ipt_egress_rc=0 || ipt_egress_rc=$?
+  if [ "$ipt_egress_rc" -eq 0 ]; then
+    add egress_chain_removed FAIL present
+  else
+    case "$ipt_egress_out" in
+      *"No chain/target/match by that name"*) add egress_chain_removed PASS absent ;;
+      *"Permission denied"*|*"Operation not permitted"*) add egress_chain_removed UNKNOWN permission-denied ;;
+      *) add egress_chain_removed UNKNOWN status-unavailable ;;
+    esac
+  fi
+elif command -v nft >/dev/null 2>&1; then
+  if [ "$nft_rc" -eq 0 ]; then
+    if printf '%s' "$nft_rules" | LC_ALL=C grep -q 'KUBE_READY_EGRESS'; then
+      add egress_chain_removed FAIL present
+    else
+      add egress_chain_removed PASS absent
+    fi
+  else
+    case "$nft_err" in
+      *"Operation not permitted"*|*"Permission denied"*) add egress_chain_removed UNKNOWN permission-denied ;;
+      *) add egress_chain_removed UNKNOWN status-unavailable ;;
+    esac
+  fi
+else
+  add egress_chain_removed UNKNOWN tool-absent
 fi
 
 if command -v iptables >/dev/null 2>&1; then
