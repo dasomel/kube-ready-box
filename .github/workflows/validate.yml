@@ -164,6 +164,8 @@ jobs:
           python3 -c "import json; d=json.load(open('/tmp/kube-ready-contracts.json')); assert any(r['name']=='rust_verifier' for r in d['reports']), d['reports']"
           bash tools/tests/openforge-project-status-test.sh
           bash tools/tests/network-firewall-detection-test.sh
+          bash tools/tests/workload-lsm-stack-test.sh
+          bash tools/tests/sandbox-seccomp-mode-test.sh
       - name: Benchmark Rust verifier vs shell (informational, non-blocking)
         continue-on-error: true
         run: |

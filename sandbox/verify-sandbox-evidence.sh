@@ -89,7 +89,11 @@ if kubectl -n "$NAMESPACE" wait --for=condition=Ready pod/sandbox-evidence --tim
   container_id="$(kubectl -n "$NAMESPACE" get pod sandbox-evidence -o jsonpath='{.status.containerStatuses[0].containerID}')"
   command="id; cat /proc/self/status | grep -E 'NoNewPrivs|Seccomp'; echo PID1=\$(tr '\0' ' ' </proc/1/cmdline)"
   if output=$(kubectl -n "$NAMESPACE" exec sandbox-evidence -- sh -c "$command" 2>/dev/null); then
-    if printf '%s\n' "$output" | grep -q 'NoNewPrivs:[[:space:]]*1' && printf '%s\n' "$output" | grep -q 'Seccomp:[[:space:]]*[12]'; then
+    # Require mode 2 (filtering with the enforced default policy), not mode 1
+    # (strict). Mode 1 means the pod never actually applied RuntimeDefault --
+    # accepting it here would let a stuck-at-mode-1 pod report PASS (#44 T-017,
+    # AC-005 deny case).
+    if printf '%s\n' "$output" | grep -q 'NoNewPrivs:[[:space:]]*1' && printf '%s\n' "$output" | grep -q 'Seccomp:[[:space:]]*2'; then
       status_security="PASS"
     fi
     if printf '%s\n' "$output" | grep -q 'PID1='; then
