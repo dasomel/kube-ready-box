@@ -221,6 +221,21 @@ exit 1'
 out=$(run_scenario egress-chain-permission-denied writer_egress_chain_permission_denied)
 assert_check "$out" egress_chain_removed UNKNOWN permission-denied
 
+# --- scenario M2: iptables fails for an unrelated reason (locale/mixed-in text
+# is not the no-chain message and not a permission error) -> UNKNOWN, never
+# PASS and never FAIL. Guards against matching on stderr content alone
+# without the exit code, per #44 T-015/T-016 review (Codex, locale finding).
+writer_egress_chain_other_failure() {
+  mock "$1/iptables" '#!/usr/bin/env bash
+if [ "$1" = "-S" ] && [ "$2" = "KUBE_READY_EGRESS" ]; then
+  echo "iptables: Resource temporarily unavailable." >&2
+  exit 1
+fi
+exit 1'
+}
+out=$(run_scenario egress-chain-other-failure writer_egress_chain_other_failure)
+assert_check "$out" egress_chain_removed UNKNOWN status-unavailable
+
 # --- scenario N: neither iptables nor nft readable -> UNKNOWN, never FAIL ---
 writer_egress_chain_tool_absent() { :; }
 out=$(run_scenario egress-chain-tool-absent writer_egress_chain_tool_absent)
@@ -234,5 +249,14 @@ exit 1'
 }
 out=$(run_scenario egress-chain-nft-fallback writer_egress_chain_nft_fallback)
 assert_check "$out" egress_chain_removed FAIL present
+
+# --- scenario P: no iptables, nft present but unreadable (permission denied) ---
+writer_egress_chain_nft_permission_denied() {
+  mock "$1/nft" '#!/usr/bin/env bash
+[ "$1" = "list" ] && [ "$2" = "ruleset" ] && { echo "Error: Could not process rule: Operation not permitted" >&2; exit 1; }
+exit 1'
+}
+out=$(run_scenario egress-chain-nft-permission-denied writer_egress_chain_nft_permission_denied)
+assert_check "$out" egress_chain_removed UNKNOWN permission-denied
 
 echo "network-firewall-detection-test.sh: all scenarios passed"

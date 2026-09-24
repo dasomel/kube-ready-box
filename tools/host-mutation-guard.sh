@@ -37,19 +37,24 @@ root = sys.argv[1]
 
 # --- what gets scanned -----------------------------------------------------
 # Docs/plans, this guard's own tests, and CI job definitions are not shipped
-# image state -- .github/workflows negative-test jobs, in particular, run
-# real `iptables -D/-F/-X` to tear down a *test* egress chain on the CI
-# runner itself (validate.yml:217-219), which is CI test infra, not a host
-# mutation this guard exists to catch.
+# image state. .github/workflows is skipped in full -- not because its
+# content is exempt, but because a workflow's `run:` steps execute on the
+# ephemeral GitHub Actions *runner*, never on a kube-ready-box image; the
+# `iptables -D/-F/-X` in validate.yml's negative-test job (~line 217-219),
+# for example, tears down a *test* egress chain on that runner, which is CI
+# test infra, not the host-image mutation this guard exists to catch. Also
+# documented in docs/host-security-baseline.md.
 SKIP_PREFIXES = (
     "docs/", "research/", "templates/", "tools/tests/",
     ".github/", ".claude/", ".agent/", ".agents/",
 )
 SKIP_EXACT = {"tools/host-mutation-guard.sh"}
-# Restricted to the file types that can actually carry a host mutation in
-# this repo (shell provisioners/validators, Nix modules, Kickstart, Packer
-# templates, the Rust verifier) -- matches #44 CHANGE.md's Scope list.
-SCAN_EXTENSIONS = (".sh", ".nix", ".cfg", ".hcl", ".rs")
+# The file types that can actually carry a host mutation in this repo: shell
+# provisioners/validators, Nix modules, Kickstart, Packer/Vagrant templates,
+# cloud-init/system config, the Rust verifier. Matches #44 CHANGE.md's Scope
+# list, extended to the config formats packer/nixos/rocky content can use
+# even though none currently do (.yaml/.yml/.conf/.tpl).
+SCAN_EXTENSIONS = (".sh", ".nix", ".cfg", ".hcl", ".rs", ".yaml", ".yml", ".conf", ".tpl")
 
 
 def is_scanned(path):
@@ -116,6 +121,59 @@ NIX_APPARMOR_DISABLE = re.compile(r"security\.apparmor\.enable\s*=\s*false")
 NIX_FIREWALL_DISABLE = re.compile(r"networking\.firewall\.enable\s*=\s*false")
 
 
+# --- normalization: classify a line the same way regardless of how it's
+# actually invoked ----------------------------------------------------------
+# `sudo setenforce 0`, `env FOO=bar iptables -F`, `command iptables -F`, and
+# `exec iptables -F` must be caught exactly like the bare form (detection is
+# already prefix-agnostic since every detector above searches the whole line
+# rather than anchoring to its start -- but the *allowlist* patterns below do
+# anchor, e.g. `^setenforce 1\b`, so a legitimate allowlisted line prefixed
+# with `sudo` must not be misclassified as a brand-new, unapproved form).
+# `command -v`/`command -p` are the builtin's own query flags, not a
+# passthrough to a real command, so they are deliberately left alone.
+LEADING_PREFIX_RE = re.compile(
+    r"^\s*(?:"
+    r"sudo(?:\s+-[A-Za-z]+)*\s+"
+    r"|env(?:\s+[A-Za-z_][A-Za-z0-9_]*=\S+)+\s+"
+    r"|command\s+(?!-)"
+    r"|exec\s+"
+    r")"
+)
+# `/usr/sbin/iptables -F` must classify identically to `iptables -F`.
+ABS_TOOL_PATH_RE = re.compile(
+    r"(?<![\w/-])(?:/usr/local/s?bin/|/usr/s?bin/|/s?bin/)"
+    r"(iptables|nft|ufw|firewall-cmd|setenforce|aa-disable|systemctl|getenforce|aa-status)\b"
+)
+
+
+def normalize(line):
+    normalized = line
+    previous = None
+    while previous != normalized:
+        previous = normalized
+        normalized = LEADING_PREFIX_RE.sub("", normalized, count=1)
+    return ABS_TOOL_PATH_RE.sub(lambda m: m.group(1), normalized)
+
+
+def logical_lines(raw_lines):
+    # Join backslash-line-continued physical lines into one logical line
+    # before classification, reporting the *first* physical line's number --
+    # `iptables \` + `  -F KUBE_READY_EGRESS` must be classified (and denied,
+    # if unallowlisted) as a single `iptables -F ...` invocation, not missed
+    # because neither physical line contains it whole.
+    i, n = 0, len(raw_lines)
+    out = []
+    while i < n:
+        start = i + 1
+        buf = raw_lines[i].rstrip("\n")
+        while buf.rstrip().endswith("\\") and i + 1 < n:
+            i += 1
+            buf = buf.rstrip()[:-1] + " " + raw_lines[i].rstrip("\n")
+        out.append((start, buf))
+        i += 1
+    return out
+
+
 def detect_forms(line):
     forms = []
     for m in IPTABLES_WORD.finditer(line):
@@ -153,8 +211,8 @@ def detect_forms(line):
 ALLOWLIST = {
     "packer/scripts/rocky-tuning.sh": [
         re.compile(r"^setenforce 1\b"),
-        re.compile(r"firewall-cmd --permanent --add-service=ssh"),
-        re.compile(r"^firewall-cmd --reload$"),
+        re.compile(r"^firewall-cmd\b.*--add-service=ssh\b"),
+        re.compile(r"^firewall-cmd\b.*--reload\b"),
     ],
     "packer/scripts/00-egress-restrict.sh": [
         re.compile(r"iptables -N KUBE_READY_EGRESS"),
@@ -194,13 +252,14 @@ for rel in sorted(tracked_files(root)):
             lines = fh.readlines()
     except OSError:
         continue
-    for lineno, raw in enumerate(lines, start=1):
+    for lineno, raw in logical_lines(lines):
         if raw.lstrip().startswith("#"):
             continue
-        forms = detect_forms(raw)
+        normalized = normalize(raw)
+        forms = detect_forms(normalized)
         if not forms:
             continue
-        if is_allowed(rel, raw):
+        if is_allowed(rel, normalized):
             continue
         violations.append((rel, lineno, forms, raw.strip()))
 

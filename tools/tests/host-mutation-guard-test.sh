@@ -98,4 +98,130 @@ if ! run_guard; then
 fi
 rm -f "$FIXTURE/readonly-check.sh"
 
+# 6. Deny: `sudo setenforce 0` in a non-allowlisted file must still be caught
+# -- a sudo prefix must never let a mutation slip through.
+cat > "$FIXTURE/sudo-mutation.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+sudo setenforce 0
+EOF
+if run_guard; then
+  echo "FAIL: 'sudo setenforce 0' was not detected" >&2
+  exit 1
+fi
+grep -q "sudo-mutation.sh:3:.*setenforce" "$WORKDIR/out.log" || {
+  echo "FAIL: violation report does not name sudo-mutation.sh:3" >&2
+  cat "$WORKDIR/out.log" >&2
+  exit 1
+}
+rm -f "$FIXTURE/sudo-mutation.sh"
+
+# 7. Deny: an absolute-path invocation (`/usr/sbin/iptables -F`) in a
+# non-allowlisted file must still be caught.
+cat > "$FIXTURE/abspath-mutation.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+/usr/sbin/iptables -F
+EOF
+if run_guard; then
+  echo "FAIL: '/usr/sbin/iptables -F' was not detected" >&2
+  exit 1
+fi
+grep -q "abspath-mutation.sh:3:.*iptables" "$WORKDIR/out.log" || {
+  echo "FAIL: violation report does not name abspath-mutation.sh:3" >&2
+  cat "$WORKDIR/out.log" >&2
+  exit 1
+}
+rm -f "$FIXTURE/abspath-mutation.sh"
+
+# 8. Allow: `sudo firewall-cmd --add-service=ssh` in the already-allowlisted
+# rocky-tuning.sh must still be recognized as the approved form -- the sudo
+# prefix must not defeat the allowlist's own (anchored) patterns.
+cp "$ROOT/packer/scripts/rocky-tuning.sh" "$FIXTURE/packer/scripts/rocky-tuning.sh"
+python3 - "$FIXTURE/packer/scripts/rocky-tuning.sh" <<'PY'
+import sys
+path = sys.argv[1]
+with open(path, encoding="utf-8") as fh:
+    text = fh.read()
+text = text.replace(
+    "firewall-cmd --permanent --add-service=ssh",
+    "sudo firewall-cmd --add-service=ssh",
+)
+with open(path, "w", encoding="utf-8") as fh:
+    fh.write(text)
+PY
+if ! run_guard; then
+  echo "FAIL: 'sudo firewall-cmd --add-service=ssh' (allowlisted form) was flagged" >&2
+  cat "$WORKDIR/out.log" >&2
+  exit 1
+fi
+cp "$ROOT/packer/scripts/rocky-tuning.sh" "$FIXTURE/packer/scripts/rocky-tuning.sh"
+
+# 9. Deny: a mutation split across a backslash line continuation must still
+# be caught and named at its *first* physical line.
+cat > "$FIXTURE/continuation-mutation.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+iptables \
+  -F KUBE_READY_EGRESS_UNSCOPED
+EOF
+if run_guard; then
+  echo "FAIL: backslash-continued 'iptables ... -F' was not detected" >&2
+  exit 1
+fi
+grep -q "continuation-mutation.sh:3:.*iptables" "$WORKDIR/out.log" || {
+  echo "FAIL: violation report does not name continuation-mutation.sh:3 (the first physical line)" >&2
+  cat "$WORKDIR/out.log" >&2
+  exit 1
+}
+rm -f "$FIXTURE/continuation-mutation.sh"
+
+# 10. Deny: a mutation embedded in a .yaml or .conf fixture (image-content
+# config formats, not just .sh/.nix/.cfg) must be caught too.
+cat > "$FIXTURE/cloud-init-fixture.yaml" <<'EOF'
+runcmd:
+  - ufw enable
+EOF
+if run_guard; then
+  echo "FAIL: 'ufw enable' in a .yaml fixture was not detected" >&2
+  exit 1
+fi
+grep -q "cloud-init-fixture.yaml:2:.*ufw" "$WORKDIR/out.log" || {
+  echo "FAIL: violation report does not name cloud-init-fixture.yaml:2" >&2
+  cat "$WORKDIR/out.log" >&2
+  exit 1
+}
+rm -f "$FIXTURE/cloud-init-fixture.yaml"
+
+cat > "$FIXTURE/some.conf" <<'EOF'
+# example config
+command_line = setenforce 0
+EOF
+if run_guard; then
+  echo "FAIL: 'setenforce 0' in a .conf fixture was not detected" >&2
+  exit 1
+fi
+grep -q "some.conf:2:.*setenforce" "$WORKDIR/out.log" || {
+  echo "FAIL: violation report does not name some.conf:2" >&2
+  cat "$WORKDIR/out.log" >&2
+  exit 1
+}
+rm -f "$FIXTURE/some.conf"
+
+# .github/workflows content stays excluded even though it's now a scanned
+# extension elsewhere -- it runs on the CI runner, never the shipped image.
+mkdir -p "$FIXTURE/.github/workflows"
+cat > "$FIXTURE/.github/workflows/example.yml" <<'EOF'
+jobs:
+  test:
+    steps:
+      - run: sudo iptables -F KUBE_READY_EGRESS
+EOF
+if ! run_guard; then
+  echo "FAIL: .github/workflows content was scanned (should stay excluded -- CI runner, not the image)" >&2
+  cat "$WORKDIR/out.log" >&2
+  exit 1
+fi
+rm -rf "$FIXTURE/.github"
+
 echo "host-mutation-guard-test.sh: all scenarios passed"
