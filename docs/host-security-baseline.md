@@ -13,8 +13,8 @@ two existing read-only validators, registered in `docs/evidence-contracts.md`.
 | Property | Producer | Schema | Checks |
 |---|---|---|---|
 | Firewall provider/state | `network/node-network-readiness.sh` | `kube-ready-network/v1` | `firewall_backend` (`nftables` / `firewalld` / `ufw` / `UNKNOWN`), `firewall_provider`, `firewall_rules`, `firewall_state` |
-| MAC (AppArmor/SELinux) | `security/workload-security-check.sh` | `kube-ready-security/v1` | `mac_backend`, `apparmor`, `apparmor_profiles`, `selinux`, `selinux_policy` |
-| seccomp/runtime | `security/workload-security-check.sh` | `kube-ready-security/v1` | `seccomp`, `seccomp_capability`, `runtime_probe`, `runtime_version` |
+| MAC (AppArmor/SELinux) | `security/workload-security-check.sh` | `kube-ready-security/v1` | `mac_backend`, `apparmor`, `apparmor_profiles`, `selinux`, `selinux_policy`, `lsm_stack` |
+| seccomp/runtime | `security/workload-security-check.sh` | `kube-ready-security/v1` | `seccomp`, `seccomp_filter`, `seccomp_capability`, `runtime_probe`, `runtime_version` |
 
 Both scripts are wired into `tools/kube-ready-contracts.sh` (reports `network`,
 `security`) and run unconditionally as part of `make validate` / CI's
@@ -29,8 +29,8 @@ owns enforcement (`firewalld`/`ufw` checked before raw `nft`) — see
 
 | Distro family | MAC | Native firewall | Notes |
 |---|---|---|---|
-| Ubuntu / Debian | AppArmor (`mac_backend=AppArmor`) | `nftables` (default) or `ufw` if present | `packer/scripts/01-base.sh` pins AppArmor packages; kube-ready-box never disables AppArmor. |
-| Rocky / RHEL / Alma / Fedora | SELinux (`mac_backend=SELinux`), required `Enforcing` | `firewalld` | `rocky/preflight.sh` and `packer/scripts/rocky-tuning.sh` require and actively preserve SELinux `Enforcing`; `rocky-tuning.sh` is the repo's only firewall **mutation** (installs/enables `firewalld`), scoped to the Rocky image build only — it is not a generic policy applied to unknown topologies. |
+| Ubuntu / Debian / NixOS | AppArmor (`mac_backend=AppArmor`) | `nftables` (default) or `ufw` if present | Classified from `/etc/os-release` `ID`, then `ID_LIKE`; `packer/scripts/01-base.sh` pins AppArmor on Ubuntu and kube-ready-box preserves it. NixOS enablement is handled separately under D5/T-022. |
+| Rocky / RHEL / Alma / Fedora / CentOS | SELinux (`mac_backend=SELinux`), required `Enforcing` | `firewalld` | Classified from `/etc/os-release` `ID`, then `ID_LIKE`; `rocky/preflight.sh` and `packer/scripts/rocky-tuning.sh` require and actively preserve SELinux `Enforcing`. |
 | Other/unrecognized | `mac_backend=UNKNOWN` | `firewall_backend=UNKNOWN` | Never reported as healthy; `UNKNOWN` is a real evidence state, not a false PASS. |
 
 ## Blind-mutation guard (#44 C-15/REQ-007)
@@ -51,6 +51,7 @@ the host-image mutation this guard exists to catch.
 
 `security/workload-security-check.sh` verifies, per node:
 - `seccomp`: kernel interface present (`/proc/self/status` reports `Seccomp:`).
+- `seccomp_filter`: filter-mode support from the `Seccomp_filters` proc-status field or, on older kernels, `errno` and `kill_process` in `actions_avail`; a known Linux kernel without either signal reports `FAIL`.
 - `seccomp_capability`: available seccomp actions (`/proc/sys/kernel/seccomp/actions_avail`).
 - `runtime_probe` / `runtime_version`: a CRI tool (`crictl` or `containerd`/`ctr`) is present and reports a version.
 

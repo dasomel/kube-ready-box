@@ -80,6 +80,22 @@ evidence-source bypass). Deterministic fixture coverage lives in
 `tools/tests/workload-lsm-stack-test.sh` (wired into `make test` and CI), which drives the allow
 and deny cases via a PATH-shimmed `cat` rather than a script input.
 
+## Native LSM family and seccomp filter support (`kube-ready-security/v1`, #44 T-013/T-014)
+
+`security/workload-security-check.sh` chooses AppArmor for Ubuntu, Debian and NixOS, and SELinux
+for Rocky, RHEL, Alma, Fedora and CentOS. It checks `/etc/os-release` `ID` first, then the ordered
+tokens in `ID_LIKE`; an unrecognized family remains `UNKNOWN`.
+
+The additive `seccomp_filter` check reports `PASS` when `/proc/self/status` contains a numeric
+`Seccomp_filters` field or, on older kernels, `actions_avail` contains both `errno` and
+`kill_process`. If neither signal exists on a known Linux kernel, it reports `FAIL`; when proc
+evidence is unavailable, it reports `UNKNOWN kernel-unavailable`. This reports node capability,
+not whether a workload actually runs with `RuntimeDefault`.
+
+`tools/tests/workload-security-classification-test.sh` covers direct and `ID_LIKE` family mapping,
+the disabled-SELinux deny case, both seccomp allow paths, missing filter support and unavailable
+kernel evidence. It runs the real validator with only its OS/proc data paths redirected to fixtures.
+
 ## Seccomp `RuntimeDefault` effective mode (`kube-ready-sandbox/v1`, #44 T-017)
 
 `sandbox/verify-sandbox-evidence.sh`'s pod-level `seccompNoNewPrivs` check now requires
