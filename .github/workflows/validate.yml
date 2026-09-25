@@ -169,6 +169,7 @@ jobs:
           bash tools/tests/openforge-project-status-test.sh
           bash tools/tests/network-firewall-detection-test.sh
           bash tools/tests/workload-lsm-stack-test.sh
+          bash tools/tests/workload-security-classification-test.sh
           bash tools/tests/sandbox-seccomp-mode-test.sh
       - name: Benchmark Rust verifier vs shell (informational, non-blocking)
         continue-on-error: true
@@ -454,6 +455,7 @@ jobs:
           # WORKLOAD_PRIVILEGED is the security script's documented runtime workload declaration.
           run_json /tmp/security-baseline.json env WORKLOAD_PRIVILEGED=0 bash security/workload-security-check.sh
           require_status /tmp/security-baseline.json privileged_workload PASS
+          require_status /tmp/security-baseline.json seccomp_filter PASS
           run_json /tmp/security-mutated.json env WORKLOAD_PRIVILEGED=1 bash security/workload-security-check.sh
           require_status /tmp/security-mutated.json privileged_workload FAIL
 
