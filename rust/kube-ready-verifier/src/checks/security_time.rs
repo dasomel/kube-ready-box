@@ -137,4 +137,51 @@ mod tests {
         assert_eq!(status.as_str(), "UNKNOWN");
         assert_eq!(detail, "unexpected-value");
     }
+
+    /// Drives `apparmor_check()` itself (the file-reading path via
+    /// `fsutil::read`/`KUBE_READY_VERIFIER_ROOT`), not only the pure
+    /// `classify_apparmor_enabled` classifier -- proof that this crate's
+    /// actual `/sys/module/apparmor/parameters/enabled` read produces the
+    /// same PASS/FAIL/UNKNOWN as the bash deny fixtures in
+    /// tools/tests/workload-security-classification-test.sh (#44 T-021b).
+    /// Sequential sub-cases in one test (rather than separate #[test]
+    /// functions) so the shared, process-global env var never races with
+    /// itself under cargo's parallel test runner.
+    #[test]
+    fn apparmor_check_reads_fixture_root() {
+        let root = std::env::temp_dir().join(format!(
+            "kube-ready-verifier-apparmor-test-{}",
+            std::process::id()
+        ));
+        let param_dir = root.join("sys/module/apparmor/parameters");
+        std::fs::create_dir_all(&param_dir).expect("create fixture parameter dir");
+        // SAFETY: this test never runs concurrently with another that reads
+        // or writes KUBE_READY_VERIFIER_ROOT (only this function touches it
+        // in this crate), and the whole scenario matrix runs sequentially
+        // within this single #[test] body.
+        unsafe {
+            std::env::set_var("KUBE_READY_VERIFIER_ROOT", &root);
+        }
+
+        std::fs::write(param_dir.join("enabled"), "N\n").expect("write disabled fixture");
+        let disabled = apparmor_check();
+        assert_eq!(disabled.status.as_str(), "FAIL");
+        assert_eq!(disabled.detail, "disabled");
+
+        std::fs::write(param_dir.join("enabled"), "Y\n").expect("write enabled fixture");
+        let enabled = apparmor_check();
+        assert_eq!(enabled.status.as_str(), "PASS");
+        assert_eq!(enabled.detail, "enabled");
+
+        std::fs::remove_file(param_dir.join("enabled")).expect("remove fixture for unreadable case");
+        let unreadable = apparmor_check();
+        assert_eq!(unreadable.status.as_str(), "UNKNOWN");
+        assert_eq!(unreadable.detail, "parameters-unreadable");
+
+        // SAFETY: same single-writer justification as above.
+        unsafe {
+            std::env::remove_var("KUBE_READY_VERIFIER_ROOT");
+        }
+        let _ = std::fs::remove_dir_all(&root);
+    }
 }

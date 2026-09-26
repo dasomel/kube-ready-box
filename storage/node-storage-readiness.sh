@@ -35,30 +35,59 @@ else
 fi
 
 os_id=$( { grep -m1 '^ID=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"'; } || true); [ -n "$os_id" ] && add os_id PASS "$os_id" || add os_id UNKNOWN unavailable
+os_id_like=$( { grep -m1 '^ID_LIKE=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"'; } || true)
 
-# mac_backend must not PASS for a disabled/permissive native LSM (#44
-# C-06/T-021, D4): SELinux Permissive/Disabled is FAIL, and AppArmor is read
-# from the kernel module parameter (not aa-status, and not bare
-# /sys/module/apparmor existence) so a loaded-but-disabled module is FAIL
-# rather than the previous false PASS.
-if command -v getenforce >/dev/null 2>&1; then
-  sel_state=$(getenforce 2>/dev/null || echo unavailable)
-  case "$sel_state" in
-    Enforcing) add mac_backend PASS "selinux:$sel_state" ;;
-    Permissive|Disabled) add mac_backend FAIL "selinux:$sel_state" ;;
-    *) add mac_backend UNKNOWN "selinux:$sel_state" ;;
+# mac_backend routes to the native LSM by OS family (ID, then ID_LIKE) --
+# never by which tool (getenforce/aa-status) happens to be on PATH, which
+# misreports an AppArmor-native host with a stray getenforce binary as
+# SELinux, and vice versa. This mirrors classify_lsm_family in
+# security/workload-security-check.sh exactly (PR 1b, f2b61f2) so the two
+# validators cannot disagree on which LSM a host is native to. It must not
+# PASS for a disabled/permissive native LSM (#44 C-06/T-021, D4): SELinux
+# Permissive/Disabled is FAIL, and AppArmor is read from the kernel module
+# parameter (not aa-status, and not bare /sys/module/apparmor existence) so
+# a loaded-but-disabled module is FAIL rather than the previous false PASS.
+# An unreadable/absent AppArmor parameter is UNKNOWN, never a PASS/FAIL
+# guess from aa-status's mere presence.
+classify_storage_lsm_family() {
+  case "$1" in
+    ubuntu|debian|nixos) printf '%s' apparmor; return ;;
+    rocky|rhel|alma|almalinux|fedora|centos) printf '%s' selinux; return ;;
   esac
-elif aa_state=$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null); then
-  case "$aa_state" in
-    Y) add mac_backend PASS "apparmor:enabled" ;;
-    N) add mac_backend FAIL "apparmor:disabled" ;;
-    *) add mac_backend UNKNOWN "apparmor:unexpected-value:$aa_state" ;;
-  esac
-elif command -v aa-status >/dev/null 2>&1; then
-  aa-status --enabled >/dev/null 2>&1 && add mac_backend PASS "apparmor:enabled" || add mac_backend FAIL "apparmor:disabled"
-else
-  add mac_backend UNKNOWN no-selinux-or-apparmor
-fi
+  for os_like in $2; do
+    case "$os_like" in
+      ubuntu|debian|nixos) printf '%s' apparmor; return ;;
+      rocky|rhel|alma|almalinux|fedora|centos) printf '%s' selinux; return ;;
+    esac
+  done
+  printf '%s' unknown
+}
+
+mac_lsm_family=$(classify_storage_lsm_family "$os_id" "$os_id_like")
+case "$mac_lsm_family" in
+  selinux)
+    sel_state=$(getenforce 2>/dev/null || echo unavailable)
+    case "$sel_state" in
+      Enforcing) add mac_backend PASS "selinux:$sel_state" ;;
+      Permissive|Disabled) add mac_backend FAIL "selinux:$sel_state" ;;
+      *) add mac_backend UNKNOWN "selinux:$sel_state" ;;
+    esac
+    ;;
+  apparmor)
+    if aa_state=$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null); then
+      case "$aa_state" in
+        Y) add mac_backend PASS "apparmor:enabled" ;;
+        N) add mac_backend FAIL "apparmor:disabled" ;;
+        *) add mac_backend UNKNOWN "apparmor:unexpected-value:$aa_state" ;;
+      esac
+    else
+      add mac_backend UNKNOWN "apparmor:parameters-unreadable"
+    fi
+    ;;
+  *)
+    add mac_backend UNKNOWN "$os_id"
+    ;;
+esac
 
 qopts=$(findmnt -no OPTIONS / 2>/dev/null || mount 2>/dev/null | awk '$3=="/"{print $0}') || true
 case "$qopts" in

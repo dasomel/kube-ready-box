@@ -117,7 +117,11 @@ this stays structurally compatible per D6 and does not bump to `v2`.
 - **`mac_backend`** (`security/workload-security-check.sh`, `storage/node-storage-readiness.sh` --
   check ID stays `mac_backend` in both): now mirrors the same enabled/disabled state instead of
   unconditionally naming the backend as `PASS`. SELinux `Permissive`/`Disabled` -> `FAIL`; AppArmor
-  `N` -> `FAIL`.
+  `N` -> `FAIL`. `storage/node-storage-readiness.sh` routes to the native LSM by OS family (`ID`,
+  then `ID_LIKE`), the same `classify_lsm_family` mapping as `workload-security-check.sh` (PR 1b,
+  `f2b61f2`) -- never by which tool (`getenforce`/`aa-status`) happens to be on `PATH`, which could
+  otherwise misreport an AppArmor-native host with a stray `getenforce` binary as SELinux (or the
+  reverse). An unrecognized family is `UNKNOWN`, never healthy.
 - **`selinux_policy`** (`security/workload-security-check.sh`, C-07): in addition to the existing
   forward-drift `FAIL` (config wants `enforcing`, runtime is permissive/disabled), the reverse
   drift -- config no longer wants `enforcing` while the running kernel is still `Enforcing`, which
@@ -130,10 +134,17 @@ this stays structurally compatible per D6 and does not bump to `v2`.
   unreadable/unexpected-value.
 
 Deterministic allow/deny fixture coverage lives in `tools/tests/workload-security-classification-test.sh`
-(extended) and `tools/tests/node-storage-mac-backend-test.sh` (new), wired into `make test` and CI,
-per REQ-006/D7 -- unreachable paths (a live Rocky SELinux toggle, a kernel `apparmor=0` boot) are
-shimmed via PATH/fixture rather than mutating a shared host, with separate recorded VM/container
-evidence for the paths a fixture cannot reach.
+(extended), `tools/tests/node-storage-mac-backend-test.sh` (new, including the family-routing
+regression cases above), `tools/tests/nixos-preflight-apparmor-test.sh`,
+`tools/tests/node-readiness-attest-apparmor-test.sh` and `tools/tests/packer-embedded-apparmor-test.sh`
+(new -- the last extracts and runs the literal heredoc body each of `07-check-tuning.sh`/
+`09-k8s-node-preflight.sh` installs as `/usr/local/bin/k8s-node-preflight`, so it exercises the
+actual shipped bytes), all wired into `make test` and CI, per REQ-006/D7 -- unreachable paths (a
+live Rocky SELinux toggle, a kernel `apparmor=0` boot) are shimmed via PATH/fixture rather than
+mutating a shared host, with separate recorded VM/container evidence for the paths a fixture
+cannot reach. The Rust verifier's `apparmor_check_reads_fixture_root` unit test drives the same
+enabled/disabled/unreadable fixture values through its actual file-reading path
+(`KUBE_READY_VERIFIER_ROOT`), not only the pure classifier, so bash and Rust are proven to agree.
 
 **Known consumers notified (REQ-010/AC-008)**: `tools/kube-ready-contracts.sh`'s `security` report
 (runs `security/workload-security-check.sh` and passes its `status` through unchanged),
