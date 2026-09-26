@@ -1,6 +1,6 @@
 //! Security baseline (AppArmor/seccomp/auditd) and time-sync checks.
 
-use crate::fsutil::{command_ok, command_output, exists};
+use crate::fsutil::{command_ok, command_output, exists, read};
 use crate::json::{Check, Status};
 
 pub fn run() -> Vec<Check> {
@@ -12,22 +12,27 @@ pub fn run() -> Vec<Check> {
     ]
 }
 
-/// bash: `[ -d /sys/module/apparmor ]` -- a bare path check, not a
-/// functional `aa-status` probe. Matched exactly; this is already correct
-/// (this was NOT among the "soft-only, never fails" bugs -- bash's own
-/// canonical check is this same bare existence test, so there is nothing
-/// to fix here beyond confirming the match).
+/// AppArmor enablement, read from the kernel module parameter (Y/N), not
+/// bare `/sys/module/apparmor` directory existence. The bare-existence
+/// check this replaced was a false-green: a loaded-but-disabled module
+/// reported PASS purely from the directory being present, which could
+/// disagree with the (now fixed) bash check on the same host (#44
+/// C-06/T-021b). Enabled -> PASS, confirmed disabled -> FAIL (unconditional,
+/// #44 D4), parameter unreadable (module absent/kernel lacks AppArmor) ->
+/// UNKNOWN.
 fn apparmor_check() -> Check {
-    let loaded = exists("/sys/module/apparmor");
-    Check::new(
-        "apparmor",
-        if loaded {
-            Status::Pass
-        } else {
-            Status::Unknown
-        },
-        if loaded { "loaded" } else { "not-loaded" },
-    )
+    let raw = read("/sys/module/apparmor/parameters/enabled");
+    let (status, detail) = classify_apparmor_enabled(raw.as_deref());
+    Check::new("apparmor", status, detail)
+}
+
+fn classify_apparmor_enabled(raw: Option<&str>) -> (Status, &'static str) {
+    match raw.map(|s| s.trim()) {
+        Some("Y") => (Status::Pass, "enabled"),
+        Some("N") => (Status::Fail, "disabled"),
+        Some(_) => (Status::Unknown, "unexpected-value"),
+        None => (Status::Unknown, "parameters-unreadable"),
+    }
 }
 
 /// New check (bash has this; the prior Rust preflight didn't).
@@ -95,5 +100,88 @@ fn time_sync_check() -> Check {
         Check::new("time_sync", Status::Pass, "synchronized")
     } else {
         Check::new("time_sync", Status::Unknown, "chrony-present-not-confirmed")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn apparmor_enabled_is_pass() {
+        let (status, detail) = classify_apparmor_enabled(Some("Y\n"));
+        assert_eq!(status.as_str(), "PASS");
+        assert_eq!(detail, "enabled");
+    }
+
+    #[test]
+    fn apparmor_disabled_is_fail_not_unknown() {
+        // #44 D4: a confirmed-disabled AppArmor on a capable kernel is FAIL,
+        // never UNKNOWN or PASS.
+        let (status, detail) = classify_apparmor_enabled(Some("N\n"));
+        assert_eq!(status.as_str(), "FAIL");
+        assert_eq!(detail, "disabled");
+    }
+
+    #[test]
+    fn apparmor_unreadable_parameter_is_unknown() {
+        // Module absent / kernel without AppArmor support: cannot determine.
+        let (status, detail) = classify_apparmor_enabled(None);
+        assert_eq!(status.as_str(), "UNKNOWN");
+        assert_eq!(detail, "parameters-unreadable");
+    }
+
+    #[test]
+    fn apparmor_unexpected_value_is_unknown() {
+        let (status, detail) = classify_apparmor_enabled(Some("?\n"));
+        assert_eq!(status.as_str(), "UNKNOWN");
+        assert_eq!(detail, "unexpected-value");
+    }
+
+    /// Drives `apparmor_check()` itself (the file-reading path via
+    /// `fsutil::read`/`KUBE_READY_VERIFIER_ROOT`), not only the pure
+    /// `classify_apparmor_enabled` classifier -- proof that this crate's
+    /// actual `/sys/module/apparmor/parameters/enabled` read produces the
+    /// same PASS/FAIL/UNKNOWN as the bash deny fixtures in
+    /// tools/tests/workload-security-classification-test.sh (#44 T-021b).
+    /// Sequential sub-cases in one test (rather than separate #[test]
+    /// functions) so the shared, process-global env var never races with
+    /// itself under cargo's parallel test runner.
+    #[test]
+    fn apparmor_check_reads_fixture_root() {
+        let root = std::env::temp_dir().join(format!(
+            "kube-ready-verifier-apparmor-test-{}",
+            std::process::id()
+        ));
+        let param_dir = root.join("sys/module/apparmor/parameters");
+        std::fs::create_dir_all(&param_dir).expect("create fixture parameter dir");
+        // SAFETY: this test never runs concurrently with another that reads
+        // or writes KUBE_READY_VERIFIER_ROOT (only this function touches it
+        // in this crate), and the whole scenario matrix runs sequentially
+        // within this single #[test] body.
+        unsafe {
+            std::env::set_var("KUBE_READY_VERIFIER_ROOT", &root);
+        }
+
+        std::fs::write(param_dir.join("enabled"), "N\n").expect("write disabled fixture");
+        let disabled = apparmor_check();
+        assert_eq!(disabled.status.as_str(), "FAIL");
+        assert_eq!(disabled.detail, "disabled");
+
+        std::fs::write(param_dir.join("enabled"), "Y\n").expect("write enabled fixture");
+        let enabled = apparmor_check();
+        assert_eq!(enabled.status.as_str(), "PASS");
+        assert_eq!(enabled.detail, "enabled");
+
+        std::fs::remove_file(param_dir.join("enabled")).expect("remove fixture for unreadable case");
+        let unreadable = apparmor_check();
+        assert_eq!(unreadable.status.as_str(), "UNKNOWN");
+        assert_eq!(unreadable.detail, "parameters-unreadable");
+
+        // SAFETY: same single-writer justification as above.
+        unsafe {
+            std::env::remove_var("KUBE_READY_VERIFIER_ROOT");
+        }
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

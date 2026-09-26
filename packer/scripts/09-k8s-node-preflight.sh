@@ -67,10 +67,16 @@ else
   check chrony FAIL 'chrony not installed'
 fi
 
-# security baseline
-if command -v aa-status >/dev/null 2>&1; then
-  if aa-status --enabled >/dev/null 2>&1; then check apparmor PASS 'enabled'; else check apparmor UNKNOWN 'not enabled'; fi
-else check apparmor UNKNOWN 'aa-status unavailable'; fi
+# security baseline: enabled/disabled comes from the kernel module parameter,
+# not aa-status (#44 C-05/T-020, D4) -- confirmed-disabled on a capable
+# kernel is FAIL, unconditionally; only an unreadable parameter is UNKNOWN.
+if aa_enabled=$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null); then
+  case "$aa_enabled" in
+    Y) check apparmor PASS 'enabled' ;;
+    N) check apparmor FAIL 'disabled' ;;
+    *) check apparmor UNKNOWN "unexpected value: $aa_enabled" ;;
+  esac
+else check apparmor UNKNOWN 'AppArmor parameters unreadable'; fi
 
 # auditd 는 이 박스에서 의도적으로 설치만 하고 기본 비활성이다(README 참고).
 # 따라서 '설치됨 + 비활성'은 정상 상태이며 UNKNOWN 이 아니라 PASS 로 판정한다.

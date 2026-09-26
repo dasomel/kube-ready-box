@@ -57,7 +57,17 @@ if systemctl is-active --quiet chrony 2>/dev/null || chronyc tracking >/dev/null
   chronyc tracking 2>/dev/null | grep -Eq 'Leap status[[:space:]]*:[[:space:]]*Normal' && add time_sync PASS synchronized || add time_sync UNKNOWN chrony-present-not-confirmed
 else add time_sync FAIL chrony-not-active; fi
 
-[ -d /sys/module/apparmor ] && add apparmor PASS loaded || add apparmor UNKNOWN not-loaded
+# Enabled/disabled, not bare module-directory existence (#44 C-06/T-021):
+# a loaded-but-disabled module previously reported PASS.
+if aa_state=$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null); then
+  case "$aa_state" in
+    Y) add apparmor PASS enabled ;;
+    N) add apparmor FAIL disabled ;;
+    *) add apparmor UNKNOWN "unexpected-value:$aa_state" ;;
+  esac
+else
+  add apparmor UNKNOWN not-loaded
+fi
 [ -r /proc/self/status ] && grep -q '^Seccomp:' /proc/self/status && add seccomp PASS kernel-interface || add seccomp UNKNOWN unavailable
 [ -S /run/auditd.sock ] || [ -f /run/auditd.pid ] && add auditd PASS active || add auditd UNKNOWN not-active
 

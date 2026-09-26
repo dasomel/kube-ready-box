@@ -183,14 +183,17 @@ else
   record time_sync FAIL "chrony not installed"
 fi
 
-if command -v aa-status >/dev/null 2>&1; then
-  if aa-status --enabled >/dev/null 2>&1; then
-    record apparmor PASS "enabled"
-  else
-    record apparmor UNKNOWN "AppArmor unavailable or disabled"
-  fi
+# Enabled/disabled is read from the kernel module parameter, not aa-status
+# (#44 C-05/T-020, D4): a confirmed-disabled AppArmor on a capable kernel is
+# FAIL, unconditionally -- only an unreadable parameter file is UNKNOWN.
+if aa_enabled=$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null); then
+  case "$aa_enabled" in
+    Y) record apparmor PASS "enabled" ;;
+    N) record apparmor FAIL "disabled" ;;
+    *) record apparmor UNKNOWN "unexpected value: $aa_enabled" ;;
+  esac
 else
-  record apparmor UNKNOWN "aa-status unavailable"
+  record apparmor UNKNOWN "AppArmor parameters unreadable"
 fi
 
 if command -v auditctl >/dev/null 2>&1; then

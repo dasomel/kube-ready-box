@@ -1,26 +1,34 @@
 #!/usr/bin/env bash
-# Deterministic coverage for #44 T-013/T-014: native LSM selection follows
-# ID then ID_LIKE, and seccomp_filter distinguishes available, absent and
-# unobservable kernel support without relying on the host running the test.
+# Deterministic coverage for #44 T-013/T-014/T-020/T-021 (D4): native LSM
+# selection follows ID then ID_LIKE, seccomp_filter distinguishes available,
+# absent and unobservable kernel support, and a disabled AppArmor or a
+# permissive/disabled/drifted SELinux is FAIL (never UNKNOWN or PASS) --
+# without relying on the host running the test.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
 
-# Repoint only the OS and proc evidence paths in a temporary copy of the real
+# Repoint only the OS/proc/sys evidence paths in a temporary copy of the real
 # validator. All classification and status logic remains the production code.
 sed \
   -e "s|/etc/os-release|$WORKDIR/os-release|g" \
   -e "s|/proc/self/status|$WORKDIR/proc-status|g" \
   -e "s|/proc/sys/kernel/seccomp/actions_avail|$WORKDIR/actions-avail|g" \
   -e "s|/proc/version|$WORKDIR/proc-version|g" \
+  -e "s|/sys/module/apparmor/parameters/enabled|$WORKDIR/apparmor-enabled|g" \
+  -e "s|/etc/selinux/config|$WORKDIR/selinux-config|g" \
   "$ROOT/security/workload-security-check.sh" > "$WORKDIR/workload-security-check.sh"
 chmod +x "$WORKDIR/workload-security-check.sh"
 
 mkdir -p "$WORKDIR/bin"
 cat > "$WORKDIR/bin/getenforce" <<'SHIM'
 #!/usr/bin/env bash
+if [ "${FIXTURE_SELINUX_QUERY_FAIL:-0}" = 1 ]; then
+  echo "getenforce: Permission denied" >&2
+  exit 1
+fi
 printf '%s\n' "${FIXTURE_SELINUX_STATE:-Enforcing}"
 SHIM
 chmod +x "$WORKDIR/bin/getenforce"
@@ -33,9 +41,17 @@ write_proc_status() {
   printf 'Name:\tbash\nSeccomp:\t2\n%s' "$1" > "$WORKDIR/proc-status"
 }
 
+# run_case <name> <id> <id_like> <status_extra> <actions> <known_kernel>
+#          <selinux_state> [actions_present=yes] [apparmor_state=Y|N|<value>|UNREADABLE]
+#          [selinux_config=SELINUX=enforcing] [selinux_query_fail=0]
+# apparmor_state/selinux_config/selinux_query_fail default to values that
+# reproduce this test's pre-#44-T-020/T-021 baseline (AppArmor enabled,
+# SELinux config enforcing, query succeeds), so every existing call site
+# below is unaffected unless it opts into the new fixtures.
 run_case() {
   local name=$1 id=$2 id_like=$3 status_extra=$4 actions=$5 known_kernel=$6 selinux_state=$7
-  local actions_present=${8:-yes}
+  local actions_present=${8:-yes} apparmor_state=${9:-Y} selinux_config=${10:-SELINUX=enforcing}
+  local selinux_query_fail=${11:-0}
   local output="$WORKDIR/$name.json" rc
   write_os_release "$id" "$id_like"
   write_proc_status "$status_extra"
@@ -46,8 +62,14 @@ run_case() {
   else
     rm -f "$WORKDIR/proc-version" "$WORKDIR/actions-avail"
   fi
+  if [ "$apparmor_state" = UNREADABLE ]; then
+    rm -f "$WORKDIR/apparmor-enabled"
+  else
+    printf '%s\n' "$apparmor_state" > "$WORKDIR/apparmor-enabled"
+  fi
+  printf '%s\n' "$selinux_config" > "$WORKDIR/selinux-config"
   set +e
-  PATH="$WORKDIR/bin:$PATH" FIXTURE_SELINUX_STATE="$selinux_state" \
+  PATH="$WORKDIR/bin:$PATH" FIXTURE_SELINUX_STATE="$selinux_state" FIXTURE_SELINUX_QUERY_FAIL="$selinux_query_fail" \
     bash "$WORKDIR/workload-security-check.sh" > "$output" 2> "$WORKDIR/$name.stderr"
   rc=$?
   set -e
@@ -123,6 +145,54 @@ assert_check "$output" mac_backend UNKNOWN unknown PASS 0
 result=$(run_case family-alma-disabled custom almalinux "$status_field" "$actions" yes Disabled)
 read -r output _ <<< "$result"
 assert_check "$output" selinux FAIL Disabled FAIL 1
+# Forward drift (config wants enforcing, runtime downgraded) is unchanged (#44 C-07).
+assert_check "$output" selinux_policy FAIL "type=unknown config=enforcing runtime=Disabled" FAIL 1
+
+# --- #44 T-020/T-021 (D4): AppArmor disabled/unreadable reclassification ---
+
+# Enabled-capable kernel but AppArmor disabled -> FAIL, never UNKNOWN/PASS.
+result=$(run_case apparmor-disabled ubuntu '' "$status_field" "$actions" yes Enforcing yes N)
+read -r output _ <<< "$result"
+assert_check "$output" apparmor FAIL disabled FAIL 1
+assert_check "$output" mac_backend FAIL "AppArmor disabled" FAIL 1
+
+# D4: unconditional -- an unrelated KUBE_READY_SECURITY_PROFILE input does not
+# soften a confirmed-disabled AppArmor back to UNKNOWN/PASS.
+result=$(KUBE_READY_SECURITY_PROFILE=standard run_case apparmor-disabled-profile-input ubuntu '' "$status_field" "$actions" yes Enforcing yes N)
+read -r output _ <<< "$result"
+assert_check "$output" apparmor FAIL disabled FAIL 1
+
+# Cannot determine (parameter file absent, e.g. no AppArmor support/container) -> UNKNOWN.
+result=$(run_case apparmor-unreadable ubuntu '' "$status_field" "$actions" yes Enforcing yes UNREADABLE)
+read -r output _ <<< "$result"
+assert_check "$output" apparmor UNKNOWN parameters-unreadable PASS 0
+assert_check "$output" mac_backend UNKNOWN "AppArmor state unknown" PASS 0
+
+# An unexpected parameter value (neither Y nor N) also cannot be trusted as PASS/FAIL.
+result=$(run_case apparmor-unexpected ubuntu '' "$status_field" "$actions" yes Enforcing yes X)
+read -r output _ <<< "$result"
+assert_check "$output" apparmor UNKNOWN unexpected-value:X PASS 0
+
+# --- #44 T-020 (REQ-004, C-07): SELinux policy drift and query-failure coverage ---
+
+# Reverse drift: config no longer wants enforcing, but the running kernel still
+# is -- lost on next boot, so this is FAIL, not the previous silent PASS.
+result=$(run_case selinux-reverse-drift rocky '' "$status_field" "$actions" yes Enforcing yes '' SELINUX=permissive)
+read -r output _ <<< "$result"
+assert_check "$output" selinux_policy FAIL "type=unknown config=permissive runtime=Enforcing" FAIL 1
+
+# A consistently non-enforcing config+runtime is not "drift" (that insecurity is
+# selinux's own job); selinux_policy only flags disagreement between the two.
+result=$(run_case selinux-consistent-permissive rocky '' "$status_field" "$actions" yes Permissive yes '' SELINUX=permissive)
+read -r output _ <<< "$result"
+assert_check "$output" selinux_policy PASS "type=unknown config=permissive runtime=Permissive" FAIL 1
+
+# A getenforce query failure is UNKNOWN, never PASS.
+result=$(run_case selinux-query-fail rocky '' "$status_field" "$actions" yes Enforcing yes '' SELINUX=enforcing 1)
+read -r output _ <<< "$result"
+assert_check "$output" selinux UNKNOWN unavailable PASS 0
+assert_check "$output" mac_backend UNKNOWN "SELinux unavailable" PASS 0
+assert_check "$output" selinux_policy UNKNOWN "type=unknown config=enforcing runtime=unavailable" PASS 0
 
 # Older kernels can prove support from action names when the status field is absent.
 result=$(run_case filter-actions unknown '' '' "$actions" yes Enforcing)
