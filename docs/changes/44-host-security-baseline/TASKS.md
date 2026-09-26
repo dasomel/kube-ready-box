@@ -6,7 +6,7 @@ Each implementation PR covers one requirement group and states the checks it act
 ## Inspect and establish evidence
 
 - [ ] `T-001` (`REQ-001..005`) Confirm the gap table's line references against `main` at the time of acceptance.
-- [ ] `T-002` (`AC-001`, `AC-003`, `D8`) Capture baseline validator JSON on a built Ubuntu 24.04 box and a
+- [x] `T-002` (#44 comment 2026-09-25) (`AC-001`, `AC-003`, `D8`) Capture baseline validator JSON on a built Ubuntu 24.04 box and a
       Rocky 9 box (`bash security/workload-security-check.sh`, `bash network/node-network-readiness.sh`,
       `bash storage/node-storage-readiness.sh`, `bash rocky/preflight.sh`). Record whether `ufw` is
       installed/inactive on Ubuntu. On Rocky, also record `firewalld`'s **runtime and permanent**
@@ -14,7 +14,7 @@ Each implementation PR covers one requirement group and states the checks it act
       as the evidence for the D8 "SSH allowed, preserved intentionally" wording.
 - [x] `T-003` Wait for the PR #53 decision. Rebase REQ-002 work on its outcome. **Done**: #53 merged
       as `d561d76`; REQ-002/T-011 rebases on that outcome.
-- [ ] `T-004` (`REQ-010`) List consumers of `kube-ready-{security,network,storage,readiness}/v1` status
+- [x] `T-004` (#44 comment 2026-09-25) (`REQ-010`) List consumers of `kube-ready-{security,network,storage,readiness}/v1` status
       (`tools/kube-ready-contracts.sh`, the status publisher, downstream installers) and record them in the PR.
 
 ## Implement: additive, non-breaking (PR 1a — first implementation PR)
@@ -46,18 +46,18 @@ path, and `T-014`'s new `seccomp_filter` `FAIL` changes the overall `status`/exi
 `workload-security-check.sh:85`. Ship these only after `T-004`'s consumer list has been notified
 (`REQ-010`), in a PR separate from `T-010`/`T-011`.
 
-- [ ] `T-013` (`REQ-004`) Classify the OS family from `ID`, then `ID_LIKE`, for debian/alma/fedora/centos,
+- [x] `T-013` (#60) (`REQ-004`) Classify the OS family from `ID`, then `ID_LIKE`, for debian/alma/fedora/centos,
       and add an explicit `nixos` branch.
-- [ ] `T-014` (`REQ-005`) Add `seccomp_filter` (filter-mode support). Link the sandbox pod evidence from `security/README.md`.
+- [x] `T-014` (#60) (`REQ-005`) Add `seccomp_filter` (filter-mode support). Link the sandbox pod evidence from `security/README.md`.
 
 ## Implement: reclassification (PR 2, separate for clean revert)
 
-- [ ] `T-020` (`REQ-003`, `D4`) AppArmor disabled on a capable kernel → `FAIL` in `workload-security-check.sh`,
+- [x] `T-020` (#61) (`REQ-003`, `D4`) AppArmor disabled on a capable kernel → `FAIL` in `workload-security-check.sh`,
       `packer/scripts/07-check-tuning.sh` and `09-k8s-node-preflight.sh`. Decided (D4, 2026-09-24):
       unconditional, not gated by `KUBE_READY_SECURITY_PROFILE` or any other input.
-- [ ] `T-021` (`REQ-003`) Remove the false PASS for MAC in `storage/node-storage-readiness.sh:39-45`.
+- [x] `T-021` (#61) (`REQ-003`) Remove the false PASS for MAC in `storage/node-storage-readiness.sh:39-45`.
       Make `nixos/preflight.sh:82` and `tools/node-readiness-attest.sh:60` read `/sys/module/apparmor/parameters/enabled`.
-- [ ] `T-021b` (`REQ-003`) Fix the same false-green in the Rust verifier: `apparmor_check()` in
+- [x] `T-021b` (#61) (`REQ-003`) Fix the same false-green in the Rust verifier: `apparmor_check()` in
       `rust/kube-ready-verifier/src/checks/security_time.rs:21` reports `PASS` from
       `/sys/module/apparmor` directory existence alone. Read `/sys/module/apparmor/parameters/enabled`
       as T-021 does for bash, and use the **same deny fixture** as T-020/T-021 so bash and Rust agree
@@ -78,7 +78,7 @@ path, and `T-014`'s new `seccomp_filter` `FAIL` changes the overall `status`/exi
     changes per rollout order). Reverting returns NixOS to no-LSM, which then `FAIL`s under
     REQ-003/004 with no exception route — call this out explicitly in the PR so it is not mistaken
     for a CI regression.
-- [ ] `T-023` (`REQ-010`, `AC-008`) Document the schema as structurally compatible, per D6 (Q3); no bump.
+- [x] `T-023` (#61) (`REQ-010`, `AC-008`) Document the schema as structurally compatible, per D6 (Q3); no bump.
 
 ## Verify
 
@@ -87,9 +87,9 @@ path, and `T-014`'s new `seccomp_filter` `FAIL` changes the overall `status`/exi
       or reclassified check. Use both fixtures and container runs, per D7 (Q4).
 - [ ] `T-032` (`AC-001`, `AC-002`) Run in containers: `ubuntu:24.04` unprivileged and `--privileged`, with
       `ufw` both enabled and inactive, and `nft` present.
-- [ ] `T-033` (`AC-003`) Ubuntu Vagrant box: normal boot (allow), then boot with `apparmor=0` (deny).
+- [x] `T-033` (#61 evidence comment) (`AC-003`) Ubuntu Vagrant box: normal boot (allow), then boot with `apparmor=0` (deny).
       Disposable VM, destroyed afterwards.
-- [ ] `T-034` (`AC-004`) Rocky 9 Vagrant box: `Enforcing` (allow), then `setenforce 0` (deny), then
+- [x] `T-034` (#61 evidence comment) (`AC-004`) Rocky 9 Vagrant box: `Enforcing` (allow), then `setenforce 0` (deny), then
       `setenforce 1`, then destroy the VM. Never on a shared host.
 - [ ] `T-035` (`AC-005`) Link the `sandbox-enforcement-evidence.yml` run showing `Seccomp: 2` for `RuntimeDefault`.
 - [ ] `T-036` Record every run (command, environment, outcome, failures included) in the PR.
