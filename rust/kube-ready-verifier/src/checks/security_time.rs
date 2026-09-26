@@ -1,6 +1,6 @@
 //! Security baseline (AppArmor/seccomp/auditd) and time-sync checks.
 
-use crate::fsutil::{command_ok, command_output, exists};
+use crate::fsutil::{command_ok, command_output, exists, read};
 use crate::json::{Check, Status};
 
 pub fn run() -> Vec<Check> {
@@ -12,22 +12,27 @@ pub fn run() -> Vec<Check> {
     ]
 }
 
-/// bash: `[ -d /sys/module/apparmor ]` -- a bare path check, not a
-/// functional `aa-status` probe. Matched exactly; this is already correct
-/// (this was NOT among the "soft-only, never fails" bugs -- bash's own
-/// canonical check is this same bare existence test, so there is nothing
-/// to fix here beyond confirming the match).
+/// AppArmor enablement, read from the kernel module parameter (Y/N), not
+/// bare `/sys/module/apparmor` directory existence. The bare-existence
+/// check this replaced was a false-green: a loaded-but-disabled module
+/// reported PASS purely from the directory being present, which could
+/// disagree with the (now fixed) bash check on the same host (#44
+/// C-06/T-021b). Enabled -> PASS, confirmed disabled -> FAIL (unconditional,
+/// #44 D4), parameter unreadable (module absent/kernel lacks AppArmor) ->
+/// UNKNOWN.
 fn apparmor_check() -> Check {
-    let loaded = exists("/sys/module/apparmor");
-    Check::new(
-        "apparmor",
-        if loaded {
-            Status::Pass
-        } else {
-            Status::Unknown
-        },
-        if loaded { "loaded" } else { "not-loaded" },
-    )
+    let raw = read("/sys/module/apparmor/parameters/enabled");
+    let (status, detail) = classify_apparmor_enabled(raw.as_deref());
+    Check::new("apparmor", status, detail)
+}
+
+fn classify_apparmor_enabled(raw: Option<&str>) -> (Status, &'static str) {
+    match raw.map(|s| s.trim()) {
+        Some("Y") => (Status::Pass, "enabled"),
+        Some("N") => (Status::Fail, "disabled"),
+        Some(_) => (Status::Unknown, "unexpected-value"),
+        None => (Status::Unknown, "parameters-unreadable"),
+    }
 }
 
 /// New check (bash has this; the prior Rust preflight didn't).
@@ -95,5 +100,41 @@ fn time_sync_check() -> Check {
         Check::new("time_sync", Status::Pass, "synchronized")
     } else {
         Check::new("time_sync", Status::Unknown, "chrony-present-not-confirmed")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn apparmor_enabled_is_pass() {
+        let (status, detail) = classify_apparmor_enabled(Some("Y\n"));
+        assert_eq!(status.as_str(), "PASS");
+        assert_eq!(detail, "enabled");
+    }
+
+    #[test]
+    fn apparmor_disabled_is_fail_not_unknown() {
+        // #44 D4: a confirmed-disabled AppArmor on a capable kernel is FAIL,
+        // never UNKNOWN or PASS.
+        let (status, detail) = classify_apparmor_enabled(Some("N\n"));
+        assert_eq!(status.as_str(), "FAIL");
+        assert_eq!(detail, "disabled");
+    }
+
+    #[test]
+    fn apparmor_unreadable_parameter_is_unknown() {
+        // Module absent / kernel without AppArmor support: cannot determine.
+        let (status, detail) = classify_apparmor_enabled(None);
+        assert_eq!(status.as_str(), "UNKNOWN");
+        assert_eq!(detail, "parameters-unreadable");
+    }
+
+    #[test]
+    fn apparmor_unexpected_value_is_unknown() {
+        let (status, detail) = classify_apparmor_enabled(Some("?\n"));
+        assert_eq!(status.as_str(), "UNKNOWN");
+        assert_eq!(detail, "unexpected-value");
     }
 }

@@ -66,6 +66,7 @@ test:
 	bash tools/tests/network-firewall-detection-test.sh
 	bash tools/tests/workload-lsm-stack-test.sh
 	bash tools/tests/workload-security-classification-test.sh
+	bash tools/tests/node-storage-mac-backend-test.sh
 	bash tools/tests/sandbox-seccomp-mode-test.sh
 
 # ROOT optionally points at a mounted/extracted box image to audit for leaked

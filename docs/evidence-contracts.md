@@ -96,6 +96,54 @@ not whether a workload actually runs with `RuntimeDefault`.
 the disabled-SELinux deny case, both seccomp allow paths, missing filter support and unavailable
 kernel evidence. It runs the real validator with only its OS/proc data paths redirected to fixtures.
 
+## Disabled/permissive native LSM reclassification (`kube-ready-security/v1`, `kube-ready-storage/v1`, `kube-ready-evidence/v1`, #44 T-020/T-021/T-021b, D4)
+
+A disabled AppArmor or a permissive/disabled SELinux on its native, capable host is now `FAIL`,
+never `PASS` and never the generic `UNKNOWN` used for "cannot determine". This is a **behavioral**
+change (existing green runs on a host with a disabled/permissive LSM turn `FAIL`); the schema
+itself is unchanged -- `kube-ready-security/v1` keeps every existing check ID and field type, so
+this stays structurally compatible per D6 and does not bump to `v2`.
+
+- **Unconditional**: not gated by `KUBE_READY_SECURITY_PROFILE` or any other input (D4). There is
+  no `standard`-profile fallback to `UNKNOWN`/`PASS` for a disabled or permissive LSM on a capable
+  kernel.
+- **AppArmor** (`security/workload-security-check.sh`'s `apparmor` check, `packer/scripts/07-check-tuning.sh`
+  and `09-k8s-node-preflight.sh`'s embedded `apparmor` check, `nixos/preflight.sh`,
+  `tools/node-readiness-attest.sh`, and the Rust verifier's `apparmor` check): read
+  `/sys/module/apparmor/parameters/enabled` (`Y`/`N`), not `aa-status` and not bare
+  `/sys/module/apparmor` directory existence. `Y` -> `PASS enabled`; `N` -> `FAIL disabled`;
+  unreadable (no such file, kernel lacks AppArmor, container without the module) -> `UNKNOWN
+  <reason>`, never `FAIL` and never `PASS`.
+- **`mac_backend`** (`security/workload-security-check.sh`, `storage/node-storage-readiness.sh` --
+  check ID stays `mac_backend` in both): now mirrors the same enabled/disabled state instead of
+  unconditionally naming the backend as `PASS`. SELinux `Permissive`/`Disabled` -> `FAIL`; AppArmor
+  `N` -> `FAIL`.
+- **`selinux_policy`** (`security/workload-security-check.sh`, C-07): in addition to the existing
+  forward-drift `FAIL` (config wants `enforcing`, runtime is permissive/disabled), the reverse
+  drift -- config no longer wants `enforcing` while the running kernel is still `Enforcing`, which
+  is lost on the next boot -- is also `FAIL`. A `getenforce` query failure is `UNKNOWN <reason>`,
+  never `PASS`.
+- **Rust verifier parity** (`rust/kube-ready-verifier/src/checks/security_time.rs`): the `apparmor`
+  check reads the same `/sys/module/apparmor/parameters/enabled` value and applies the same
+  PASS/FAIL/UNKNOWN mapping as the bash check, so the two implementations agree on a disabled-
+  AppArmor host. Covered by unit tests (`classify_apparmor_enabled`) for enabled/disabled/
+  unreadable/unexpected-value.
+
+Deterministic allow/deny fixture coverage lives in `tools/tests/workload-security-classification-test.sh`
+(extended) and `tools/tests/node-storage-mac-backend-test.sh` (new), wired into `make test` and CI,
+per REQ-006/D7 -- unreachable paths (a live Rocky SELinux toggle, a kernel `apparmor=0` boot) are
+shimmed via PATH/fixture rather than mutating a shared host, with separate recorded VM/container
+evidence for the paths a fixture cannot reach.
+
+**Known consumers notified (REQ-010/AC-008)**: `tools/kube-ready-contracts.sh`'s `security` report
+(runs `security/workload-security-check.sh` and passes its `status` through unchanged),
+`tools/openforge-project-status.sh` (the OpenForge status publisher, which reads that aggregated
+`workload-security` report's `PASS`/`FAIL` status to set the `workload-security` capability's
+`verification.runtime` field), and the CI `readiness-negative-tests`/aggregate-contract-runner jobs
+in `.github/workflows/validate.yml`. Downstream cluster installers consuming `kube-ready-security/v1`
+per `docs/host-security-baseline.md`'s hand-off are the other named consumer class (CHANGE.md
+"Affected consumers"). See `CHANGELOG.md` for the release-facing notice.
+
 ## Seccomp `RuntimeDefault` effective mode (`kube-ready-sandbox/v1`, #44 T-017)
 
 `sandbox/verify-sandbox-evidence.sh`'s pod-level `seccompNoNewPrivs` check now requires

@@ -26,23 +26,47 @@ classify_lsm_family() {
 lsm_family=$(classify_lsm_family "$ID" "$ID_LIKE")
 case "$lsm_family" in
   apparmor)
-    command -v aa-status >/dev/null 2>&1 && aa-status --enabled >/dev/null 2>&1 && add apparmor PASS enabled || add apparmor UNKNOWN unavailable
-    add mac_backend PASS AppArmor
+    # Enabled/disabled is read from the kernel module parameter, not
+    # aa-status: aa-status absence and a confirmed-disabled kernel used to be
+    # folded into the same UNKNOWN, hiding a real FAIL (#44 C-05/T-020, D4).
+    # Y -> enabled, N -> confirmed disabled, unreadable (no such
+    # file/no AppArmor support) -> cannot determine. This is unconditional --
+    # no KUBE_READY_SECURITY_PROFILE or other input downgrades a disabled
+    # AppArmor back to UNKNOWN.
+    if aa_enabled=$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null); then
+      case "$aa_enabled" in
+        Y) add apparmor PASS enabled; add mac_backend PASS AppArmor ;;
+        N) add apparmor FAIL disabled; add mac_backend FAIL "AppArmor disabled" ;;
+        *) add apparmor UNKNOWN "unexpected-value:$aa_enabled"; add mac_backend UNKNOWN "AppArmor state unknown" ;;
+      esac
+    else
+      add apparmor UNKNOWN parameters-unreadable
+      add mac_backend UNKNOWN "AppArmor state unknown"
+    fi
     add selinux_policy UNKNOWN no-selinux
     ;;
   selinux)
     state=$(getenforce 2>/dev/null || echo unavailable)
-    case "$state" in Enforcing) add selinux PASS Enforcing;; Permissive|Disabled) add selinux FAIL "$state";; *) add selinux UNKNOWN "$state";; esac
-    add mac_backend PASS SELinux
+    case "$state" in
+      Enforcing) add selinux PASS Enforcing; add mac_backend PASS SELinux ;;
+      Permissive|Disabled) add selinux FAIL "$state"; add mac_backend FAIL "SELinux $state" ;;
+      *) add selinux UNKNOWN "$state"; add mac_backend UNKNOWN "SELinux $state" ;;
+    esac
 
-    # Cross-check the SELinux config file against the runtime mode; only flag an
-    # unsafe downgrade (config wants enforcing, runtime is permissive/disabled).
+    # Cross-check the SELinux config file against the runtime mode: flag the
+    # forward drift (config wants enforcing, runtime is permissive/disabled)
+    # and the reverse drift (config no longer wants enforcing while the
+    # running kernel is still Enforcing, which is lost on the next boot --
+    # #44 C-07/T-020). A runtime query failure is UNKNOWN, never PASS.
     if [ -r /etc/selinux/config ]; then
       sel_type=$(grep -oE '^SELINUXTYPE=.*' /etc/selinux/config | cut -d= -f2 || echo "")
       sel_mode=$(grep -oE '^SELINUX=.*' /etc/selinux/config | cut -d= -f2 || echo "")
-      sel_runtime=$(getenforce 2>/dev/null || echo "unavailable")
-      sel_detail="type=${sel_type:-unknown} config=${sel_mode:-unset} runtime=${sel_runtime}"
-      if [ "$sel_mode" = "enforcing" ] && { [ "$sel_runtime" = "Permissive" ] || [ "$sel_runtime" = "Disabled" ]; }; then
+      sel_detail="type=${sel_type:-unknown} config=${sel_mode:-unset} runtime=${state}"
+      if [ "$state" = "unavailable" ]; then
+        add selinux_policy UNKNOWN "$sel_detail"
+      elif [ "$sel_mode" = "enforcing" ] && { [ "$state" = "Permissive" ] || [ "$state" = "Disabled" ]; }; then
+        add selinux_policy FAIL "$sel_detail"
+      elif [ "$sel_mode" != "enforcing" ] && [ "$state" = "Enforcing" ]; then
         add selinux_policy FAIL "$sel_detail"
       else
         add selinux_policy PASS "$sel_detail"

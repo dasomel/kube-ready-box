@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Host security evidence reclassification (#44 T-020/T-021/T-021b, D4)**: a disabled AppArmor
+  or a permissive/disabled SELinux, on its native/capable host, is now `FAIL` instead of the
+  previous `UNKNOWN`/`PASS` false-green. This is a **behavior change for consumers**: any host or
+  CI run that was previously `PASS`/`UNKNOWN` for MAC evidence and has AppArmor disabled or
+  SELinux permissive/disabled will now report `FAIL`, and this is unconditional -- there is no
+  `KUBE_READY_SECURITY_PROFILE` (or other input) fallback to the old behavior. Affects the
+  `apparmor`/`mac_backend`/`selinux_policy` check IDs in `security/workload-security-check.sh`,
+  `mac_backend` in `storage/node-storage-readiness.sh`, `apparmor` in
+  `packer/scripts/07-check-tuning.sh`, `09-k8s-node-preflight.sh`, `nixos/preflight.sh` and
+  `tools/node-readiness-attest.sh`, and the Rust verifier's `apparmor` check
+  (`rust/kube-ready-verifier/src/checks/security_time.rs`), which now agrees with bash on the same
+  host. `kube-ready-security/v1` and `kube-ready-storage/v1` keep every existing check ID and field
+  type -- this is structurally compatible and does not bump the schema version (D6). See
+  `docs/evidence-contracts.md` for the full detail vocabulary and the known-consumers list, and
+  revert the reclassification commit to restore the prior (less truthful) behavior if a consumer
+  is not yet ready.
+
 ## [Rocky-0.1.0] - 2026-08-26
 
 `dasomel/rocky-9-ext4` 0.1.0 (VMware / arm64) 최초 배포 (#15). Rocky Linux 9 Packer

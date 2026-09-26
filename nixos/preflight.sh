@@ -79,7 +79,17 @@ else
 fi
 for dependency in iscsiadm cryptsetup dmsetup; do command -v "$dependency" >/dev/null 2>&1 && add "csi_$dependency" PASS installed || add "csi_$dependency" UNKNOWN missing; done
 
-[ -d /sys/module/apparmor ] && add apparmor PASS loaded || add apparmor UNKNOWN facility-absent
+# Enabled/disabled, not bare module-directory existence (#44 C-06/T-021):
+# a loaded-but-disabled module previously reported PASS.
+if aa_state=$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null); then
+  case "$aa_state" in
+    Y) add apparmor PASS enabled ;;
+    N) add apparmor FAIL disabled ;;
+    *) add apparmor UNKNOWN "unexpected-value:$aa_state" ;;
+  esac
+else
+  add apparmor UNKNOWN facility-absent
+fi
 if [ -r /proc/self/status ] && grep -q '^Seccomp:' /proc/self/status; then
   add seccomp PASS "kernel-interface mode=$(awk '/^Seccomp:/ { print $2 }' /proc/self/status)"
 else

@@ -36,10 +36,26 @@ fi
 
 os_id=$( { grep -m1 '^ID=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"'; } || true); [ -n "$os_id" ] && add os_id PASS "$os_id" || add os_id UNKNOWN unavailable
 
+# mac_backend must not PASS for a disabled/permissive native LSM (#44
+# C-06/T-021, D4): SELinux Permissive/Disabled is FAIL, and AppArmor is read
+# from the kernel module parameter (not aa-status, and not bare
+# /sys/module/apparmor existence) so a loaded-but-disabled module is FAIL
+# rather than the previous false PASS.
 if command -v getenforce >/dev/null 2>&1; then
-  add mac_backend PASS "selinux:$(getenforce)"
+  sel_state=$(getenforce 2>/dev/null || echo unavailable)
+  case "$sel_state" in
+    Enforcing) add mac_backend PASS "selinux:$sel_state" ;;
+    Permissive|Disabled) add mac_backend FAIL "selinux:$sel_state" ;;
+    *) add mac_backend UNKNOWN "selinux:$sel_state" ;;
+  esac
+elif aa_state=$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null); then
+  case "$aa_state" in
+    Y) add mac_backend PASS "apparmor:enabled" ;;
+    N) add mac_backend FAIL "apparmor:disabled" ;;
+    *) add mac_backend UNKNOWN "apparmor:unexpected-value:$aa_state" ;;
+  esac
 elif command -v aa-status >/dev/null 2>&1; then
-  aa-status --enabled >/dev/null 2>&1 && add mac_backend PASS "apparmor:enabled" || add mac_backend PASS "apparmor:disabled"
+  aa-status --enabled >/dev/null 2>&1 && add mac_backend PASS "apparmor:enabled" || add mac_backend FAIL "apparmor:disabled"
 else
   add mac_backend UNKNOWN no-selinux-or-apparmor
 fi
