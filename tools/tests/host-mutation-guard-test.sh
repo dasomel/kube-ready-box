@@ -80,17 +80,31 @@ fi
 
 # 4b. Deny: a NixOS priority wrapper sets the same value, so
 # `security.apparmor.enable = lib.mkForce false;` must be caught like `= false;`.
-printf '  security.apparmor.enable = lib.mkForce false;\n' >> "$FIXTURE/packer/scripts/rocky-tuning.sh"
+for form in 'lib.mkForce false' '(lib.mkForce false)' 'pkgs.lib.mkDefault false' 'mkOverride 50 false'; do
+  printf '  security.apparmor.enable = %s;\n' "$form" >> "$FIXTURE/packer/scripts/rocky-tuning.sh"
+  if run_guard; then
+    echo "FAIL: 'security.apparmor.enable = $form' was not detected" >&2
+    exit 1
+  fi
+  grep -q "rocky-tuning.sh:.*nix-apparmor-disable" "$WORKDIR/out.log" || {
+    echo "FAIL: violation report does not name the '$form' AppArmor disable" >&2
+    cat "$WORKDIR/out.log" >&2
+    exit 1
+  }
+  cp "$ROOT/packer/scripts/rocky-tuning.sh" "$FIXTURE/packer/scripts/rocky-tuning.sh"
+done
+
+# 4c. Deny: the whole-line allowlist entry in nixos/tests/apparmor.nix must not
+# cover a second form appended to the same line.
+mkdir -p "$FIXTURE/nixos/tests"
+cp "$ROOT/nixos/tests/apparmor.nix" "$FIXTURE/nixos/tests/apparmor.nix"
+sed -i.bak 's/security\.apparmor\.enable = lib\.mkForce false;/& # systemctl disable apparmor/' "$FIXTURE/nixos/tests/apparmor.nix"
+rm -f "$FIXTURE/nixos/tests/apparmor.nix.bak"
 if run_guard; then
-  echo "FAIL: 'security.apparmor.enable = lib.mkForce false' was not detected" >&2
+  echo "FAIL: a second form appended to the allowlisted apparmor.nix line was not detected" >&2
   exit 1
 fi
-grep -q "rocky-tuning.sh:.*nix-apparmor-disable" "$WORKDIR/out.log" || {
-  echo "FAIL: violation report does not name the mkForce AppArmor disable" >&2
-  cat "$WORKDIR/out.log" >&2
-  exit 1
-}
-cp "$ROOT/packer/scripts/rocky-tuning.sh" "$FIXTURE/packer/scripts/rocky-tuning.sh"
+cp "$ROOT/nixos/tests/apparmor.nix" "$FIXTURE/nixos/tests/apparmor.nix"
 
 # 5. Allow: read-only invocations of every covered tool must pass anywhere,
 # allowlisted or not -- kube-ready-box's own validators rely on this.

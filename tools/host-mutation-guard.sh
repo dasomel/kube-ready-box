@@ -117,11 +117,12 @@ APPARMOR_EQ0 = re.compile(r"\bapparmor=0\b")
 SELINUX_EQ0 = re.compile(r"\bselinux=0\b")
 # Declarative NixOS toggles that disable enforcement (still "the same form",
 # just spelled as an option assignment instead of a CLI invocation).
-# A priority wrapper (`lib.mkForce false`, `mkDefault false`, `mkOverride 50 false`)
-# sets the same value, so it must not slip past the plain `= false` form.
-NIX_PRIORITY = r"(?:(?:lib\.)?mk(?:Force|Default|Override\s+\d+)\s+)?"
-NIX_APPARMOR_DISABLE = re.compile(r"security\.apparmor\.enable\s*=\s*" + NIX_PRIORITY + r"false")
-NIX_FIREWALL_DISABLE = re.compile(r"networking\.firewall\.enable\s*=\s*" + NIX_PRIORITY + r"false")
+# A priority wrapper (`lib.mkForce false`, `pkgs.lib.mkDefault false`,
+# `(mkOverride 50 false)`) sets the same value, so it must not slip past the
+# plain `= false` form.
+NIX_FALSE = r"\s*=\s*\(?\s*(?:(?:\w+\.)*mk(?:Force|Default|Override\s+\d+)\s+)?false\b"
+NIX_APPARMOR_DISABLE = re.compile(r"security\.apparmor\.enable" + NIX_FALSE)
+NIX_FIREWALL_DISABLE = re.compile(r"networking\.firewall\.enable" + NIX_FALSE)
 
 
 # --- normalization: classify a line the same way regardless of how it's
@@ -241,7 +242,8 @@ ALLOWLIST = {
     # The VM test's disposable 'disabled' node turns AppArmor off to prove the
     # AC-003 deny case (#44 T-022); it never reaches a shipped image.
     "nixos/tests/apparmor.nix": [
-        re.compile(r"security\.apparmor\.enable = lib\.mkForce false;"),
+        # Anchored to the whole line: an allowlisted line skips every form on it.
+        re.compile(r"^\s*security\.apparmor\.enable = lib\.mkForce false;\s*$"),
     ],
 }
 
