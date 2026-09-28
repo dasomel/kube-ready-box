@@ -205,7 +205,7 @@ pkgs.testers.runNixOSTest {
 
     # Run workload-security-check.sh — apparmor must FAIL
     security_disabled_json = disabled.succeed(
-      "bash /etc/kube-ready-tests/workload-security-check.sh 2>&1; true"
+      "bash /etc/kube-ready-tests/workload-security-check.sh 2>&1 || true"
     )
     print(f"=== disabled: workload-security-check.sh ===\n{security_disabled_json}")
     sec_dis = json.loads(security_disabled_json.strip().split("\n")[-1])
@@ -215,7 +215,7 @@ pkgs.testers.runNixOSTest {
 
     # Run preflight.sh — apparmor must FAIL
     preflight_disabled_json = disabled.succeed(
-      "bash /etc/kube-ready-tests/preflight.sh 2>&1; true"
+      "bash /etc/kube-ready-tests/preflight.sh 2>&1 || true"
     )
     print(f"=== disabled: preflight.sh ===\n{preflight_disabled_json}")
     pf_dis = json.loads(preflight_disabled_json.strip().split("\n")[-1])
