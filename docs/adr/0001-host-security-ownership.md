@@ -101,7 +101,7 @@ for decision wording and scope; this ADR is the durable local record.
 - Native AppArmor/SELinux state is classified from OS family. A disabled/permissive native LSM on a capable kernel fails; unknown evidence is not healthy.
 - The kernel LSM stack and seccomp filter-mode capability are reported. Pod-level `RuntimeDefault` effectiveness is verified by the sandbox path, which requires `Seccomp: 2`.
 - Ubuntu receives no firewall policy. Rocky retains its existing `firewalld` policy with SSH allowed; do not describe it as exclusively SSH-only without zone evidence.
-- NixOS enables AppArmor (T-022).
+- NixOS: D5 decides AppArmor is enabled; until T-022 lands, the NixOS image reports AppArmor `FAIL disabled` under D4.
 
 ### Installer ownership
 

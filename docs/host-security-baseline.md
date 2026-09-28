@@ -93,8 +93,9 @@ provisioning rather than relying on kube-ready-box to have done it.
   for any Kubernetes/CNI port on any image (D1).
 - **Installer obligation**: determine and apply the firewall rules its actual
   cluster topology and CNI require (e.g. `6443`/`10250`/CNI overlay ports).
-  Rocky's default-deny-except-SSH posture will block those ports until the
-  installer opens them. Stage changes audit→enforce, keep an out-of-band
+  Rocky ships `firewalld` active in the `public` zone with only its default
+  services (`cockpit dhcpv6-client ssh` as observed in T-002), so ports such
+  as these are not open until the installer opens them (D8). Stage changes audit→enforce, keep an out-of-band
   console available, and snapshot the existing ruleset before mutating it.
 - **Verification**: `bash network/node-network-readiness.sh | jq '.checks[] | select(.id | test("firewall|egress"))'`
   reports `firewall_provider`, `firewall_state`, `firewall_rules` for the
@@ -185,9 +186,10 @@ suppressed `PASS`. An exception missing any of those three fields, or past
 its expiry, is treated as no exception at all: the underlying check reports
 its normal `FAIL`/`UNKNOWN`. There is no `KUBE_READY_SECURITY_PROFILE` (or
 other) input that suppresses a disabled/permissive native LSM to `PASS` or
-`UNKNOWN` (D4) — the only way to change that outcome is a REQ-009 exception
-record reviewed like any other change, or reverting the reclassification
-commit itself. As of this writing, no host-security-specific exception file
+`UNKNOWN` (D4). A valid REQ-009 exception documents an accepted deviation
+next to the evidence; it does not change the check result. The only way to
+change the result itself is to fix the host or revert the reclassification
+commit. As of this writing, no host-security-specific exception file
 ships in this repository (compare `tools/sbom-license-gate.sh`'s
 `etc/license-exceptions.tsv` for the owner/reason pattern used elsewhere);
 record exceptions in the PR/issue that requests them until one exists.
