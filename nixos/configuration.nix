@@ -149,7 +149,8 @@ in
   # hostSupports() stats that fixed path) and then loads docker-default by running
   # apparmor_parser from PATH. NixOS has neither, so containers ran unconfined (#63).
   systemd.tmpfiles.rules = [
-    "L+ /sbin/apparmor_parser - - - - ${pkgs.apparmor-parser}/bin/apparmor_parser"
+    # `L` (not `L+`): never replace an /sbin/apparmor_parser the system already provides.
+    "L /sbin/apparmor_parser - - - - ${pkgs.apparmor-parser}/bin/apparmor_parser"
   ];
   virtualisation.docker.extraPackages = [ pkgs.apparmor-parser ];
   # dockerd writes `#include <tunables/global>` into docker-default only if

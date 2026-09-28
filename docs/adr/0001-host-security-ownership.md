@@ -109,7 +109,7 @@ for decision wording and scope; this ADR is the durable local record.
 - Native AppArmor/SELinux state is classified from OS family. A disabled/permissive native LSM on a capable kernel fails; unknown evidence is not healthy.
 - The kernel LSM stack and seccomp filter-mode capability are reported. Pod-level `RuntimeDefault` effectiveness is verified by the sandbox path, which requires `Seccomp: 2`.
 - Ubuntu receives no firewall policy. Rocky retains its existing `firewalld` policy with SSH allowed; do not describe it as exclusively SSH-only without zone evidence.
-- NixOS: D5 enables AppArmor; the VM test verifies profile enforcement on containerd (T-022) and Docker (`docker-default`, #63) workloads. The host-level AppArmor result reports kernel state, not workload enforcement.
+- NixOS: D5 enables AppArmor; the VM test verifies profile enforcement on a containerd workload (T-022) and on Docker workloads run with the default `docker-default` profile and with an explicit `--security-opt apparmor=` profile (#63). The host-level AppArmor result reports kernel state, not workload enforcement.
 
 ### Installer ownership
 
@@ -117,7 +117,7 @@ for decision wording and scope; this ADR is the durable local record.
 - Where the installer supplies containerd, it configures and verifies AppArmor or SELinux runtime integration. The image does not install containerd into Ubuntu/Rocky base boxes.
 - The installer distributes custom AppArmor profiles to eligible nodes and verifies the profile is present (for example with `aa-status --json`).
 - The installer applies workload-scoped `seLinuxOptions` where required and gates deployment on the documented evidence contract. Rollback expectations belong to the installer hand-off.
-- NixOS: the VM test verifies AppArmor confinement for containerd (T-022) and Docker (#63) workloads.
+- NixOS: the VM test verifies AppArmor confinement for a containerd workload (T-022) and for Docker workloads under `docker-default` and an explicit `--security-opt apparmor=` profile (#63).
 
 ### Compatibility and alternatives
 
