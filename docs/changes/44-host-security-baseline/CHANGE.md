@@ -424,7 +424,11 @@ reclassification in its own PR, announced to downstream consumers (REQ-010).
   accepted as a whole on 2026-09-24 (above).
 - Material changes after acceptance and re-review:
   - **D11** (2026-09-28): T-022's C-12 evidence narrowed to containerd; Docker AppArmor enforcement
-    on NixOS split to #63. Chosen by @dasomel on 2026-09-28; re-review pending on this revision.
+    on NixOS split to #63. Chosen by @dasomel on 2026-09-28 and independently re-reviewed on
+    2026-09-28. Accepted for the Kubernetes CRI/containerd scope because NixOS ships containerd as
+    its CRI path; the Docker gap remains explicit and tracked, and durable docs on PR #65 state
+    that `apparmor=PASS` does not claim Docker workload confinement. The gap remains operationally
+    significant while Docker is enabled on the image.
 - Open questions for the reviewer:
   - **Q1 — DECIDED (D4, 2026-09-24)**: A disabled LSM (AppArmor not enabled, or SELinux
     permissive/disabled) is `FAIL` always, regardless of `KUBE_READY_SECURITY_PROFILE`. See D4.
