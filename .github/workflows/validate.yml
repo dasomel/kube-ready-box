@@ -472,6 +472,7 @@ jobs:
             require_status /tmp/security-baseline.json mac_backend FAIL
           else
             require_status /tmp/security-baseline.json apparmor UNKNOWN
+            require_status /tmp/security-baseline.json mac_backend UNKNOWN
           fi
           require_non_fail /tmp/security-baseline.json lsm_stack
           # #44 T-031: network baseline firewall checks must not FAIL (read-only evidence).
