@@ -152,6 +152,15 @@ in
     "L+ /sbin/apparmor_parser - - - - ${pkgs.apparmor-parser}/bin/apparmor_parser"
   ];
   virtualisation.docker.extraPackages = [ pkgs.apparmor-parser ];
+  # dockerd writes `#include <tunables/global>` into docker-default only if
+  # /etc/apparmor.d/tunables/global exists, but still includes abstractions/base, which
+  # needs the variables tunables/global declares (@{HOMEDIRS}). NixOS ships base but
+  # not global there, so provide it and put apparmor-profiles on the parser's
+  # include path for the files global includes in turn.
+  security.apparmor.includes."tunables/global" = ''
+    include "${pkgs.apparmor-profiles}/etc/apparmor.d/tunables/global"
+  '';
+  security.apparmor.packages = [ pkgs.apparmor-profiles ];
 
   # CSI & Storage Prerequisites (Longhorn / Open-iSCSI)
   services.openiscsi = {
