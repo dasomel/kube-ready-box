@@ -208,6 +208,7 @@ def detect_forms(line):
 # firewalld (D8); 00-egress-restrict.sh/99-cleanup.sh create and tear down
 # the build-only KUBE_READY_EGRESS chain (T-016 checks it never survives);
 # nixos/configuration.nix keeps its one documented D1 firewall-disable line.
+# nixos/tests/apparmor.nix may boot its throwaway deny-case node with apparmor=0.
 ALLOWLIST = {
     "packer/scripts/rocky-tuning.sh": [
         re.compile(r"^setenforce 1\b"),
@@ -233,6 +234,11 @@ ALLOWLIST = {
     "packer/http/rocky-9-xfs/ks.cfg": [],
     "nixos/configuration.nix": [
         re.compile(r"networking\.firewall\.enable\s*=\s*false;\s*#\s*K8s CNI manages iptables/nftables"),
+    ],
+    # The VM test's disposable 'disabled' node boots with apparmor=0 to prove the
+    # AC-003 deny case (#44 T-022); it never reaches a shipped image.
+    "nixos/tests/apparmor.nix": [
+        re.compile(r'boot\.kernelParams = \[ "apparmor=0" \];'),
     ],
 }
 

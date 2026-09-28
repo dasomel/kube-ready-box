@@ -56,6 +56,8 @@ pkgs.testers.runNixOSTest {
       ../configuration.nix
       testOverrides
     ];
+    # The driver names machines after hostName; configuration.nix sets one shared name.
+    networking.hostName = lib.mkForce "enabled";
 
     # Extra packages the test scripts need (python3 for workload-security-check.sh,
     # jq for JSON parsing, apparmor-utils for aa-status and apparmor_parser).
@@ -97,6 +99,8 @@ pkgs.testers.runNixOSTest {
       ../configuration.nix
       testOverrides
     ];
+    # The driver names machines after hostName; configuration.nix sets one shared name.
+    networking.hostName = lib.mkForce "disabled";
 
     # AC-003: kernel-level AppArmor disable.
     boot.kernelParams = [ "apparmor=0" ];
