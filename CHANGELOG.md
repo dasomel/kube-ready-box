@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **NixOS AppArmor enablement (#44 T-022, D5)**: the NixOS image now sets
+  `security.apparmor.enable = true`, so its host evidence reports `apparmor=PASS` instead of the
+  no-LSM `FAIL` introduced by the reclassification below. A KVM `nixosTest`
+  (`nixos/tests/apparmor.nix`, CI job `NixOS AppArmor VM Test`) proves it on every change: the
+  enabled node passes and confines a containerd container with a deny profile; a node with
+  AppArmor turned off (the rolled-back image) reports `FAIL`. Docker containers on NixOS are not
+  yet confined by AppArmor (#63); only containerd enforcement is claimed. Reverting the
+  enablement commit returns NixOS to no-LSM, which `FAIL`s with no exception route.
+
 ### Changed
 - **Host security evidence reclassification (#44 T-020/T-021/T-021b, D4)**: a disabled AppArmor
   or a permissive/disabled SELinux, on its native/capable host, is now `FAIL` instead of the

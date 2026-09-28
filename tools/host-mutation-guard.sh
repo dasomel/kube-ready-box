@@ -117,8 +117,12 @@ APPARMOR_EQ0 = re.compile(r"\bapparmor=0\b")
 SELINUX_EQ0 = re.compile(r"\bselinux=0\b")
 # Declarative NixOS toggles that disable enforcement (still "the same form",
 # just spelled as an option assignment instead of a CLI invocation).
-NIX_APPARMOR_DISABLE = re.compile(r"security\.apparmor\.enable\s*=\s*false")
-NIX_FIREWALL_DISABLE = re.compile(r"networking\.firewall\.enable\s*=\s*false")
+# A priority wrapper (`lib.mkForce false`, `pkgs.lib.mkDefault false`,
+# `(mkOverride 50 false)`) sets the same value, so it must not slip past the
+# plain `= false` form.
+NIX_FALSE = r"\s*=\s*\(?\s*(?:(?:\w+\.)*mk(?:Force|Default|Override\s+\d+)\s+)?false\b"
+NIX_APPARMOR_DISABLE = re.compile(r"security\.apparmor\.enable" + NIX_FALSE)
+NIX_FIREWALL_DISABLE = re.compile(r"networking\.firewall\.enable" + NIX_FALSE)
 
 
 # --- normalization: classify a line the same way regardless of how it's
@@ -208,6 +212,7 @@ def detect_forms(line):
 # firewalld (D8); 00-egress-restrict.sh/99-cleanup.sh create and tear down
 # the build-only KUBE_READY_EGRESS chain (T-016 checks it never survives);
 # nixos/configuration.nix keeps its one documented D1 firewall-disable line.
+# nixos/tests/apparmor.nix may turn AppArmor off on its throwaway deny-case node.
 ALLOWLIST = {
     "packer/scripts/rocky-tuning.sh": [
         re.compile(r"^setenforce 1\b"),
@@ -233,6 +238,12 @@ ALLOWLIST = {
     "packer/http/rocky-9-xfs/ks.cfg": [],
     "nixos/configuration.nix": [
         re.compile(r"networking\.firewall\.enable\s*=\s*false;\s*#\s*K8s CNI manages iptables/nftables"),
+    ],
+    # The VM test's disposable 'disabled' node turns AppArmor off to prove the
+    # AC-003 deny case (#44 T-022); it never reaches a shipped image.
+    "nixos/tests/apparmor.nix": [
+        # Anchored to the whole line: an allowlisted line skips every form on it.
+        re.compile(r"^\s*security\.apparmor\.enable = lib\.mkForce false;\s*$"),
     ],
 }
 

@@ -118,6 +118,10 @@ in
 
   security.sudo.wheelNeedsPassword = false;
 
+  # AppArmor (#44 D5): NixOS is AppArmor-native, so it gets the same
+  # REQ-003/004 LSM rule as Ubuntu/Rocky instead of a permanent C-09 exception.
+  security.apparmor.enable = true;
+
   # Vagrant는 동기화 폴더 정리 단계에서 /etc/fstab에 자기 블록을 직접 써넣는다.
   # NixOS의 /etc/fstab은 스토어를 가리키는 읽기 전용 심볼릭 링크라 `vagrant up`이
   # "Read-only file system"으로 실패한다. 최초 활성화 때 한 번만 실제 파일로 바꿔

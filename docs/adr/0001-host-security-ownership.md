@@ -58,6 +58,13 @@ for decision wording and scope; this ADR is the durable local record.
 - **Cost:** This changes shipped image enforcement and carries module-availability and hardened-kernel compatibility risk; it needs allow, deny, and rollback evidence (T-022).
 - **Escape hatch:** Revert the separate NixOS enablement commit; no permanent C-09 exception remains.
 
+### D11 — Verify NixOS AppArmor through containerd
+
+- **Decision:** T-022 verifies AppArmor profile enforcement for containerd workloads. Docker AppArmor enforcement is excluded from T-022 and tracked separately in #63.
+- **Reason:** Kubernetes uses containerd through CRI; containerd is the relevant runtime path for this node baseline.
+- **Cost:** NixOS still enables Docker, whose containers currently run `unconfined` despite Docker reporting AppArmor support. The host-level AppArmor check reports kernel state only and must not be read as Docker workload-enforcement evidence.
+- **Escape hatch:** Diagnose/fix the Docker integration under #63; keep Docker workloads documented as unconfined until effective enforcement is verified.
+
 ### D6 — Schema compatibility is structural
 
 - **Decision:** Reclassifying existing check IDs is structurally compatible with `kube-ready-security/v1`; do not bump the schema.
@@ -101,7 +108,7 @@ for decision wording and scope; this ADR is the durable local record.
 - Native AppArmor/SELinux state is classified from OS family. A disabled/permissive native LSM on a capable kernel fails; unknown evidence is not healthy.
 - The kernel LSM stack and seccomp filter-mode capability are reported. Pod-level `RuntimeDefault` effectiveness is verified by the sandbox path, which requires `Seccomp: 2`.
 - Ubuntu receives no firewall policy. Rocky retains its existing `firewalld` policy with SSH allowed; do not describe it as exclusively SSH-only without zone evidence.
-- NixOS: D5 decides AppArmor is enabled; until T-022 lands, the NixOS image reports AppArmor `FAIL disabled` under D4.
+- NixOS: D5 enables AppArmor; T-022 verifies containerd profile enforcement on a workload. Docker is also enabled but its containers currently run `unconfined` despite Docker reporting AppArmor support (#63); the host-level AppArmor result does not claim Docker workload enforcement.
 
 ### Installer ownership
 
@@ -109,7 +116,7 @@ for decision wording and scope; this ADR is the durable local record.
 - Where the installer supplies containerd, it configures and verifies AppArmor or SELinux runtime integration. The image does not install containerd into Ubuntu/Rocky base boxes.
 - The installer distributes custom AppArmor profiles to eligible nodes and verifies the profile is present (for example with `aa-status --json`).
 - The installer applies workload-scoped `seLinuxOptions` where required and gates deployment on the documented evidence contract. Rollback expectations belong to the installer hand-off.
-- No claim is made here about NixOS containerd confinement beyond D5's AppArmor enablement.
+- NixOS T-022 verifies AppArmor confinement for a containerd workload. Docker AppArmor enforcement is a known gap tracked in #63; Docker workloads are not claimed as confined by this decision.
 
 ### Compatibility and alternatives
 
