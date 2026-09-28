@@ -97,6 +97,9 @@ pkgs.testers.runNixOSTest {
 
     # Ensure containerd is running for the C-12 test.
     virtualisation.containerd.enable = lib.mkForce true;
+    # The flake's nixos-25.11 default docker (28.5.2) is marked insecure and refuses
+    # to evaluate; the shipped image is built from nixos-unstable, which has Docker 29.
+    virtualisation.docker.package = pkgs.docker_29;
 
     # Give the VM enough resources for containerd + AppArmor tests.
     virtualisation.memorySize = 2048;
