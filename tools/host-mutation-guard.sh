@@ -10,14 +10,17 @@
 # declarative NixOS toggles that disable enforcement
 # (`security.apparmor.enable`/`networking.firewall.enable` set to `false`).
 #
-# Matching is per line/form, not per file: an allowlisted file (below) still
-# fails on any mutating line that isn't one of its specifically-approved
-# forms -- adding e.g. `setenforce 0` to rocky-tuning.sh fails exactly like
-# adding it anywhere else. Read-only invocations of these same tools (`nft
-# list ruleset`, `ufw status`, `firewall-cmd --state`, `getenforce`,
-# `aa-status`, `iptables -S/-L/-C`, `command -v ufw`, ...) are never flagged,
-# in any file -- kube-ready-box's own validators use them constantly to
-# report state truthfully.
+# Matching is span-based, not per file or per whole line: each allowlist
+# pattern exempts only the text span it matches within a normalized line.
+# Any remaining text is re-checked for mutation forms; if any survive, the
+# line is a violation.  This prevents a second mutation (e.g. '; setenforce 0'
+# or '&& systemctl disable apparmor') appended to an allowlisted invocation
+# from slipping through.  A whole-line anchored entry (e.g. apparmor.nix)
+# removes the entire line and thus exempts everything on it, as intended.
+# Read-only invocations of these same tools (`nft list ruleset`, `ufw status`,
+# `firewall-cmd --state`, `getenforce`, `aa-status`, `iptables -S/-L/-C`,
+# `command -v ufw`, ...) are never flagged, in any file -- kube-ready-box's
+# own validators use them constantly to report state truthfully.
 #
 # This is regex-based line classification, not a shell parser: it cannot see
 # through indirection (a mutation built from a variable, `eval`, or a
@@ -207,7 +210,10 @@ def detect_forms(line):
     return forms
 
 
-# --- allowlist: file -> the specific approved forms (per line, not per file) -
+# --- allowlist: file -> the specific approved spans (not whole lines) --------
+# Each pattern exempts only its own matched span; the remainder of the line is
+# re-checked for mutation forms.  A whole-line anchored pattern (^...$) removes
+# the entire line, effectively exempting everything on it.
 # rocky-tuning.sh/ks.cfg preserve Rocky's enforcing SELinux + ssh-only
 # firewalld (D8); 00-egress-restrict.sh/99-cleanup.sh create and tear down
 # the build-only KUBE_READY_EGRESS chain (T-016 checks it never survives);
@@ -216,8 +222,12 @@ def detect_forms(line):
 ALLOWLIST = {
     "packer/scripts/rocky-tuning.sh": [
         re.compile(r"^setenforce 1\b"),
-        re.compile(r"^firewall-cmd\b.*--add-service=ssh\b"),
-        re.compile(r"^firewall-cmd\b.*--reload\b"),
+        # The failure message of that same line, confined to its quoted string.
+        re.compile(r'echo "[^"]*setenforce 1 failed[^"]*"'),
+        # [^;&|]* keeps a span inside one command, so it cannot swallow a
+        # second command chained on the same line.
+        re.compile(r"^firewall-cmd\b[^;&|]*--add-service=ssh\b"),
+        re.compile(r"^firewall-cmd\b[^;&|]*--reload\b"),
     ],
     "packer/scripts/00-egress-restrict.sh": [
         re.compile(r"iptables -N KUBE_READY_EGRESS"),
@@ -242,15 +252,29 @@ ALLOWLIST = {
     # The VM test's disposable 'disabled' node turns AppArmor off to prove the
     # AC-003 deny case (#44 T-022); it never reaches a shipped image.
     "nixos/tests/apparmor.nix": [
-        # Anchored to the whole line: an allowlisted line skips every form on it.
+        # Anchored to the whole line: the matched span covers the entire line,
+        # so nothing remains for re-checking.
         re.compile(r"^\s*security\.apparmor\.enable = lib\.mkForce false;\s*$"),
     ],
 }
 
 
-def is_allowed(path, line):
-    patterns = ALLOWLIST.get(path) or []
-    return any(p.search(line) for p in patterns)
+def strip_allowed_spans(path, line):
+    """Remove each allowlist pattern's matched span from *line*.
+
+    Returns the line with all matched spans replaced by whitespace so that
+    positions of unmatched text are preserved.  If no patterns match (or
+    the path has no allowlist), returns *line* unchanged.
+    """
+    patterns = ALLOWLIST.get(path)
+    if not patterns:
+        return line
+    chars = list(line)
+    for pat in patterns:
+        for m in pat.finditer(line):
+            for i in range(m.start(), m.end()):
+                chars[i] = " "
+    return "".join(chars)
 
 
 violations = []
@@ -270,9 +294,11 @@ for rel in sorted(tracked_files(root)):
         forms = detect_forms(normalized)
         if not forms:
             continue
-        if is_allowed(rel, normalized):
+        remainder = strip_allowed_spans(rel, normalized)
+        remaining_forms = detect_forms(remainder)
+        if not remaining_forms:
             continue
-        violations.append((rel, lineno, forms, raw.strip()))
+        violations.append((rel, lineno, remaining_forms, raw.strip()))
 
 if violations:
     for rel, lineno, forms, text in violations:

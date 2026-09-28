@@ -106,6 +106,147 @@ if run_guard; then
 fi
 cp "$ROOT/nixos/tests/apparmor.nix" "$FIXTURE/nixos/tests/apparmor.nix"
 
+# 4d. Deny (#67): a second mutation appended to rocky-tuning.sh's own
+# allowlisted `setenforce 1 ...` line -- not a new line -- must still be
+# caught; the allowlist exempts only the matched span, not the rest of the
+# line it sits on.
+cp "$ROOT/packer/scripts/rocky-tuning.sh" "$FIXTURE/packer/scripts/rocky-tuning.sh"
+python3 - "$FIXTURE/packer/scripts/rocky-tuning.sh" <<'PY'
+import sys
+path = sys.argv[1]
+with open(path, encoding="utf-8") as fh:
+    text = fh.read()
+assert text.count('config is persisted)"') == 1, "fixture anchor not found"
+text = text.replace(
+    'config is persisted)"',
+    'config is persisted)"; setenforce 0',
+)
+with open(path, "w", encoding="utf-8") as fh:
+    fh.write(text)
+PY
+if run_guard; then
+  echo "FAIL: '; setenforce 0' appended to rocky-tuning.sh's allowlisted setenforce line was not detected" >&2
+  exit 1
+fi
+grep -q "packer/scripts/rocky-tuning.sh:.*setenforce" "$WORKDIR/out.log" || {
+  echo "FAIL: violation report does not name rocky-tuning.sh's contaminated allowlisted line" >&2
+  cat "$WORKDIR/out.log" >&2
+  exit 1
+}
+cp "$ROOT/packer/scripts/rocky-tuning.sh" "$FIXTURE/packer/scripts/rocky-tuning.sh"
+if ! run_guard; then
+  echo "FAIL: fixture did not pass again after restoring rocky-tuning.sh" >&2
+  cat "$WORKDIR/out.log" >&2
+  exit 1
+fi
+
+# 4d2. Deny (#67): a mutation chained between two allowlisted firewall-cmd
+# commands must not be swallowed by the allowlist spans.
+cp "$ROOT/packer/scripts/rocky-tuning.sh" "$FIXTURE/packer/scripts/rocky-tuning.sh"
+python3 - "$FIXTURE/packer/scripts/rocky-tuning.sh" <<'PY'
+import sys
+path = sys.argv[1]
+with open(path, encoding="utf-8") as fh:
+    text = fh.read()
+assert text.count("firewall-cmd --permanent --add-service=ssh\n") == 1, "fixture anchor not found"
+text = text.replace(
+    "firewall-cmd --permanent --add-service=ssh\n",
+    "firewall-cmd --permanent --add-service=ssh; setenforce 0; firewall-cmd --reload\n",
+)
+with open(path, "w", encoding="utf-8") as fh:
+    fh.write(text)
+PY
+if run_guard; then
+  echo "FAIL: 'setenforce 0' chained between allowlisted firewall-cmd commands was not detected" >&2
+  exit 1
+fi
+grep -q "packer/scripts/rocky-tuning.sh:.*setenforce" "$WORKDIR/out.log" || {
+  echo "FAIL: violation report does not name rocky-tuning.sh's chained firewall-cmd line" >&2
+  cat "$WORKDIR/out.log" >&2
+  exit 1
+}
+cp "$ROOT/packer/scripts/rocky-tuning.sh" "$FIXTURE/packer/scripts/rocky-tuning.sh"
+
+# 4e. Deny (#67): same for 00-egress-restrict.sh's allowlisted iptables line.
+mkdir -p "$FIXTURE/packer/scripts"
+cp "$ROOT/packer/scripts/00-egress-restrict.sh" "$FIXTURE/packer/scripts/00-egress-restrict.sh"
+python3 - "$FIXTURE/packer/scripts/00-egress-restrict.sh" <<'PY'
+import sys
+path = sys.argv[1]
+with open(path, encoding="utf-8") as fh:
+    text = fh.read()
+assert text.count("iptables -N KUBE_READY_EGRESS 2>/dev/null || iptables -F KUBE_READY_EGRESS") == 1, "fixture anchor not found"
+text = text.replace(
+    "iptables -N KUBE_READY_EGRESS 2>/dev/null || iptables -F KUBE_READY_EGRESS",
+    "iptables -N KUBE_READY_EGRESS 2>/dev/null || iptables -F KUBE_READY_EGRESS && systemctl disable apparmor",
+)
+with open(path, "w", encoding="utf-8") as fh:
+    fh.write(text)
+PY
+if run_guard; then
+  echo "FAIL: '&& systemctl disable apparmor' appended to 00-egress-restrict.sh's allowlisted iptables line was not detected" >&2
+  exit 1
+fi
+grep -q "packer/scripts/00-egress-restrict.sh:.*systemctl-disable-apparmor" "$WORKDIR/out.log" || {
+  echo "FAIL: violation report does not name 00-egress-restrict.sh's contaminated allowlisted line" >&2
+  cat "$WORKDIR/out.log" >&2
+  exit 1
+}
+rm -f "$FIXTURE/packer/scripts/00-egress-restrict.sh"
+
+# 4f. Deny (#67): same for 99-cleanup.sh's allowlisted iptables line.
+cp "$ROOT/packer/scripts/99-cleanup.sh" "$FIXTURE/packer/scripts/99-cleanup.sh"
+python3 - "$FIXTURE/packer/scripts/99-cleanup.sh" <<'PY'
+import sys
+path = sys.argv[1]
+with open(path, encoding="utf-8") as fh:
+    text = fh.read()
+assert text.count("iptables -D OUTPUT -j KUBE_READY_EGRESS 2>/dev/null || true") == 1, "fixture anchor not found"
+text = text.replace(
+    "iptables -D OUTPUT -j KUBE_READY_EGRESS 2>/dev/null || true",
+    "iptables -D OUTPUT -j KUBE_READY_EGRESS 2>/dev/null || true; setenforce 0",
+)
+with open(path, "w", encoding="utf-8") as fh:
+    fh.write(text)
+PY
+if run_guard; then
+  echo "FAIL: '; setenforce 0' appended to 99-cleanup.sh's allowlisted iptables line was not detected" >&2
+  exit 1
+fi
+grep -q "packer/scripts/99-cleanup.sh:.*setenforce" "$WORKDIR/out.log" || {
+  echo "FAIL: violation report does not name 99-cleanup.sh's contaminated allowlisted line" >&2
+  cat "$WORKDIR/out.log" >&2
+  exit 1
+}
+rm -f "$FIXTURE/packer/scripts/99-cleanup.sh"
+
+# 4g. Deny (#67): same for nixos/configuration.nix's allowlisted firewall line.
+mkdir -p "$FIXTURE/nixos"
+cp "$ROOT/nixos/configuration.nix" "$FIXTURE/nixos/configuration.nix"
+python3 - "$FIXTURE/nixos/configuration.nix" <<'PY'
+import sys
+path = sys.argv[1]
+with open(path, encoding="utf-8") as fh:
+    text = fh.read()
+assert text.count("networking.firewall.enable = false; # K8s CNI manages iptables/nftables") == 1, "fixture anchor not found"
+text = text.replace(
+    "networking.firewall.enable = false; # K8s CNI manages iptables/nftables",
+    "networking.firewall.enable = false; # K8s CNI manages iptables/nftables  security.apparmor.enable = false;",
+)
+with open(path, "w", encoding="utf-8") as fh:
+    fh.write(text)
+PY
+if run_guard; then
+  echo "FAIL: 'security.apparmor.enable = false;' appended to configuration.nix's allowlisted firewall line was not detected" >&2
+  exit 1
+fi
+grep -q "nixos/configuration.nix:.*nix-apparmor-disable" "$WORKDIR/out.log" || {
+  echo "FAIL: violation report does not name configuration.nix's contaminated allowlisted line" >&2
+  cat "$WORKDIR/out.log" >&2
+  exit 1
+}
+rm -f "$FIXTURE/nixos/configuration.nix"
+
 # 5. Allow: read-only invocations of every covered tool must pass anywhere,
 # allowlisted or not -- kube-ready-box's own validators rely on this.
 cat > "$FIXTURE/readonly-check.sh" <<'EOF'
@@ -171,6 +312,7 @@ import sys
 path = sys.argv[1]
 with open(path, encoding="utf-8") as fh:
     text = fh.read()
+assert text.count("firewall-cmd --permanent --add-service=ssh") == 1, "fixture anchor not found"
 text = text.replace(
     "firewall-cmd --permanent --add-service=ssh",
     "sudo firewall-cmd --add-service=ssh",
