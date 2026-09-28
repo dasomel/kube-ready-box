@@ -59,6 +59,17 @@ pkgs.testers.runNixOSTest {
     # The driver names machines after hostName; configuration.nix sets one shared name.
     networking.hostName = lib.mkForce "enabled";
 
+    # C-12 deny profile, declared the NixOS way: /etc/apparmor.d is a read-only store
+    # link, so the test cannot write profiles there at runtime.
+    security.apparmor.policies."test-deny-tmp".profile = ''
+      #include <tunables/global>
+      profile test-deny-tmp flags=(attach_disconnected,mediate_deleted) {
+        #include <abstractions/base>
+        file,
+        deny /tmp/** w,
+      }
+    '';
+
     # Extra packages the test scripts need (python3 for workload-security-check.sh,
     # jq for JSON parsing, apparmor-utils for aa-status and apparmor_parser).
     environment.systemPackages = with pkgs; [
@@ -159,19 +170,6 @@ pkgs.testers.runNixOSTest {
 
     # Import the OCI image into containerd
     enabled.succeed("ctr image import /etc/kube-ready-tests/busybox.tar")
-
-    # Write a deny profile that blocks writes to /tmp/**
-    enabled.succeed("""
-      cat > /etc/apparmor.d/test-deny-tmp <<'PROFILE'
-    #include <tunables/global>
-    profile test-deny-tmp flags=(attach_disconnected,mediate_deleted) {
-      #include <abstractions/base>
-      file,
-      deny /tmp/** w,
-    }
-    PROFILE
-    """)
-    enabled.succeed("apparmor_parser -r /etc/apparmor.d/test-deny-tmp")
 
     # Verify the profile is loaded
     enabled.succeed("aa-status --json | python3 -c 'import json,sys; d=json.load(sys.stdin); assert \"test-deny-tmp\" in d[\"profiles\"], list(d[\"profiles\"].keys())'")
