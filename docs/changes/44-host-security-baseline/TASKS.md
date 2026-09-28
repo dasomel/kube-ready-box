@@ -84,7 +84,7 @@ path, and `T-014`'s new `seccomp_filter` `FAIL` changes the overall `status`/exi
 ## Verify
 
 - [ ] `T-030` (`AC-006`, all) `shellcheck --severity=warning`, `bash -n`, `make lint`, `./packer/build.sh validate`.
-- [ ] `T-031` (`REQ-006`) Add allow and deny cases to `validate.yml` `readiness-negative-tests` for every new
+- [x] `T-031` (#64) (`REQ-006`) Add allow and deny cases to `validate.yml` `readiness-negative-tests` for every new
       or reclassified check. Use both fixtures and container runs, per D7 (Q4).
 - [x] `T-032` (#44 comment 2026-09-28) (`AC-001`, `AC-002`) Run in containers: `ubuntu:24.04` unprivileged and `--privileged`, with
       `ufw` both enabled and inactive, and `nft` present.
