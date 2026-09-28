@@ -145,6 +145,9 @@ in
   # Container Runtime
   virtualisation.containerd.enable = true;
   virtualisation.docker.enable = true;
+  # nixos-25.11's default docker (28.5.2) is marked insecure and refuses to evaluate,
+  # and the release build (nixos-unstable) already ships Docker 29 (#70).
+  virtualisation.docker.package = pkgs.docker_29;
   # dockerd applies an AppArmor profile only if /sbin/apparmor_parser exists (containerd's
   # hostSupports() stats that fixed path) and then loads docker-default by running
   # apparmor_parser from PATH. NixOS has neither, so containers ran unconfined (#63).
