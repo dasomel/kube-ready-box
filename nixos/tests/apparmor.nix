@@ -181,13 +181,14 @@ pkgs.testers.runNixOSTest {
       "sh -c 'touch /tmp/allowed'"
     )
 
-    # Confined run: the container's own attr must name the profile and the write must be
+    # Confined run (the LSM-specific attr: the generic /proc/self/attr/current returns
+    # EINVAL on a stacked-LSM kernel): the container's own attr must name the profile and the write must be
     # denied by it. Exit status is printed rather than asserted by ctr, since the write
     # is expected to fail.
     result = enabled.succeed(
       "ctr run --rm --apparmor-profile test-deny-tmp "
       "localhost/test-busybox:latest test-aa "
-      "sh -c 'echo attr=$(cat /proc/self/attr/current); touch /tmp/blocked 2>&1; echo rc=$?'"
+      "sh -c 'echo attr=$(cat /proc/self/attr/apparmor/current); touch /tmp/blocked 2>&1; echo rc=$?'"
     )
     print(f"=== C-12 confined run ===\n{result}")
     assert "attr=test-deny-tmp" in result, f"container not confined by test-deny-tmp: {result}"
