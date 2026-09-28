@@ -168,4 +168,8 @@ assert_check "$out" mac_backend FAIL "selinux:Permissive"
 out=$(run_case family-unknown unknown '')
 assert_check "$out" mac_backend UNKNOWN unknown
 
+# --- SELinux family with getenforce absent -> UNKNOWN (T-031 G4) ---
+out=$(run_case selinux-getenforce-absent rocky '')
+assert_check "$out" mac_backend UNKNOWN "selinux:unavailable"
+
 echo "node-storage-mac-backend-test.sh: all scenarios passed"

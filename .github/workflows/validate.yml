@@ -460,6 +460,24 @@ jobs:
           run_json /tmp/security-baseline.json env WORKLOAD_PRIVILEGED=0 bash security/workload-security-check.sh
           require_status /tmp/security-baseline.json privileged_workload PASS
           require_status /tmp/security-baseline.json seccomp_filter PASS
+          # #44 T-031: apparmor/mac_backend must match the runner's real kernel state rather
+          # than assume the ubuntu-latest image keeps AppArmor enabled (runner-images #10015).
+          aa_enabled=$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null || true)
+          echo "runner AppArmor enabled=${aa_enabled:-unreadable}"
+          if [ "$aa_enabled" = Y ]; then
+            require_status /tmp/security-baseline.json apparmor PASS
+            require_status /tmp/security-baseline.json mac_backend PASS
+          elif [ "$aa_enabled" = N ]; then
+            require_status /tmp/security-baseline.json apparmor FAIL
+            require_status /tmp/security-baseline.json mac_backend FAIL
+          else
+            require_status /tmp/security-baseline.json apparmor UNKNOWN
+            require_status /tmp/security-baseline.json mac_backend UNKNOWN
+          fi
+          require_non_fail /tmp/security-baseline.json lsm_stack
+          # #44 T-031: network baseline firewall checks must not FAIL (read-only evidence).
+          require_non_fail /tmp/network-forward-baseline.json firewall_state
+          require_non_fail /tmp/network-forward-baseline.json firewall_rules
           run_json /tmp/security-mutated.json env WORKLOAD_PRIVILEGED=1 bash security/workload-security-check.sh
           require_status /tmp/security-mutated.json privileged_workload FAIL
 

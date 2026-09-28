@@ -147,6 +147,23 @@ read -r output _ <<< "$result"
 assert_check "$output" selinux FAIL Disabled FAIL 1
 # Forward drift (config wants enforcing, runtime downgraded) is unchanged (#44 C-07).
 assert_check "$output" selinux_policy FAIL "type=unknown config=enforcing runtime=Disabled" FAIL 1
+# #44 T-031: mac_backend must FAIL for SELinux Disabled (deny case).
+assert_check "$output" mac_backend FAIL "SELinux Disabled" FAIL 1
+
+# SELinux Permissive must also FAIL mac_backend (deny case, #44 T-031).
+result=$(run_case selinux-permissive-mac rocky '' "$status_field" "$actions" yes Permissive yes '' SELINUX=permissive)
+read -r output _ <<< "$result"
+assert_check "$output" mac_backend FAIL "SELinux Permissive" FAIL 1
+
+# #44 T-031: clean SELinux baseline (config=enforcing runtime=Enforcing -> PASS).
+result=$(run_case selinux-enforcing-baseline rocky '' "$status_field" "$actions" yes Enforcing yes '' SELINUX=enforcing)
+read -r output _ <<< "$result"
+assert_check "$output" selinux_policy PASS "type=unknown config=enforcing runtime=Enforcing" PASS 0
+
+# #44 T-031: non-SELinux host (AppArmor family) -> selinux_policy UNKNOWN no-selinux.
+result=$(run_case selinux-policy-no-selinux ubuntu '' "$status_field" "$actions" yes Enforcing)
+read -r output _ <<< "$result"
+assert_check "$output" selinux_policy UNKNOWN no-selinux PASS 0
 
 # --- #44 T-020/T-021 (D4): AppArmor disabled/unreadable reclassification ---
 

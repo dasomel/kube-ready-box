@@ -88,6 +88,21 @@ assert_check "$out" firewall_provider PASS firewalld
 assert_check "$out" firewall_state PASS running
 assert_check "$out" firewall_rules PASS present
 
+# --- scenario A2: firewalld active alone, no ufw (AC-001 allow #1, Rocky baseline) ---
+writer_firewalld_only() {
+  mock "$1/firewall-cmd" '#!/usr/bin/env bash
+[ "$1" = "--state" ] && { echo running; exit 0; }
+exit 1'
+  mock "$1/nft" '#!/usr/bin/env bash
+[ "$1" = "list" ] && [ "$2" = "ruleset" ] && { echo "table inet filter {}"; exit 0; }
+exit 1'
+}
+out=$(run_scenario firewalld-only writer_firewalld_only)
+assert_check "$out" firewall_backend PASS nftables
+assert_check "$out" firewall_provider PASS firewalld
+assert_check "$out" firewall_state PASS running
+assert_check "$out" firewall_rules PASS present
+
 # --- scenario B: ufw enabled, nft present, no firewalld (AC-001 allow #2) ---
 writer_ufw_only() {
   mock "$1/ufw" '#!/usr/bin/env bash
