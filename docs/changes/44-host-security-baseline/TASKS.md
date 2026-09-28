@@ -68,9 +68,10 @@ path, and `T-014`'s new `seccomp_filter` `FAIL` changes the overall `status`/exi
       overrides LSM settings). No exception record is created for C-09 (decided, D5, 2026-09-24).
   - Verification: build the NixOS image, confirm it **boots successfully**, and confirm
     `apparmor=PASS enabled`, `mac_backend=PASS AppArmor`, and `lsm_stack` contains `apparmor` (allow
-    case, AC-003) — status JSON alone is not sufficient. Also confirm containerd/Docker
-    (`nixos/configuration.nix:142-143`) actually apply an AppArmor profile to a running container
-    (C-12), and run **one workload** under that confinement. Build a fixture/VM with AppArmor left
+    case, AC-003) — status JSON alone is not sufficient. Also confirm containerd
+    (`nixos/configuration.nix:142`) actually applies an AppArmor profile to a running container
+    (C-12), and run **one workload** under that confinement. Docker (`:143`) is out of T-022's
+    evidence per D11; its unconfined result is recorded as a known gap in #63. Build a fixture/VM with AppArmor left
     disabled and confirm `apparmor=FAIL disabled` (deny case, AC-003). Exercise the **rollback path**:
     revert the enablement commit, rebuild, and confirm the image returns to no-LSM and `FAIL`s under
     REQ-003/004 with no exception route. Record all JSON, boot and workload outputs per T-036.
@@ -85,13 +86,13 @@ path, and `T-014`'s new `seccomp_filter` `FAIL` changes the overall `status`/exi
 - [ ] `T-030` (`AC-006`, all) `shellcheck --severity=warning`, `bash -n`, `make lint`, `./packer/build.sh validate`.
 - [ ] `T-031` (`REQ-006`) Add allow and deny cases to `validate.yml` `readiness-negative-tests` for every new
       or reclassified check. Use both fixtures and container runs, per D7 (Q4).
-- [ ] `T-032` (`AC-001`, `AC-002`) Run in containers: `ubuntu:24.04` unprivileged and `--privileged`, with
+- [x] `T-032` (#44 comment 2026-09-28) (`AC-001`, `AC-002`) Run in containers: `ubuntu:24.04` unprivileged and `--privileged`, with
       `ufw` both enabled and inactive, and `nft` present.
 - [x] `T-033` (#61 evidence comment) (`AC-003`) Ubuntu Vagrant box: normal boot (allow), then boot with `apparmor=0` (deny).
       Disposable VM, destroyed afterwards.
 - [x] `T-034` (#61 evidence comment) (`AC-004`) Rocky 9 Vagrant box: `Enforcing` (allow), then `setenforce 0` (deny), then
       `setenforce 1`, then destroy the VM. Never on a shared host.
-- [ ] `T-035` (`AC-005`) Link the `sandbox-enforcement-evidence.yml` run showing `Seccomp: 2` for `RuntimeDefault`.
+- [x] `T-035` (#44 comment, kind cluster; no CI live-cluster job exists) (`AC-005`) Link the `sandbox-enforcement-evidence.yml` run showing `Seccomp: 2` for `RuntimeDefault`.
 - [ ] `T-036` Record every run (command, environment, outcome, failures included) in the PR.
       Genuine release-run evidence goes under `release-evidence/`; **deny/experiment evidence
       (deliberately-failing fixtures, e.g. AC-003/AC-004 deny cases) is attached to the PR only and

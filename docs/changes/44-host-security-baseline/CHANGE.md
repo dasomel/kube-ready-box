@@ -72,7 +72,7 @@ LSM rule (`REQ-004`): the model is chosen by OS family from `ID`/`ID_LIKE`. It i
 | C-09 | NixOS LSM | No LSM is enabled. The validators report it as UNKNOWN or as a misleading "loaded" (C-06) | **Decided (D5, 2026-09-24): enable `security.apparmor.enable = true`.** Enabled → `PASS` under the same REQ-003 rule as Ubuntu; no exception is recorded for this state | Gap → REQ-003, REQ-004. Enablement is an enforcement change, not reporting-only; needs its own allow/deny/rollback evidence (T-022) |
 | C-10 | seccomp node prerequisite | `workload-security-check.sh`: `seccomp` checks only for the `Seccomp:` line; `seccomp_capability` lists `actions_avail` | Also assert filter mode (`CONFIG_SECCOMP_FILTER`: the `Seccomp_filters:` field or `actions_avail` contains `errno` and `kill_process`). Missing → `FAIL` when the kernel is known | Gap → REQ-005 |
 | C-11 | seccomp `RuntimeDefault` **effective** | Covered only by the pod-level path in `sandbox/verify-sandbox-evidence.sh:74-92`, which needs a cluster | Keep at pod level and link from the host evidence. A node-only image cannot prove it (`security/README.md`) | **N/A at image level.** Covered by the cluster path, per the existing `declared→…→verified` contract |
-| C-12 | Runtime LSM integration (containerd AppArmor default profile, `enable_selinux`, `container-selinux`) | containerd is not in the Ubuntu/Rocky base box (`packer/scripts/07-check-tuning.sh:234`). **NixOS is the exception**: `nixos/configuration.nix:142-143` already sets `virtualisation.containerd.enable = true` and `virtualisation.docker.enable = true`, so the image-level N/A premise does not hold there | Check it when a runtime is present. **NixOS: containerd/Docker AppArmor integration is verified as part of D5 (T-022), not deferred to the installer.** Otherwise it is an installer obligation in the hand-off contract | **N/A at image level for Ubuntu/Rocky** (no runtime shipped). **In scope for NixOS** via D5/T-022. Installer obligation elsewhere (REQ-008); re-evaluate for Ubuntu/Rocky if they ever ship containerd |
+| C-12 | Runtime LSM integration (containerd AppArmor default profile, `enable_selinux`, `container-selinux`) | containerd is not in the Ubuntu/Rocky base box (`packer/scripts/07-check-tuning.sh:234`). **NixOS is the exception**: `nixos/configuration.nix:142-143` already sets `virtualisation.containerd.enable = true` and `virtualisation.docker.enable = true`, so the image-level N/A premise does not hold there | Check it when a runtime is present. **NixOS: containerd AppArmor integration is verified as part of D5 (T-022), not deferred to the installer; Docker enforcement is a known gap tracked in #63 (D11).** Otherwise it is an installer obligation in the hand-off contract | **N/A at image level for Ubuntu/Rocky** (no runtime shipped). **In scope for NixOS** via D5/T-022. Installer obligation elsewhere (REQ-008); re-evaluate for Ubuntu/Rocky if they ever ship containerd |
 | C-13 | Custom AppArmor profile distribution / `seLinuxOptions` | Documented in `docs/host-security-baseline.md` ("Cluster-installer hand-off") | Keep the doc. Add the verification recipe (`aa-status --json` profile name present on every eligible node) | Docs → REQ-008 |
 | C-14 | Deterministic allow/deny tests | CI asserts only `privileged_workload` PASS/FAIL and `firewall_backend` non-FAIL (`.github/workflows/validate.yml:416-448`) | Every new classification has a PASS case and a FAIL/UNKNOWN case in CI | Gap → REQ-006 |
 | C-15 | No blind host mutation | The mutations that exist are all scoped: `rocky-tuning.sh` (Rocky build), `ks.cfg`, build-time egress `00-egress-restrict.sh` (opt-in, `plugins.pkr.hcl:138-147`) removed by `99-cleanup.sh:14-16` | A static guard fails CI when a firewall or LSM mutation command appears outside an allowlist. The artifact check confirms that no `KUBE_READY_EGRESS` chain remains | Gap → REQ-007 |
@@ -328,6 +328,16 @@ Each enforcement or classification change has an **allow** case and a **deny** c
     track the package by PR/revision rather than a stable doc path. Escape hatch: if tracking spans
     enough PRs to become unmanageable, merge a temporary package doc and fold it back into durable
     docs once implementation completes.
+  - **D11** (decided 2026-09-28, material change after acceptance): T-022's C-12 runtime evidence
+    for NixOS is **containerd only**. A 2026-09-27 prototype showed the kernel and containerd enforce
+    an AppArmor profile (`ctr run --apparmor-profile` denied a write), but Docker 29.5.3 runs a
+    `--security-opt apparmor=docker-default` container as `unconfined` with no
+    `process.apparmorProfile` in its OCI spec. Reason: Kubernetes nodes use containerd through CRI,
+    so containerd is the enforcement path this baseline governs; diagnosing the NixOS Docker module
+    is a separate defect, not a prerequisite for enabling the LSM. Cost: the NixOS box ships Docker
+    workloads unconfined while host evidence reports `apparmor=PASS`; this is documented as a known
+    gap, not claimed as covered. Escape hatch: #63 tracks the Docker diagnosis and fix; if it cannot
+    be fixed, Docker is documented as unconfined on NixOS and removed from the C-12 claim entirely.
 - Alternatives rejected: shipping a "Kubernetes ports" firewall profile in the image (breaks unknown
   CNI topologies, and #44 forbids it explicitly); disabling SELinux on Rocky for runtime
   compatibility (forbidden by #44 and OpenForge #77 §6).
@@ -412,7 +422,9 @@ reclassification in its own PR, announced to downstream consumers (REQ-010).
 - Decisions accepted by reviewer: **D4** (Q1), **D5** (Q2), **D6** (Q3), **D7** (Q4), **D8** (Q5),
   **D9** (Q6) and **D10** (Q7), all dated 2026-09-24 — see Architecture and decisions. Package
   accepted as a whole on 2026-09-24 (above).
-- Material changes after acceptance and re-review: —
+- Material changes after acceptance and re-review:
+  - **D11** (2026-09-28): T-022's C-12 evidence narrowed to containerd; Docker AppArmor enforcement
+    on NixOS split to #63. Chosen by @dasomel on 2026-09-28; re-review pending on this revision.
 - Open questions for the reviewer:
   - **Q1 — DECIDED (D4, 2026-09-24)**: A disabled LSM (AppArmor not enabled, or SELinux
     permissive/disabled) is `FAIL` always, regardless of `KUBE_READY_SECURITY_PROFILE`. See D4.
