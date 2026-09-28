@@ -38,7 +38,7 @@ owns enforcement (`firewalld`/`ufw` checked before raw `nft`) — see
 | Ubuntu 24.04 (default) / 26.04 | **AppArmor**: kept enabled via `packer/scripts/01-base.sh`; disabled-on-capable-kernel is `FAIL` (D4) | No policy from kube-ready-box. Distro default `ufw` is installed but inactive (confirmed on a built ARM64/VMware box, #44 T-002: `ufw status` = `Status: inactive`) |
 | Rocky 9 | **SELinux `Enforcing`**: required and actively preserved by `packer/http/rocky-9-*/ks.cfg` and `packer/scripts/rocky-tuning.sh` | **`firewalld` active with SSH allowed, preserved intentionally** (#44 D8) — the build only *adds* the `ssh` service; it does not remove or verify other default-zone services/ports, so exclusivity to SSH is not claimed. Confirmed on a built ARM64/VMware box (#44 T-002): `firewall-cmd --state`=`running`; runtime and permanent active zone `public`; both list `cockpit dhcpv6-client ssh`, no explicit ports, no rich rules |
 | Rocky 10 | Reserved, rejected by `packer validate` until built | N/A |
-| NixOS | AppArmor, **enabled** (#44 D5/T-022): `security.apparmor.enable = true`; KVM VM test verifies enabled and disabled states plus containerd AppArmor workload enforcement. Docker containers remain unconfined by AppArmor on NixOS (#63); `apparmor=PASS` reports host LSM state and does not assert Docker workload confinement | Disabled by design (`nixos/configuration.nix`: "K8s CNI manages iptables/nftables") |
+| NixOS | AppArmor, **enabled** (#44 D5/T-022): `security.apparmor.enable = true`; KVM VM test verifies enabled and disabled states plus AppArmor workload enforcement for containerd and Docker (`docker-default`, #63). `apparmor=PASS` reports host LSM state; workload confinement is proven by the VM test | Disabled by design (`nixos/configuration.nix`: "K8s CNI manages iptables/nftables") |
 | Debian / RHEL / Alma / Fedora / CentOS (bring-your-own host running the validators, not built here) | Classified from `/etc/os-release` `ID`, then `ID_LIKE`: Debian → AppArmor; RHEL/Alma/Fedora/CentOS → SELinux `Enforcing` required | Classified, never configured |
 | Other/unrecognized | `mac_backend=UNKNOWN` | `firewall_backend=UNKNOWN` |
 
@@ -112,12 +112,10 @@ provisioning rather than relying on kube-ready-box to have done it.
 
 - **Image guarantees**: containerd is not installed in the Ubuntu or Rocky
   base box, so there is no runtime LSM integration to verify at image level
-  for those two images (C-12, N/A). On NixOS, T-022 verifies a containerd
-  workload is confined by an AppArmor profile. Docker is also enabled in the
-  image but its AppArmor integration is currently ineffective: Docker-launched
-  workloads run `unconfined` even when Docker reports AppArmor support (#63).
-  The host-level `apparmor` check reports kernel state only; it is not evidence
-  of Docker workload confinement.
+  for those two images (C-12, N/A). On NixOS, the KVM VM test verifies that a
+  containerd workload (T-022) and a Docker workload (`docker-default`, #63) are
+  confined by AppArmor. The host-level `apparmor` check reports kernel state
+  only; workload confinement evidence is that VM test.
 - **Installer obligation**: wherever the installer supplies containerd (or
   another CRI runtime), it must configure and verify that runtime's AppArmor
   default-profile (Ubuntu-family) or `enable_selinux`/`container-selinux`
