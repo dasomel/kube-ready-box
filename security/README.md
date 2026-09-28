@@ -8,7 +8,10 @@ The contract distinguishes:
 
 Ubuntu, Debian and NixOS use AppArmor; Rocky, RHEL, Alma, Fedora and CentOS use SELinux. The validator selects the native family from `/etc/os-release` `ID`, then the ordered `ID_LIKE` tokens. A node-only check cannot prove a workload's effective profile, so actual pod/container verification must be performed in the Kubernetes test environment and linked to this evidence. Privileged/host namespace use is always an explicit risk signal.
 
-Unavailable capability evidence is `UNKNOWN`; missing required native LSM or seccomp support is not reported healthy.
+Unavailable capability evidence is `UNKNOWN`; missing required native LSM or seccomp support is not reported healthy. A disabled AppArmor or a permissive/disabled SELinux on its native, capable
+host is `FAIL` (#44 D4), unconditionally -- there is no profile input that downgrades this to
+`UNKNOWN`/`PASS`. See `docs/evidence-contracts.md`'s reclassification section for the full
+PASS/FAIL/UNKNOWN mapping.
 
 `seccomp_filter` (#44 T-014) reports filter-mode support from the `Seccomp_filters`
 field in `/proc/self/status` or the `errno` and `kill_process` actions in

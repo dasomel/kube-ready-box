@@ -63,6 +63,18 @@ The `missing-runtime-class` negative probe demonstrates the Kubernetes/runtime e
 
 Deterministic fixture coverage lives in `tools/tests/network-firewall-detection-test.sh` (wired into `make test` and CI); container evidence for unprivileged vs `--privileged` runs is recorded per-PR per T-032.
 
+`egress_chain_removed` (`kube-ready-network/v1`, #44 REQ-007/T-016): confirms the build-only
+`KUBE_READY_EGRESS` chain that `packer/scripts/00-egress-restrict.sh` creates does not survive
+`99-cleanup.sh` on a provisioned/booted node. Queried with `iptables -S KUBE_READY_EGRESS` (the
+tool the chain was actually created with) so a chain built through the legacy iptables backend
+isn't missed by an nft-only view, falling back to the already-queried nft ruleset only when
+iptables itself cannot answer; never `FAIL`s when neither tool is readable. Chain present ->
+`FAIL present`; absent -> `PASS absent`; query fails with a permission error -> `UNKNOWN
+permission-denied`; any other query failure -> `UNKNOWN status-unavailable`; neither tool present
+-> `UNKNOWN tool-absent`. All string matching runs under `LC_ALL=C` so a translated locale can't
+mask an absent chain or misclassify an unrelated failure. Covered by the same
+`tools/tests/network-firewall-detection-test.sh` fixture suite.
+
 ## Kernel LSM stack evidence (`kube-ready-security/v1`, #44 T-012)
 
 `security/workload-security-check.sh` reports `lsm_stack`, an additive-only check that reads the
