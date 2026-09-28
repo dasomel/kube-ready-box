@@ -145,6 +145,13 @@ in
   # Container Runtime
   virtualisation.containerd.enable = true;
   virtualisation.docker.enable = true;
+  # dockerd applies an AppArmor profile only if /sbin/apparmor_parser exists (containerd's
+  # hostSupports() stats that fixed path) and then loads docker-default by running
+  # apparmor_parser from PATH. NixOS has neither, so containers ran unconfined (#63).
+  systemd.tmpfiles.rules = [
+    "L+ /sbin/apparmor_parser - - - - ${pkgs.apparmor-parser}/bin/apparmor_parser"
+  ];
+  virtualisation.docker.extraPackages = [ pkgs.apparmor-parser ];
 
   # CSI & Storage Prerequisites (Longhorn / Open-iSCSI)
   services.openiscsi = {

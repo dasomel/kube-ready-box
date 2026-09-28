@@ -97,8 +97,6 @@ pkgs.testers.runNixOSTest {
 
     # Ensure containerd is running for the C-12 test.
     virtualisation.containerd.enable = lib.mkForce true;
-    # D11: Docker gap tracked in #63 — do not test Docker here.
-    virtualisation.docker.enable = lib.mkForce false;
 
     # Give the VM enough resources for containerd + AppArmor tests.
     virtualisation.memorySize = 2048;
@@ -195,6 +193,24 @@ pkgs.testers.runNixOSTest {
     assert "attr=test-deny-tmp" in result, f"container not confined by test-deny-tmp: {result}"
     assert "rc=0" not in result, f"write to /tmp was not denied: {result}"
     assert "Permission denied" in result, f"write failed for a reason other than AppArmor: {result}"
+
+    # ── #63: Docker applies docker-default and honours --security-opt apparmor= ──
+    enabled.wait_for_unit("docker.service")
+    enabled.succeed("docker load -i /etc/kube-ready-tests/busybox.tar")
+    docker_default = enabled.succeed(
+      "docker run --rm localhost/test-busybox:latest cat /proc/self/attr/apparmor/current"
+    )
+    print(f"=== #63 docker default run ===\n{docker_default}")
+    assert docker_default.strip() == "docker-default (enforce)", \
+      f"docker container not confined by docker-default: {docker_default}"
+    docker_deny = enabled.succeed(
+      "docker run --rm --security-opt apparmor=test-deny-tmp localhost/test-busybox:latest "
+      "sh -c 'echo attr=$(cat /proc/self/attr/apparmor/current); touch /tmp/blocked 2>&1; echo rc=$?'"
+    )
+    print(f"=== #63 docker confined run ===\n{docker_deny}")
+    assert "attr=test-deny-tmp" in docker_deny, f"docker ignored --security-opt apparmor: {docker_deny}"
+    assert "rc=0" not in docker_deny and "Permission denied" in docker_deny, \
+      f"docker write to /tmp was not denied: {docker_deny}"
 
     # ── Node 'disabled': AC-003 deny case ────────────────────────────
     disabled.start()
