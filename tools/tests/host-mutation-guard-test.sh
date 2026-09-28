@@ -78,6 +78,20 @@ if ! run_guard; then
   exit 1
 fi
 
+# 4b. Deny: a NixOS priority wrapper sets the same value, so
+# `security.apparmor.enable = lib.mkForce false;` must be caught like `= false;`.
+printf '  security.apparmor.enable = lib.mkForce false;\n' >> "$FIXTURE/packer/scripts/rocky-tuning.sh"
+if run_guard; then
+  echo "FAIL: 'security.apparmor.enable = lib.mkForce false' was not detected" >&2
+  exit 1
+fi
+grep -q "rocky-tuning.sh:.*nix-apparmor-disable" "$WORKDIR/out.log" || {
+  echo "FAIL: violation report does not name the mkForce AppArmor disable" >&2
+  cat "$WORKDIR/out.log" >&2
+  exit 1
+}
+cp "$ROOT/packer/scripts/rocky-tuning.sh" "$FIXTURE/packer/scripts/rocky-tuning.sh"
+
 # 5. Allow: read-only invocations of every covered tool must pass anywhere,
 # allowlisted or not -- kube-ready-box's own validators rely on this.
 cat > "$FIXTURE/readonly-check.sh" <<'EOF'

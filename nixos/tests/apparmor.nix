@@ -113,8 +113,9 @@ pkgs.testers.runNixOSTest {
     # The driver names machines after hostName; configuration.nix sets one shared name.
     networking.hostName = lib.mkForce "disabled";
 
-    # AC-003: kernel-level AppArmor disable.
-    boot.kernelParams = [ "apparmor=0" ];
+    # AC-003 deny case = the pre-D5 / rolled-back image. A kernel `apparmor=0` does not
+    # work here: the apparmor module appends `apparmor=1` after it on the command line.
+    security.apparmor.enable = lib.mkForce false;
 
     environment.systemPackages = with pkgs; [
       python3

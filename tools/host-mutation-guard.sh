@@ -117,8 +117,11 @@ APPARMOR_EQ0 = re.compile(r"\bapparmor=0\b")
 SELINUX_EQ0 = re.compile(r"\bselinux=0\b")
 # Declarative NixOS toggles that disable enforcement (still "the same form",
 # just spelled as an option assignment instead of a CLI invocation).
-NIX_APPARMOR_DISABLE = re.compile(r"security\.apparmor\.enable\s*=\s*false")
-NIX_FIREWALL_DISABLE = re.compile(r"networking\.firewall\.enable\s*=\s*false")
+# A priority wrapper (`lib.mkForce false`, `mkDefault false`, `mkOverride 50 false`)
+# sets the same value, so it must not slip past the plain `= false` form.
+NIX_PRIORITY = r"(?:(?:lib\.)?mk(?:Force|Default|Override\s+\d+)\s+)?"
+NIX_APPARMOR_DISABLE = re.compile(r"security\.apparmor\.enable\s*=\s*" + NIX_PRIORITY + r"false")
+NIX_FIREWALL_DISABLE = re.compile(r"networking\.firewall\.enable\s*=\s*" + NIX_PRIORITY + r"false")
 
 
 # --- normalization: classify a line the same way regardless of how it's
@@ -208,7 +211,7 @@ def detect_forms(line):
 # firewalld (D8); 00-egress-restrict.sh/99-cleanup.sh create and tear down
 # the build-only KUBE_READY_EGRESS chain (T-016 checks it never survives);
 # nixos/configuration.nix keeps its one documented D1 firewall-disable line.
-# nixos/tests/apparmor.nix may boot its throwaway deny-case node with apparmor=0.
+# nixos/tests/apparmor.nix may turn AppArmor off on its throwaway deny-case node.
 ALLOWLIST = {
     "packer/scripts/rocky-tuning.sh": [
         re.compile(r"^setenforce 1\b"),
@@ -235,10 +238,10 @@ ALLOWLIST = {
     "nixos/configuration.nix": [
         re.compile(r"networking\.firewall\.enable\s*=\s*false;\s*#\s*K8s CNI manages iptables/nftables"),
     ],
-    # The VM test's disposable 'disabled' node boots with apparmor=0 to prove the
+    # The VM test's disposable 'disabled' node turns AppArmor off to prove the
     # AC-003 deny case (#44 T-022); it never reaches a shipped image.
     "nixos/tests/apparmor.nix": [
-        re.compile(r'boot\.kernelParams = \[ "apparmor=0" \];'),
+        re.compile(r"security\.apparmor\.enable = lib\.mkForce false;"),
     ],
 }
 
