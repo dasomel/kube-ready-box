@@ -63,7 +63,7 @@ path, and `T-014`'s new `seccomp_filter` `FAIL` changes the overall `status`/exi
       as T-021 does for bash, and use the **same deny fixture** as T-020/T-021 so bash and Rust agree
       on a disabled-AppArmor host. Update the function's doc comment (`security_time.rs:15-19`), which
       currently claims the bare existence check is "already correct".
-- [ ] `T-022` (`REQ-003`, `REQ-004`, `D5`) Enable AppArmor on NixOS: add
+- [x] `T-022` (#65) (`REQ-003`, `REQ-004`, `D5`) Enable AppArmor on NixOS: add
       `security.apparmor.enable = true` to `nixos/configuration.nix` (and `hardened-profile.nix` if it
       overrides LSM settings). No exception record is created for C-09 (decided, D5, 2026-09-24).
   - Verification: build the NixOS image, confirm it **boots successfully**, and confirm
