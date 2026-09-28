@@ -5,7 +5,7 @@ Each implementation PR covers one requirement group and states the checks it act
 
 ## Inspect and establish evidence
 
-- [ ] `T-001` (`REQ-001..005`) Confirm the gap table's line references against `main` at the time of acceptance.
+- [x] `T-001` (`REQ-001..005`) Confirm the gap table's line references against `main` at the time of acceptance. The independent verifier re-read every file:line reference against `origin/main` (`d561d76`) before the package was accepted (PR #55).
 - [x] `T-002` (#44 comment 2026-09-25) (`AC-001`, `AC-003`, `D8`) Capture baseline validator JSON on a built Ubuntu 24.04 box and a
       Rocky 9 box (`bash security/workload-security-check.sh`, `bash network/node-network-readiness.sh`,
       `bash storage/node-storage-readiness.sh`, `bash rocky/preflight.sh`). Record whether `ufw` is
@@ -83,7 +83,7 @@ path, and `T-014`'s new `seccomp_filter` `FAIL` changes the overall `status`/exi
 
 ## Verify
 
-- [ ] `T-030` (`AC-006`, all) `shellcheck --severity=warning`, `bash -n`, `make lint`, `./packer/build.sh validate`.
+- [x] `T-030` (`AC-006`, all) `make lint` (includes `shellcheck --severity=warning`, `bash -n`, template/mutation-guard tests and `actionlint`) and `./packer/build.sh validate` — both passed on `main` after #64/#65 merges on 2026-09-28; output reported all templates valid.
 - [x] `T-031` (#64) (`REQ-006`) Add allow and deny cases to `validate.yml` `readiness-negative-tests` for every new
       or reclassified check. Use both fixtures and container runs, per D7 (Q4).
 - [x] `T-032` (#44 comment 2026-09-28) (`AC-001`, `AC-002`) Run in containers: `ubuntu:24.04` unprivileged and `--privileged`, with
@@ -93,7 +93,7 @@ path, and `T-014`'s new `seccomp_filter` `FAIL` changes the overall `status`/exi
 - [x] `T-034` (#61 evidence comment) (`AC-004`) Rocky 9 Vagrant box: `Enforcing` (allow), then `setenforce 0` (deny), then
       `setenforce 1`, then destroy the VM. Never on a shared host.
 - [x] `T-035` (#44 comment, kind cluster; no CI live-cluster job exists) (`AC-005`) Link the `sandbox-enforcement-evidence.yml` run showing `Seccomp: 2` for `RuntimeDefault`.
-- [ ] `T-036` Record every run (command, environment, outcome, failures included) in the PR.
+- [x] `T-036` Record every run (command, environment, outcome, failures included) in the PR. Implementation PRs #56/#58/#59/#60/#61/#64/#65 contain their local/CI evidence and limitations; T-002, T-032 and T-035 live-runtime evidence is recorded on #44. The final #64 and #65 CI runs are 36419921517 and 36420223108 (including KVM run 36420223101); the earlier local image corruption and Docker `unconfined` result are also recorded in #65/#63.
       Genuine release-run evidence goes under `release-evidence/`; **deny/experiment evidence
       (deliberately-failing fixtures, e.g. AC-003/AC-004 deny cases) is attached to the PR only and
       never written under `release-evidence/`**, since `tools/openforge-project-status.sh:70` picks
@@ -102,22 +102,22 @@ path, and `T-014`'s new `seccomp_filter` `FAIL` changes the overall `status`/exi
 
 ## Synchronize durable truth
 
-- [ ] `T-040` (`REQ-008`, `AC-007`) Update `docs/host-security-baseline.md`: OS/LSM matrix from CHANGE.md,
+- [x] `T-040` (`REQ-008`, `AC-007`) Update `docs/host-security-baseline.md`: OS/LSM matrix from CHANGE.md,
       Rocky default-deny inbound, containerd AppArmor/SELinux obligations, custom-profile verification
       recipe, rollback expectations for installers.
-- [ ] `T-041` Update `docs/evidence-contracts.md`, `security/README.md` and `rocky/README.md`.
-- [ ] `T-042` Write the ADR in local `docs/adr/` (D9, resolves Q6), covering D1–D10.
+- [x] `T-041` Update `docs/evidence-contracts.md` and `security/README.md` (#62); audit `rocky/README.md` and record that it had no stale contract text to change (#62).
+- [x] `T-042` Write the ADR in local `docs/adr/` (D9, resolves Q6), covering D1–D10 (#62); D11's containerd-only scope and Docker gap are durably recorded in #65.
 - [x] `T-043` (reclassification: #61 on main; NixOS D5: #65) Add release notes that call out the reclassification and the D5 NixOS AppArmor
       enablement (`CHANGELOG.md`).
-- [ ] `T-044` Feed reusable gaps (C-01 provider vs backend, C-02 detail vocabulary) back to dasomel/openforge#77.
+- [x] `T-044` Feed reusable gaps (C-01 provider vs backend, C-02 detail vocabulary) back to dasomel/openforge#77 — comment https://github.com/dasomel/openforge/pull/77#issuecomment-5869733050 (2026-09-28).
 
 ## Completion review
 
-- [ ] Every REQ maps to an AC with both allow and deny results.
-- [ ] Material scope changes were reflected here and re-reviewed.
-- [ ] VM-only paths have recorded evidence, not just a claim.
-- [ ] N/A items (C-03, C-11, and C-12 for Ubuntu/Rocky only) have owner and review date. C-12 is
+- [x] Every REQ maps to an AC with both allow and deny results (package matrix and #64 deterministic cases; runtime evidence linked above).
+- [x] Material scope changes were reflected here and re-reviewed: D11 was chosen by the maintainer and independently re-reviewed on 2026-09-28; see `CHANGE.md` review record.
+- [x] VM-only paths have recorded evidence, not just a claim: Ubuntu/Rocky VMware evidence on #61; NixOS KVM AppArmor/containerd allow/deny and rollback-equivalent disabled node on #65.
+- [x] N/A items (C-03, C-11, and C-12 for Ubuntu/Rocky only) have owner and review date. C-12 is
       in scope for NixOS (containerd already enabled) — confirm T-022's runtime/workload evidence
       covers it. C-09 is no longer an exception (D5) — confirm NixOS AppArmor enablement evidence
       (T-022) is attached instead.
-- [ ] Each PR states the checks actually run and any unverified path.
+- [x] Each PR states the checks actually run and any unverified path (#56/#58/#59/#60/#61/#64/#65).
