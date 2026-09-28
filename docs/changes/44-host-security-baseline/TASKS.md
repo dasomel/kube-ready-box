@@ -107,7 +107,7 @@ path, and `T-014`'s new `seccomp_filter` `FAIL` changes the overall `status`/exi
       recipe, rollback expectations for installers.
 - [ ] `T-041` Update `docs/evidence-contracts.md`, `security/README.md` and `rocky/README.md`.
 - [ ] `T-042` Write the ADR in local `docs/adr/` (D9, resolves Q6), covering D1–D10.
-- [ ] `T-043` Add release notes that call out the reclassification and the D5 NixOS AppArmor
+- [x] `T-043` (reclassification: #61 on main; NixOS D5: #65) Add release notes that call out the reclassification and the D5 NixOS AppArmor
       enablement (`CHANGELOG.md`).
 - [ ] `T-044` Feed reusable gaps (C-01 provider vs backend, C-02 detail vocabulary) back to dasomel/openforge#77.
 
