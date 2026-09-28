@@ -26,6 +26,12 @@
           inherit system;
           modules = [ ./configuration.nix ];
         };
+      } // nixpkgs.lib.optionalAttrs (system == "x86_64-linux") {
+        # AppArmor VM test (#44 T-022) — requires KVM, x86_64 only.
+        apparmor-vm = import ./tests/apparmor.nix {
+          pkgs = nixpkgs.legacyPackages.${system};
+          lib = nixpkgs.lib;
+        };
       });
     };
 }
