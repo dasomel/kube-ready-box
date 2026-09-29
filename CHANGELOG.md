@@ -59,7 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NixOS AppArmor enablement (#44 T-022, D5)**: the NixOS image now sets
   `security.apparmor.enable = true`, so its host evidence reports `apparmor=PASS` instead of the
   no-LSM `FAIL` introduced by the host security reclassification (`[Unreleased]`). A KVM `nixosTest`
-  (`nixos/tests/apparmor.nix`, CI job `NixOS AppArmor VM Test`) proves it on every change: the
+  (`nixos/tests/apparmor.nix`, CI job `NixOS AppArmor VM Test`) proves it on pull requests touching `nixos/**`, `security/workload-security-check.sh`, or the workflow itself (and on manual dispatch): the
   enabled node passes and confines a containerd container with a deny profile; a node with
   AppArmor turned off (the rolled-back image) reports `FAIL`. Reverting the
   enablement commit returns NixOS to no-LSM, which `FAIL`s with no exception route.

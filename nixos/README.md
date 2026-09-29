@@ -61,10 +61,10 @@ macOS에 별도 박스가 필요 없습니다. vagrant-qemu가 `box_format: "lib
 ./nixos/package-box.sh -p vmware_desktop # -> dist/dasomel-...-arm64-vmware_desktop.box
 
 # 3. Vagrant Cloud 배포 (검증된 프로바이더만 좁혀서)
-PROVIDERS=libvirt VERSION=0.1.1 ./nixos/upload-nixos.sh
+PROVIDERS=libvirt VERSION=0.2.0 ./nixos/upload-nixos.sh
 
 # 부가: SBOM(SPDX 2.3 JSON) 생성 — 박스에 내장되지 않고 dist/에 별도 파일로 떨어집니다
-./nixos/build.sh sbom
+VERSION=0.2.0 ./nixos/build.sh sbom
 ```
 
 파일명 규칙은 `box-common.sh` 한 곳에서만 정의하며 세 스크립트가 공유합니다. 이름을 각자 조립하면
