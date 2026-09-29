@@ -18,6 +18,14 @@ Linked Change Package: [`CHANGE.md`](CHANGE.md). **Draft; no implementation befo
 - [ ] `T-014` Assign maintainers, dependencies, supported targets, acceptance evidence, and follow-up issue/PR boundaries.
 - [ ] `T-015` Re-review the accepted investigation package after material scope/decision changes. Follow-up implementation requires its own accepted Class C package.
 
+## Preconditions for accepting the team recommendations (unaccepted)
+
+- [ ] `T-016` (`Q4`) Verify snapshot resolution in the installer (with `package_upgrade: true` and the `01-base.sh:45,50-51` URI rewrite) and at first boot on Ubuntu 26.04 and 24.04, amd64 and arm64, including ports and security pockets; retention/rate limits remain unverified until checked.
+- [ ] `T-017` (`Q7`) Define the revocation trust model: trust root, list version/expiry, freshness delivery, key rotation, missing/stale list behavior; cooling stays optional until an owner and exception process exist.
+- [ ] `T-018` (`Q6`) Define the air-gap attestation consumer: trust root, expected OIDC issuer/workflow identity, log evidence, which signature gates release, and the Trivy-optional gap in `generate-sbom.sh:20`.
+- [ ] `T-019` (`Q5`) Extend guard scope to `nixos/` and `.github/workflows/`, pin the floating `nix run` (`nixos/build.sh:189`), CI-verify the input lock against real inputs, and forbid local bypass from promoting artifacts.
+- [ ] `T-024` (`Q1`) Add gVisor `latest` default (`plugins.pkr.hcl:133-136` vs `build-inputs.md:151`) and the stale comment (`plugins.pkr.hcl:138-143`) to Package A; fix in a later accepted package, not this one.
+
 ## Verify investigation
 
 - [x] `T-020` (`AC-001`) Check corrected evidence against linked issue records; historical statements are labeled and current gaps are explicit.
