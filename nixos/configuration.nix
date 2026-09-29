@@ -9,7 +9,7 @@
 let
   # 박스 버전의 단일 출처. info.txt / manifest.json / MOTD가 모두 이 값을 쓴다.
   # 배포 버전을 올릴 때 여기만 고치면 게스트 표기가 어긋나지 않는다.
-  boxVersion = "0.1.1";
+  boxVersion = "0.2.0";
 in
 {
   imports = [

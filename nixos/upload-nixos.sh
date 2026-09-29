@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 dasomel
 #
-# Vagrant Cloud NixOS Box Upload Script (v0.1.0)
+# Vagrant Cloud NixOS Box Upload Script (v0.2.0)
 set -e
 
-VERSION="${VERSION:-0.1.0}"
+VERSION="${VERSION:-0.2.0}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
@@ -98,7 +98,7 @@ failed=0
 # libvirt 박스는 Linux(vagrant-libvirt)와 macOS(vagrant-qemu)가 공유한다.
 # virtualbox는 목록에 없다: nixpkgs가 게스트 확장용 pkgsi686Linux를 요구해 ARM64에서 만들 수 없다.
 # 검증되지 않은 프로바이더를 실수로 공개하지 않도록 PROVIDERS로 범위를 좁힐 수 있다.
-#   예: PROVIDERS=libvirt VERSION=0.1.1 ./upload-nixos.sh
+#   예: PROVIDERS=libvirt VERSION=0.2.0 ./upload-nixos.sh
 PROVIDERS="${PROVIDERS:-libvirt vmware_desktop}"
 
 for provider in $PROVIDERS; do

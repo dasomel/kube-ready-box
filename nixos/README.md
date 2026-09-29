@@ -15,9 +15,9 @@
 
 ---
 
-## 현재 상태 (2026-08-11)
+## 현재 상태 (2026-09-29)
 
-**`dasomel/nixos-kube-ready` 0.1.1 배포됨** (libvirt / arm64, 공개).
+**`dasomel/nixos-kube-ready` 0.1.1 배포됨** (libvirt / arm64, 공개). **0.2.0은 준비 중이며 아직 배포되지 않았습니다** (AppArmor 활성화, Docker 29 고정 -- [CHANGELOG](../CHANGELOG.md)).
 디스크 이미지를 빌드한 뒤 `package-box.sh`로 직접 Vagrant 박스로 포장하는 구조입니다.
 
 | 경로 | 상태 |
@@ -61,10 +61,10 @@ macOS에 별도 박스가 필요 없습니다. vagrant-qemu가 `box_format: "lib
 ./nixos/package-box.sh -p vmware_desktop # -> dist/dasomel-...-arm64-vmware_desktop.box
 
 # 3. Vagrant Cloud 배포 (검증된 프로바이더만 좁혀서)
-PROVIDERS=libvirt VERSION=0.1.1 ./nixos/upload-nixos.sh
+PROVIDERS=libvirt VERSION=0.2.0 ./nixos/upload-nixos.sh
 
 # 부가: SBOM(SPDX 2.3 JSON) 생성 — 박스에 내장되지 않고 dist/에 별도 파일로 떨어집니다
-./nixos/build.sh sbom
+VERSION=0.2.0 ./nixos/build.sh sbom
 ```
 
 파일명 규칙은 `box-common.sh` 한 곳에서만 정의하며 세 스크립트가 공유합니다. 이름을 각자 조립하면
