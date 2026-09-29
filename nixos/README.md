@@ -15,9 +15,9 @@
 
 ---
 
-## 현재 상태 (2026-08-11)
+## 현재 상태 (2026-09-29)
 
-**`dasomel/nixos-kube-ready` 0.1.1 배포됨** (libvirt / arm64, 공개).
+**`dasomel/nixos-kube-ready` 0.1.1 배포됨** (libvirt / arm64, 공개). **0.2.0은 준비 중이며 아직 배포되지 않았습니다** (AppArmor 활성화, Docker 29 고정 -- [CHANGELOG](../CHANGELOG.md)).
 디스크 이미지를 빌드한 뒤 `package-box.sh`로 직접 Vagrant 박스로 포장하는 구조입니다.
 
 | 경로 | 상태 |

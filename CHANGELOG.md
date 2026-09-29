@@ -7,23 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- **NixOS AppArmor enablement (#44 T-022, D5)**: the NixOS image now sets
-  `security.apparmor.enable = true`, so its host evidence reports `apparmor=PASS` instead of the
-  no-LSM `FAIL` introduced by the reclassification below. A KVM `nixosTest`
-  (`nixos/tests/apparmor.nix`, CI job `NixOS AppArmor VM Test`) proves it on every change: the
-  enabled node passes and confines a containerd container with a deny profile; a node with
-  AppArmor turned off (the rolled-back image) reports `FAIL`. Reverting the
-  enablement commit returns NixOS to no-LSM, which `FAIL`s with no exception route.
-
-### Fixed
-- **Docker containers on NixOS are now confined by AppArmor (#63)**: dockerd enables AppArmor
-  only when `/sbin/apparmor_parser` exists, and its `docker-default` profile needs
-  `tunables/global` in `/etc/apparmor.d`; NixOS had neither, so every container ran
-  `unconfined`. The image now links `/sbin/apparmor_parser` and provides `tunables/global`
-  (`nixos/configuration.nix`). The NixOS VM test asserts a plain `docker run` is
-  `docker-default (enforce)` and that `--security-opt apparmor=<profile>` confines and denies.
-
 ### Changed
 - **Host security evidence reclassification (#44 T-020/T-021/T-021b, D4)**: a disabled AppArmor
   or a permissive/disabled SELinux, on its native/capable host, is now `FAIL` instead of the
@@ -62,6 +45,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `restrict_build_egress=1`로 실제 Packer 빌드를 재검증하며 dpkg-lock 레이스 버그를
 발견/수정(#30) — `00-egress-restrict.sh`가 `01-base.sh`와 동일한 cloud-init 대기
 가드를 사용하도록 함. 박스 산출물 자체는 1.1.0과 기능적으로 동일.
+
+## [NixOS-0.2.0] - 2026-09-29
+
+`dasomel/nixos-kube-ready` 0.2.0 준비 (libvirt / arm64). **아직 Vagrant Cloud에 배포되지 않았습니다** --
+업로드 전까지 배포본은 0.1.1입니다. AppArmor를 켠 이미지이며, 소비자 쪽 동작이 바뀝니다.
+
+> **소비자 동작 변경**: 호스트 보안 증거 재분류(아래 `[Unreleased]`의 D4)로 AppArmor가 꺼진 호스트는
+> 이전에 `PASS`/`UNKNOWN`이던 AppArmor 증거가 `FAIL`로 보고됩니다. 0.1.1 이미지는 AppArmor가 꺼져 있어
+> 이 기준에서 `FAIL`이 되며, 0.2.0 이미지는 AppArmor를 활성화해 `PASS`합니다.
+
+### Added
+- **NixOS AppArmor enablement (#44 T-022, D5)**: the NixOS image now sets
+  `security.apparmor.enable = true`, so its host evidence reports `apparmor=PASS` instead of the
+  no-LSM `FAIL` introduced by the host security reclassification (`[Unreleased]`). A KVM `nixosTest`
+  (`nixos/tests/apparmor.nix`, CI job `NixOS AppArmor VM Test`) proves it on every change: the
+  enabled node passes and confines a containerd container with a deny profile; a node with
+  AppArmor turned off (the rolled-back image) reports `FAIL`. Reverting the
+  enablement commit returns NixOS to no-LSM, which `FAIL`s with no exception route.
+
+### Fixed
+- **Docker containers on NixOS are now confined by AppArmor (#63)**: dockerd enables AppArmor
+  only when `/sbin/apparmor_parser` exists, and its `docker-default` profile needs
+  `tunables/global` in `/etc/apparmor.d`; NixOS had neither, so every container ran
+  `unconfined`. The image now links `/sbin/apparmor_parser` and provides `tunables/global`
+  (`nixos/configuration.nix`). The NixOS VM test asserts a plain `docker run` is
+  `docker-default (enforce)` and that `--security-opt apparmor=<profile>` confines and denies.
+- **Docker 29 고정 (#70/#71)**: nixos-25.11의 기본 docker(28.5.2)가 insecure로 표시되어 flake 경로에서
+  이미지 평가가 거부되었습니다(릴리스 빌드인 nixos-unstable은 이미 Docker 29). `nixos/configuration.nix`에서
+  `pkgs.docker_29`를 고정하고 VM 테스트의 임시 고정을 제거해, 테스트가 이미지 자체의 Docker 패키지를 검증합니다.
 
 ## [NixOS-0.1.1] - 2026-08-11
 
