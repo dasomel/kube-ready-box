@@ -91,7 +91,7 @@ Every substantive task ends in one of three states (report which one, don't just
 - 프로비저닝 스크립트 수정 (`packer/scripts/`)
 - 문서 수정 (`*.md`)
 - GitHub Actions 워크플로우 수정
-- Agent 설정 수정 (`.claude/`, `.Codex/`)
+- Agent 설정 수정 (`.claude/`, `.codex/`)
 
 ### Not allowed
 - SSH 키/비밀번호 하드코딩 (var 사용)
