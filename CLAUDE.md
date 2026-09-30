@@ -14,8 +14,4 @@ For Packer templates, provisioning scripts, provider/architecture build paths, b
 
 Project slash commands live in `.claude/commands/`; hooks and permissions live under `.claude/hooks/` and `.claude/settings.json`. Use those runtime-specific helpers without copying their procedures into this file.
 
-Model/team routing guidance for Claude, Codex, and other agents lives in `docs/agent-playbook.md`. A maintainer-global `~/.claude/CLAUDE.md` may add personal preferences but is not required for repository correctness.
-
-Useful project commands remain discoverable through the repository entrypoints (`packer/build.sh`, `upload-boxes.sh`, Make/CI) and the slash commands; keep deterministic procedures executable rather than restating them here.
-
-When a new recurring failure is discovered, update `docs/mistakes-log.md` (or use the project helper command) rather than growing CLAUDE.md.
+Model/team routing guidance for Claude, Codex, and other agents lives in `docs/agent-playbook.md`.
