@@ -126,7 +126,7 @@ fn matches_sha256sums_line(line: &str) -> bool {
 /// error surface) rather than hand-rolling a JSON parser just for
 /// validation -- this crate stays zero-dependency, and `python3` is
 /// already an established dependency across this repo's tooling (see
-/// CLAUDE.md), not a new one introduced here.
+/// AGENTS.md), not a new one introduced here.
 fn validate_json(path: &str) -> Result<(), String> {
     let out = process::Command::new("python3")
         .args(["-c", "import json,sys; json.load(open(sys.argv[1]))", path])
