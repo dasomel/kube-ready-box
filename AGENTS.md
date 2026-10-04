@@ -1,115 +1,31 @@
 # AGENTS.md - Kube Ready Box
 
-> Layered contract per OpenForge Agent Engineering standard (dasomel/openforge#12): this file
-> stays short and high-priority. Detailed model/tool routing → [docs/agent-playbook.md](docs/agent-playbook.md).
-> Historical failure patterns → [docs/mistakes-log.md](docs/mistakes-log.md) (add new ones there, not here).
+Kubernetes-ready Ubuntu 24.04 / 26.04 (plus Rocky ARM64, NixOS) Vagrant box build via Packer, multi-arch, VirtualBox and VMware.
+Change workflow and agent standards: https://github.com/dasomel/openforge/blob/main/docs/change-management.md and https://github.com/dasomel/openforge/blob/main/docs/agent-engineering.md.
 
-Inspect only the source-map entries relevant to the current task. Do not preload the full technical reference or unrelated project documentation.
+## Load on demand
 
-## Product boundary
-
-Kubernetes-ready Ubuntu 24.04 / 26.04 Vagrant Box build project. Packer generates multi-arch
-(AMD64/ARM64) OS images for VirtualBox and VMware.
-
-## Source of truth
-
-| Topic | File |
-|---|---|
-| Build entry point | `packer/build.sh` (`init`, `validate`, `<provider>-<arch>`, `all`, `clean`) |
-| Packer templates | `packer/{virtualbox,vmware}-{amd64,arm64}.pkr.hcl` |
-| Provisioning scripts | `packer/scripts/` — numbered, order-dependent (`00-`...`99-`) |
-| CI/CD | `.github/workflows/build-{amd64,arm64}.yml` |
-| NixOS variant | `nixos/build.sh`, `nixos/configuration.nix` |
-| Vagrant Cloud upload | `upload-boxes.sh` |
-| Detailed technical guide | [.agent/AGENT.md](.agent/AGENT.md) (700+ lines — load sections, not the whole file) |
-| Security policy | [.agent/SECURITY.md](.agent/SECURITY.md) |
-| Agent/model routing playbook | [docs/agent-playbook.md](docs/agent-playbook.md) |
-| Historical mistake log | [docs/mistakes-log.md](docs/mistakes-log.md) |
-| Usage guide | [docs/usage.md](docs/usage.md) |
-| K8s post-install | [docs/k8s-post-install.md](docs/k8s-post-install.md) |
-| Research evidence collection (OpenForge standard) | [research/README.md](research/README.md) |
+- Packer templates, provisioning scripts, build inputs, image-build validation: `.agents/skills/kube-ready-box-build-validation/SKILL.md`.
+- Technical guide: `.agent/AGENT.md` (800+ lines, read the relevant section only); security policy `.agent/SECURITY.md`.
+- Before touching a build path: `docs/mistakes-log.md` (single source of historical failures, add new ones there via `/add-mistake`, never copy them here). Lane routing: `docs/agent-playbook.md`.
 
 ## High-risk invariants
 
-- **Template-family rule**: templates of one OS family share a provisioner sequence — Ubuntu has
-  four (`{virtualbox,vmware}-{amd64,arm64}.pkr.hcl`), Rocky has two (`rocky-{virtualbox,vmware}-arm64.pkr.hcl`).
-  Changing one requires updating every template in that family.
-- Provisioning scripts run in the order the template lists them (not alphabetically); do not
-  reorder, skip, or add one without wiring it into every template of the family.
-- `packer validate` reads each template alone and cannot see this drift. `tools/template-consistency-check.sh`
-  is the gate that can — it runs inside `./packer/build.sh validate`, `make lint`, and CI (#47).
-- Never tweak a working 0.1.0-era build setting (`boot_wait`, `boot_command`, `http_directory`, ...)
-  without cause — check `git show 327f8dc:packer/<file>` first (see mistakes-log #6).
-- Never hardcode SSH keys/passwords (use vars), modify a `.box` artifact directly, expose Vagrant
-  Cloud credentials, or edit key files (`*.pem`, `*.key`).
+- Templates of one OS family share one provisioner sequence: Ubuntu has four (`packer/{virtualbox,vmware}-{amd64,arm64}.pkr.hcl`), Rocky has two (`packer/rocky-{virtualbox,vmware}-arm64.pkr.hcl`). Changing one means updating every template in the family.
+- `packer/scripts/` run in the order each template lists them (not alphabetically). Never reorder, skip or add one without wiring it into every template of the family.
+- `packer validate` reads each template alone and cannot see that drift; `tools/template-consistency-check.sh` can (run by `./packer/build.sh validate`, `make lint`, CI).
+- Do not tweak a working 0.1.0-era build setting (`boot_wait`, `boot_command`, `http_directory`, ...) without cause; compare with `git show 327f8dc:packer/<file>` first (mistakes-log #6).
+- Evidence status: `UNKNOWN` (check could not establish the property) is never healthy -- never map it to `PASS`/green or swallow it in an aggregator; it does not fail a run by itself, so failing on it is an explicit opt-in (`STRICT_READINESS=1`, verifier `--strict-*`). Contract: `docs/evidence-contracts.md`.
+- Never hardcode SSH keys/passwords (use vars), edit `.box` artifacts or key files (`*.pem`, `*.key`), or expose Vagrant Cloud credentials.
 
-## Smallest coherent change
-
-Make the smallest change that solves the requested problem. Do not touch unrelated code, even
-code you notice is wrong nearby — report it instead (new entry in
-[docs/mistakes-log.md](docs/mistakes-log.md) via `/add-mistake`, or a follow-up issue).
-
-## Bug-fix policy
-
-```
-reproduce -> failing test/evidence -> minimal fix -> same check passes -> regression check
-```
-
-Linux-targeted scripts cannot be verified by syntax-checking on macOS alone (no `/proc`/`/sys`) —
-reproduce and verify inside a container when that runtime behavior is affected (see mistakes-log #23):
+## Verification
 
 ```bash
-docker run --rm --entrypoint bash -v "$PWD:/w" -w /w <image-with-python3> -c 'bash /w/<script>'
+./packer/build.sh validate   # Packer validate for all templates + consistency check
+make lint                    # shellcheck (warning+), bash -n, consistency and host-mutation guards, actionlint if installed
+make test                    # Rust verifier + contract/tool tests
 ```
 
-## Canonical verification entrypoints
+`bash -n` alone is not evidence. Scripts that depend on Linux runtime (`/proc`, `/sys`, services, filesystem semantics) cannot be verified on macOS (BSD tools differ; mistakes-log #23): run them in a Linux container or VM, e.g. `docker run --rm --entrypoint bash -v "$PWD:/w" -w /w <image-with-python3> -c 'bash /w/<script>'`.
 
-```bash
-./packer/build.sh validate                                    # all 4 templates
-find packer/scripts nixos rocky security network storage time observability tools rust \
-  -type f -name '*.sh' -print0 | xargs -0 -r shellcheck --severity=warning
-bash -n <script>                                               # syntax only, not sufficient alone
-```
-
-Choose verification proportional to task risk and affected runtime. Do not claim a fix works without running the relevant command above and, for Linux-runtime-shaped changes, real container/VM execution evidence.
-
-Safe local/disposable inspect-edit-build-test-fix-retest work may proceed within scope. Shared/production/destructive/release/credential/permission/external mutations require explicit authorization unless already granted.
-
-## Convergence states
-
-Every substantive task ends in one of three states (report which one, don't just report activity):
-
-- **A — Complete**: intended behavior verified on the relevant path.
-- **B — Meaningful progress**: one verified blocker removed, next blocker isolated with evidence.
-- **C — Stop**: further work needs unjustified scope growth, a fragile workaround, or an
-  unsupported assumption — report the evidence and stop rather than patch around it.
-
-## Permissions
-
-### Allowed
-- Packer 템플릿 수정 (`*.pkr.hcl`)
-- 프로비저닝 스크립트 수정 (`packer/scripts/`)
-- 문서 수정 (`*.md`)
-- GitHub Actions 워크플로우 수정
-- Agent 설정 수정 (`.claude/`, `.Codex/`)
-
-### Not allowed
-- SSH 키/비밀번호 하드코딩 (var 사용)
-- Box 파일 직접 수정 (`.box`)
-- Vagrant Cloud 인증정보 노출
-- 키 파일 수정 (`*.pem`, `*.key`)
-
-References:
-- https://github.com/dasomel/openforge/blob/main/docs/agent-engineering.md
-- https://github.com/dasomel/openforge/blob/main/docs/model-agnostic-agent-instructions.md
-- https://github.com/dasomel/openforge/blob/main/docs/user-centric-validation.md
-
-
-## Risk-scaled change workflow
-
-- Class A documentation-only changes use the Issue/PR as the change record.
-- Class B internal behavior changes require explicit acceptance criteria; use a Change Package when the work is complex, cross-component, or operationally risky.
-- Class C dependency/runtime/toolchain/build-contract changes and Class D release/deployment/security-boundary changes require an accepted Change Package before broad implementation.
-- For Class C/D or complex Class B work, use `templates/change/CHANGE.md` plus `templates/change/TASKS.md` when a versioned working artifact is useful.
-- Keep requirement → acceptance scenario → task → evidence traceability. Material scope changes require package update and re-review.
-- At completion, synchronize durable truth into code/tests, normative docs, ADRs, evidence, and portfolio/status records; do not maintain a duplicate long-lived specification tree.
+Local/disposable edit-build-test work is fine; release, upload, Vagrant Cloud and other shared or destructive actions need explicit authorization.

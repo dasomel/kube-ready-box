@@ -4,13 +4,13 @@
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTEXT_FILE="$PROJECT_ROOT/.claude/cache/project-context.md"
-CLAUDE_MD="$PROJECT_ROOT/CLAUDE.md"
+AGENTS_MD="$PROJECT_ROOT/AGENTS.md"
 
 echo "=== Kube Ready Box Project Context ==="
 echo ""
 
-# Show quick overview from CLAUDE.md
-if [ -f "$CLAUDE_MD" ]; then
+# Show quick overview from AGENTS.md
+if [ -f "$AGENTS_MD" ]; then
     echo "[Project] Kubernetes-ready Ubuntu 24.04 / 26.04 Vagrant Box"
     echo "[Tech] Packer + VirtualBox/VMware + Bash"
     echo ""
@@ -29,5 +29,5 @@ fi
 
 echo ""
 echo "Key commands: ./packer/build.sh [init|validate|vmware-arm64|all]"
-echo "Docs: CLAUDE.md, .agent/AGENT.md"
+echo "Docs: AGENTS.md, .agent/AGENT.md"
 echo "==================================="

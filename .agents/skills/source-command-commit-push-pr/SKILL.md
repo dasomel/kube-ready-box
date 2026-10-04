@@ -1,6 +1,11 @@
 ---
 name: "source-command-commit-push-pr"
 description: "Migrated source command `commit-push-pr`"
+metadata:
+  openforge-scope: project
+  openforge-owner: dasomel/kube-ready-box
+  openforge-maturity: draft
+  openforge-version: "1"
 ---
 
 # source-command-commit-push-pr

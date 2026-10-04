@@ -60,8 +60,8 @@ impl Check {
 }
 
 /// A run FAILs if any check FAILs. UNKNOWN never fails a run on its own --
-/// matching every bash evidence script in this repo (CLAUDE.md: "UNKNOWN
-/// never treated as healthy" for the *caller's* judgment, but it is not the
+/// matching every bash evidence script in this repo (AGENTS.md high-risk invariants: "UNKNOWN
+/// is never healthy" for the *caller's* judgment, but it is not the
 /// same as FAIL either; forcing a FAIL on UNKNOWN belongs to the caller as
 /// an opt-in policy, e.g. `--strict-runtime`/`--require-sandbox`, not to
 /// this shared helper).

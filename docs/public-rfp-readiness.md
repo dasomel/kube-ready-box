@@ -75,7 +75,7 @@ network/storage/time/security readiness scripts plus (when the
 `RUN_ROCKY_PROFILE`/`RUN_NIXOS_PROFILE` flags are set) the Rocky/NixOS
 preflight scripts, and fails closed (`evidence_missing` non-empty → exit 1)
 rather than silently reporting `null` for a script that produced no
-evidence — see `CLAUDE.md` mistake patterns #20/#21 for why that guarantee
+evidence — see `docs/mistakes-log.md` patterns #20/#21 for why that guarantee
 exists.
 
 ### "Narwhal cluster provisioning 직전 preflight와 결과 연계"

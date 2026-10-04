@@ -1,6 +1,11 @@
 ---
 name: "source-command-add-mistake"
 description: "Migrated source command `add-mistake`"
+metadata:
+  openforge-scope: project
+  openforge-owner: dasomel/kube-ready-box
+  openforge-maturity: draft
+  openforge-version: "1"
 ---
 
 # source-command-add-mistake

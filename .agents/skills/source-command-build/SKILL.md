@@ -1,6 +1,11 @@
 ---
 name: "source-command-build"
 description: "Migrated source command `build`"
+metadata:
+  openforge-scope: project
+  openforge-owner: dasomel/kube-ready-box
+  openforge-maturity: draft
+  openforge-version: "1"
 ---
 
 # source-command-build
