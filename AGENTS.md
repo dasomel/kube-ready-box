@@ -15,6 +15,7 @@ Change workflow and agent standards: https://github.com/dasomel/openforge/blob/m
 - `packer/scripts/` run in the order each template lists them (not alphabetically). Never reorder, skip or add one without wiring it into every template of the family.
 - `packer validate` reads each template alone and cannot see that drift; `tools/template-consistency-check.sh` can (run by `./packer/build.sh validate`, `make lint`, CI).
 - Do not tweak a working 0.1.0-era build setting (`boot_wait`, `boot_command`, `http_directory`, ...) without cause; compare with `git show 327f8dc:packer/<file>` first (mistakes-log #6).
+- Evidence status: `UNKNOWN` (check could not establish the property) is never healthy -- never map it to `PASS`/green or swallow it in an aggregator; it does not fail a run by itself, so failing on it is an explicit opt-in (`STRICT_READINESS=1`, verifier `--strict-*`). Contract: `docs/evidence-contracts.md`.
 - Never hardcode SSH keys/passwords (use vars), edit `.box` artifacts or key files (`*.pem`, `*.key`), or expose Vagrant Cloud credentials.
 
 ## Verification
