@@ -1,6 +1,11 @@
 ---
 name: "source-command-test-box"
 description: "Migrated source command `test-box`"
+metadata:
+  openforge-scope: project
+  openforge-owner: dasomel/kube-ready-box
+  openforge-maturity: draft
+  openforge-version: "1"
 ---
 
 # source-command-test-box

@@ -1,6 +1,11 @@
 ---
 name: "source-command-validate"
 description: "Migrated source command `validate`"
+metadata:
+  openforge-scope: project
+  openforge-owner: dasomel/kube-ready-box
+  openforge-maturity: draft
+  openforge-version: "1"
 ---
 
 # source-command-validate

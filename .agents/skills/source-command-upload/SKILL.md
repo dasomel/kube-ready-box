@@ -1,6 +1,11 @@
 ---
 name: "source-command-upload"
 description: "Migrated source command `upload`"
+metadata:
+  openforge-scope: project
+  openforge-owner: dasomel/kube-ready-box
+  openforge-maturity: draft
+  openforge-version: "1"
 ---
 
 # source-command-upload
