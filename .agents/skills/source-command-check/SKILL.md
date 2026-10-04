@@ -1,6 +1,11 @@
 ---
 name: "source-command-check"
 description: "Migrated source command `check`"
+metadata:
+  openforge-scope: project
+  openforge-owner: dasomel/kube-ready-box
+  openforge-maturity: draft
+  openforge-version: "1"
 ---
 
 # source-command-check
