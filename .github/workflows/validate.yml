@@ -394,7 +394,7 @@ jobs:
           run_json /tmp/attest-swap-baseline.json env READINESS_OUTPUT=/tmp/readiness-attest.json bash tools/node-readiness-attest.sh
           require_status /tmp/attest-swap-baseline.json swap PASS
           # /var/tmp + a dense dd file: swapon rejects fallocate/holey files and
-          # files on tmpfs (/tmp is tmpfs on newer ubuntu-latest images, "Invalid argument").
+          # files on tmpfs ("swapon: Invalid argument" seen on the 26.04 runner with /tmp + fallocate).
           swap_file=/var/tmp/readiness-negative.swap
           run_or_fail "could not allocate negative-test swap file" sudo dd if=/dev/zero of="$swap_file" bs=1M count=64 status=none
           run_or_fail "could not restrict negative-test swap file permissions" sudo chmod 600 "$swap_file"
