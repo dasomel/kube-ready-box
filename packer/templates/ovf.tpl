@@ -85,7 +85,7 @@
         <AudioAdapter useDefault="true" driver="CoreAudio" enabled="true"/>
         <Clipboard/>
         <StorageControllers>
-          <StorageController name="SATA" type="AHCI" PortCount="30" useHostIOCache="false" Bootable="true" IDE0MasterEmulationPort="0" IDE0SlaveEmulationPort="1" IDE1MasterEmulationPort="2" IDE1SlaveEmulationPort="3">
+          <StorageController name="NVMe" type="NVMe" PortCount="1" useHostIOCache="false" Bootable="true">
             <AttachedDevice type="HardDisk" hotpluggable="false" port="0" device="0">
               <Image uuid="{${disk_uuid}}"/>
             </AttachedDevice>

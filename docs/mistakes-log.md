@@ -142,3 +142,10 @@
     - 재현(fresh-session replay) 시 로컬 colima/docker 데몬이 꺼져 있어 런타임 엣지케이스(컨테이너 실행이 필요한 스크립트)를 실제로 통과시키지 못했다 — 대신 스킬 자체의 "환경 부재 시 에스컬레이션" 조항이 올바르게 발동하는지만 확인했다
     - four-template invariant / 프로비저닝 순번 체크도 실제로 하나를 깨뜨렸다 고쳐본 것이 아니라 grep 으로 참조 관계만 확인했다
     - 다음에 이 스킬로 Linux 런타임 의존 변경(예: `/proc` `/sys` 읽는 스크립트)을 검증할 때는, 먼저 `docker ps` 로 데몬이 떠 있는지 확인하고 23번의 컨테이너 명령으로 실제 실행 증거를 남길 것. 그 전까지 이 스킬의 "runtime evidence" 단계는 부분 검증 상태로 취급
+
+25. **VirtualBox ARM64 박스는 AHCI(SATA)로 배포하면 26.04 게스트가 디스크를 못 본다 — NVMe로 배포할 것** (#79)
+    - 증상: `vagrant up` 후 dracut이 약 3분 대기하다 emergency mode (`/dev/disk/by-uuid/...`, `/dev/mapper/ubuntu--vg-ubuntu--lv` 없음). VirtualBox 7.2.20r175154, Apple Silicon, 로컬 빌드/배포 박스 모두 재현. 24.04(bento)는 같은 호스트에서 디스크를 인식함
+    - 원인: 빌드는 `hard_drive_interface = "virtio"`로 설치하지만 `packer/templates/ovf.tpl`은 SATA(AHCI)로 포장했다. 26.04에서 AHCI 뒤 디스크가 보이지 않는 정확한 메커니즘(initramfs 모듈 vs VirtualBox ARM AHCI)은 미확정 — 증거는 컨트롤러 교체 전/후 부팅 결과뿐
+    - 확인: 같은 디스크를 NVMe로 옮기면 로그인 프롬프트까지 부팅(xfs 0.1.0, ext4 1.2.0). VirtIO 컨트롤러는 EFI가 디스크를 못 읽어 부팅 불가(후보 아님)
+    - 해결: `ovf.tpl`을 `StorageController type="NVMe"`로 변경. 이미 받은 박스의 임시 우회는 `VBoxManage storagectl <vm> --name SATA --remove` 후 `--add pcie --controller NVMe`로 NVMe 컨트롤러를 만들어 같은 vmdk를 `storageattach`
+    - 미검증: 이 호스트에서는 VirtualBox NAT SSH가 24.04 대조군도 막혀 `vagrant up` 완료는 확인 못 함. 24.04 vbox 박스(템플릿 공유)와 `rocky-ovf.tpl`(여전히 AHCI)은 NVMe 부팅을 확인하지 않았음
