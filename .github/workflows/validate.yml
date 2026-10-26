@@ -115,8 +115,8 @@ jobs:
           cargo test --locked --offline
           cargo build --release --locked --offline
           bash tests/cli_contract.sh
-      - name: Install arm64 cross-linker and qemu user-mode emulation
-        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu qemu-user-static
+      - name: Install arm64 cross-linker and qemu-aarch64 user-mode emulation
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu qemu-user
       - name: ARM64 cross-build (real link, not just compile-check)
         working-directory: rust/kube-ready-verifier
         run: cargo build --release --locked --offline --target aarch64-unknown-linux-gnu
@@ -124,7 +124,7 @@ jobs:
         working-directory: rust/kube-ready-verifier
         run: file target/aarch64-unknown-linux-gnu/release/kube-ready-verifier | tee /tmp/arm64-file-output.txt
           && grep -q "ARM aarch64" /tmp/arm64-file-output.txt
-      - name: Actually run the cross-built binary under qemu-user-static
+      - name: Actually run the cross-built binary under qemu-aarch64
         # The binary is dynamically linked (interpreter /lib/ld-linux-aarch64.so.1),
         # which does not exist on an amd64 rootfs -- qemu-user needs -L pointing at
         # the aarch64 cross-libc sysroot the gcc-aarch64-linux-gnu install above
@@ -132,7 +132,7 @@ jobs:
         # '/lib/ld-linux-aarch64.so.1'". Confirmed by reproducing this exact failure
         # in a --platform linux/amd64 container before adding -L here.
         working-directory: rust/kube-ready-verifier
-        run: qemu-aarch64-static -L /usr/aarch64-linux-gnu target/aarch64-unknown-linux-gnu/release/kube-ready-verifier --help
+        run: qemu-aarch64 -L /usr/aarch64-linux-gnu target/aarch64-unknown-linux-gnu/release/kube-ready-verifier --help
 
   contract-syntax:
     name: Contract syntax and JSON smoke
@@ -393,8 +393,11 @@ jobs:
           run_or_fail "could not disable pre-existing swap for a clean baseline" sudo swapoff -a
           run_json /tmp/attest-swap-baseline.json env READINESS_OUTPUT=/tmp/readiness-attest.json bash tools/node-readiness-attest.sh
           require_status /tmp/attest-swap-baseline.json swap PASS
-          swap_file=/tmp/readiness-negative.swap
-          run_or_fail "could not allocate negative-test swap file" sudo fallocate -l 64M "$swap_file"
+          # /var/tmp + a dense dd file: swapon rejects fallocate/holey files and
+          # files on tmpfs (/tmp is tmpfs on newer ubuntu-latest images, "Invalid argument").
+          swap_file=/var/tmp/readiness-negative.swap
+          run_or_fail "could not allocate negative-test swap file" sudo dd if=/dev/zero of="$swap_file" bs=1M count=64 status=none
+          run_or_fail "could not restrict negative-test swap file permissions" sudo chmod 600 "$swap_file"
           run_or_fail "could not format negative-test swap file" sudo mkswap "$swap_file" >/dev/null
           run_or_fail "could not enable negative-test swap file" sudo swapon "$swap_file"
           run_json /tmp/attest-swap-mutated.json env READINESS_OUTPUT=/tmp/readiness-attest.json bash tools/node-readiness-attest.sh
