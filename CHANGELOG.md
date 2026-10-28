@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **NixOS box 0.2.1: OpenSSH 10.3p1 -> 10.5p1.** The 0.2.0 image was built from an older
+  `nixos-26.05` revision (`714a5f8c...`) that shipped OpenSSH 10.3p1, which lacks the 10.4-10.5
+  fixes. 0.2.1 builds from `nixos-26.05` rev `718f670e...` (2026-10-26) and pins that revision in
+  `nixos/flake.lock`; the documented Docker build now passes it via `NIX_PATH` so the image no
+  longer depends on whatever channel the `nixos/nix` image happens to carry. OpenSSH 10.6p1 is
+  only in `nixos-unstable` at the time of writing and is not included.
+
 ### Changed
 - **Host security evidence reclassification (#44 T-020/T-021/T-021b, D4)**: a disabled AppArmor
   or a permissive/disabled SELinux, on its native/capable host, is now `FAIL` instead of the
