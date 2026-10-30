@@ -50,14 +50,28 @@ reports_file=$(mktemp)
 missing_file=$(mktemp)
 printf '%s' "$(IFS=,; echo "${reports[*]:-}")" > "$reports_file"
 printf '%s' "$(IFS=,; echo "${missing[*]:-}")" > "$missing_file"
-python3 - "$OUT" "$reports_file" "$missing_file" <<'PY'
+# 실행 환경 출처(#54). 이 증거가 어느 커널/가상화 위에서 나왔는지 기록한다.
+# 못 구하면 추측하지 않고 UNKNOWN. systemd-detect-virt 는 베어메탈에서 "none" 을
+# 출력하고 exit 1 이므로 종료코드가 아니라 출력만 본다.
+kernel_release=$(uname -r 2>/dev/null || true)
+virtualization=""
+if command -v systemd-detect-virt >/dev/null 2>&1; then
+  virtualization=$(systemd-detect-virt 2>/dev/null || true)
+fi
+python3 - "$OUT" "$reports_file" "$missing_file" "${kernel_release:-UNKNOWN}" "${virtualization:-UNKNOWN}" "${KUBE_READY_EXECUTION_TARGET:-UNKNOWN}" <<'PY'
 import json,sys
-out,reports_file,missing_file=sys.argv[1:]
+out,reports_file,missing_file,kernel_release,virtualization,declared_target=sys.argv[1:]
 with open(reports_file) as f: raw=f.read()
 with open(missing_file) as f: miss=f.read()
 reports=json.loads('['+raw+']') if raw else []
 obj={'schema':'kube-ready-contracts/v1','reports':reports,
-     'evidence_missing':[m for m in miss.split(',') if m],'offline':True}
+     'evidence_missing':[m for m in miss.split(',') if m],'offline':True,
+     # full_image_conformance 는 true 가 될 수 없다: smolvm 이면 false(자체 libkrunfw
+     # 커널이라 풀 이미지 적합성을 증명하지 못함), 그 외는 UNKNOWN 문자열. 이 실행
+     # 만으로는 알 수 없는 값을 false/PASS 로 바꾸지 않는다(UNKNOWN 불변식).
+     'execution_context':{'kernel_release':kernel_release,'virtualization':virtualization,
+       'declared_target':declared_target,
+       'full_image_conformance':False if declared_target=='smolvm' else 'UNKNOWN'}}
 open(out,'w').write(json.dumps(obj,sort_keys=True,separators=(',',':'))+'\n')
 print(json.dumps(obj,sort_keys=True,separators=(',',':')))
 PY

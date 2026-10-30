@@ -77,6 +77,7 @@ test:
 	bash tools/tests/node-readiness-drift-test.sh
 	bash tools/tests/airgap-bundle-verify-test.sh
 	bash tools/tests/node-time-readiness-test.sh
+	bash tools/tests/contracts-execution-context-test.sh
 	# dpkg-query 가 있어야 하는 테스트라 Linux 에서만 돈다 (macOS 는 CI 에 맡긴다).
 	if command -v dpkg-query >/dev/null 2>&1; then bash tools/tests/sbom-license-gate-root-test.sh; else echo 'SKIP sbom-license-gate-root-test.sh: dpkg-query 없음 (CI 에서 실행)'; fi
 

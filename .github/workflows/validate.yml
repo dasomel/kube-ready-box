@@ -183,6 +183,7 @@ jobs:
           bash tools/tests/node-readiness-drift-test.sh
           bash tools/tests/airgap-bundle-verify-test.sh
           bash tools/tests/node-time-readiness-test.sh
+          bash tools/tests/contracts-execution-context-test.sh
           bash tools/tests/sbom-license-gate-root-test.sh
       - name: Benchmark Rust verifier vs shell (informational, non-blocking)
         continue-on-error: true
