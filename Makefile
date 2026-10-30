@@ -84,6 +84,7 @@ test:
 # SSH host keys and machine identity residue after the input guard passes.
 security:
 	bash tools/unpinned-input-guard.sh
+	bash tools/tests/unpinned-input-guard-test.sh
 	@if [ -n "$(ROOT)" ]; then bash tools/image-identity-security-check.sh "$(ROOT)"; fi
 
 # ROOT defaults to tools/sbom-license-gate.sh's own default (the running

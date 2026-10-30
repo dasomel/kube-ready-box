@@ -98,7 +98,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Reject floating downloads / open plugin version constraints
-        run: bash tools/unpinned-input-guard.sh
+        run: |
+          bash tools/unpinned-input-guard.sh
+          bash tools/tests/unpinned-input-guard-test.sh
 
   rust:
     name: Rust verifier
