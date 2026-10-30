@@ -191,6 +191,37 @@ verify() {
   (cd "$BUNDLE_DIR" && sha256sum -c "$CHECKSUMS")
   [ -s "$PACKAGE_LIST" ] || fail "missing package lock: $PACKAGE_LIST"
   [ -s "$BUNDLE_DIR/keys/ubuntu-archive-keyring.gpg" ] || fail "missing Ubuntu archive key"
+
+  # SHA256SUMS 가 일부만 나열해도 sha256sum -c 는 통과하므로, 번들 구성 자체를 따로 검증한다.
+  # packages.txt 의 모든 패키지는 debs/ 에 .deb 가 있어야 한다(apt-get download 명명: <pkg>_<ver>_<arch>.deb).
+  local pkg deb
+  while IFS= read -r pkg; do
+    [ -n "$pkg" ] || continue
+    deb="$(find "$BUNDLE_DIR/debs" -maxdepth 1 -type f -name "${pkg}_*.deb" -print -quit 2>/dev/null)"
+    [ -n "$deb" ] || fail "package listed in packages.txt has no .deb in bundle: $pkg"
+  done < "$PACKAGE_LIST"
+
+  # prepare() 는 항상 ISO 를 받아 iso_sha256 으로 기록한다. ISO 없는 번들은 허용하지 않는다.
+  local iso_url iso_sha iso_file actual_sha
+  iso_url="$(sed -n 's/^iso_url=//p' "$MANIFEST" | head -1)"
+  iso_sha="$(sed -n 's/^iso_sha256=//p' "$MANIFEST" | head -1)"
+  [ -n "$iso_url" ] || fail "manifest has no iso_url: $MANIFEST"
+  [ -n "$iso_sha" ] || fail "manifest has no iso_sha256: $MANIFEST"
+  iso_file="$BUNDLE_DIR/iso/$(basename "$iso_url")"
+  [ -f "$iso_file" ] || fail "ISO named by manifest is missing from bundle: iso/$(basename "$iso_url")"
+  actual_sha="$(sha256sum "$iso_file" | awk '{print $1}')"
+  [ "$actual_sha" = "$iso_sha" ] || fail "ISO sha256 does not match manifest: expected=$iso_sha actual=$actual_sha"
+
+  # SHA256SUMS 자신과 prepare() 가 의도적으로 나열하지 않는 manifest.env/packages.txt 를
+  # 제외한 모든 일반 파일은 SHA256SUMS 에 있어야 한다.
+  local rel unlisted listed
+  unlisted=""
+  listed="$(sed 's/^[0-9a-fA-F]*  *[*]\{0,1\}//' "$CHECKSUMS")"
+  while IFS= read -r rel; do
+    case "$rel" in SHA256SUMS|manifest.env|packages.txt) continue ;; esac
+    printf '%s\n' "$listed" | grep -Fxq -- "$rel" || unlisted="${unlisted} ${rel}"
+  done < <(cd "$BUNDLE_DIR" && find . -type f | sed 's|^\./||' | sort)
+  [ -z "$unlisted" ] || fail "files in bundle not listed in SHA256SUMS:${unlisted}"
   echo "Offline bundle verification: PASS"
   echo "No network access was used by verify."
 }
