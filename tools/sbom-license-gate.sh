@@ -87,13 +87,37 @@ done
 # than inventing license data. dpkg copyright files are collected as evidence.
 copyright_dir="$EVIDENCE_DIR/copyright"
 mkdir -p "$copyright_dir"
+# 이전 실행의 잔여 줄이 남지 않도록 루프 전에 비운다.
+: > "$EVIDENCE_DIR/copyright-SHA256SUMS"
+# ROOT가 "/"가 아니면 이미지 안의 심볼릭 링크(절대 링크 포함)가 호스트로 새지
+# 않도록 realpath -m 으로 풀고, 결과가 ROOT 밖이면 unknown으로 센다(해시 안 함).
+root_real=""
+if [ "$ROOT" != "/" ]; then
+  root_real="$(realpath -m "${ROOT%/}")"
+fi
 while IFS=$'\t' read -r pkg _version _source _status; do
   [ -n "$pkg" ] || continue
-  if [ -f "/usr/share/doc/$pkg/copyright" ]; then
-    sha256sum "/usr/share/doc/$pkg/copyright" >> "$EVIDENCE_DIR/copyright-SHA256SUMS"
-  else
-    unknowns=$((unknowns + 1))
+  rel="usr/share/doc/$pkg/copyright"
+  if [ -z "$root_real" ]; then
+    if [ -f "/$rel" ]; then
+      sha256sum "/$rel" >> "$EVIDENCE_DIR/copyright-SHA256SUMS"
+    else
+      unknowns=$((unknowns + 1))
+    fi
+    continue
   fi
+  resolved="$(realpath -m "$root_real/$rel")"
+  case "$resolved" in
+    "$root_real"/*)
+      if [ -f "$resolved" ]; then
+        # 기록 경로는 이미지 상대경로(호스트 경로가 evidence에 새지 않게).
+        printf '%s  %s\n' "$(sha256sum "$resolved" | cut -d' ' -f1)" "$rel" >> "$EVIDENCE_DIR/copyright-SHA256SUMS"
+      else
+        unknowns=$((unknowns + 1))
+      fi
+      ;;
+    *) unknowns=$((unknowns + 1)) ;;
+  esac
 done < "$packages_json"
 sort -u "$EVIDENCE_DIR/copyright-SHA256SUMS" 2>/dev/null -o "$EVIDENCE_DIR/copyright-SHA256SUMS" || true
 
