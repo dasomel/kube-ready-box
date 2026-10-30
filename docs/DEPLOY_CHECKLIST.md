@@ -29,7 +29,7 @@ VERSION=vX.Y.Z ./tools/release-promote.sh init
 (검증기 드리프트) promote가 실패하며 원인을 출력한다 — 기본은 꺼져 있어 기존 동작에 영향 없음.
 
 ```bash
-RUN_RUST_VERIFIER=1 VERSION=vX.Y.Z ./tools/release-promote.sh promote
+ARTIFACT_DIR=packer/dist RUN_RUST_VERIFIER=1 VERSION=vX.Y.Z ./tools/release-promote.sh promote
 ```
 
 ## 3. Candidate → staging → production
@@ -38,12 +38,15 @@ RUN_RUST_VERIFIER=1 VERSION=vX.Y.Z ./tools/release-promote.sh promote
 
 ```bash
 # 1단계: candidate -> staging (5개 evidence 파일이 모두 존재/파싱 가능해야 함)
-VERSION=vX.Y.Z ./tools/release-promote.sh promote
+# 추가 게이트: security/license 리포트 status가 정확히 PASS, SHA256SUMS에 나열된 파일이
+# ARTIFACT_DIR 아래에 존재하고 해시 일치(.box는 packer/dist에 있으므로 ARTIFACT_DIR=packer/dist).
+# UNKNOWN은 기본 차단이며 ALLOW_UNKNOWN_EVIDENCE=1로만 경고 후 허용(두 전이 모두 적용).
+ARTIFACT_DIR=packer/dist VERSION=vX.Y.Z ./tools/release-promote.sh promote
 
 # staging에서 실제 provider/architecture/filesystem smoke test 수행 후 verification.json 갱신
 
-# 2단계: staging -> production (매트릭스 전 항목 PASS 필요)
-VERSION=vX.Y.Z ./tools/release-promote.sh promote
+# 2단계: staging -> production (매트릭스 전 항목 PASS 필요, 위 evidence 게이트 동일 적용)
+ARTIFACT_DIR=packer/dist VERSION=vX.Y.Z ./tools/release-promote.sh promote
 ```
 
 매 전이는 `release-evidence/$VERSION/promotion-log.tsv`에 (timestamp, from_stage, to_stage) 한 줄로 기록된다. production은 종착 stage이며, 여기서 다시 `promote`를 실행하면 거부된다.
@@ -51,7 +54,8 @@ VERSION=vX.Y.Z ./tools/release-promote.sh promote
 언제든 아래로 현재 상태를 점검할 수 있다:
 
 ```bash
-VERSION=vX.Y.Z ./tools/release-promote.sh verify
+# SHA256SUMS 에 나열된 .box 가 있는 디렉터리를 ARTIFACT_DIR 로 지정한다.
+ARTIFACT_DIR=packer/dist VERSION=vX.Y.Z ./tools/release-promote.sh verify
 ```
 
 `verify`는 stage=candidate에서는 evidence 준비 상태만 보고하고(부족해도 exit 0), stage=staging/production에서는 evidence가 없거나 무효하면 반드시 실패(exit 1)한다. `verification.json`과 required-matrix 계약은 [release-evidence/README.md](../release-evidence/README.md)를 참고.

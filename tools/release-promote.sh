@@ -27,7 +27,12 @@ get_field(){
 # SHA256SUMS는 JSON이 아니라 체크섬 목록이므로 구조적으로 검증한다.
 # 유효하지 않으면 위반한 줄 번호와 내용을 stdout으로 출력하고 1을 반환한다.
 validate_sha256sums(){
-  local f="$1" lineno=0 line
+  local f="$1" lineno=0 entries=0 line
+  # CRLF 는 파일명에 \r 이 섞여 해시 검사가 어긋나므로 거부한다(Rust 검증기와 동일 규칙).
+  if grep -q $'\r' "$f"; then
+    echo "contains CR (CRLF line endings not allowed)"
+    return 1
+  fi
   while IFS= read -r line || [ -n "$line" ]; do
     lineno=$((lineno+1))
     [[ "$line" =~ ^[[:space:]]*$ ]] && continue
@@ -35,7 +40,12 @@ validate_sha256sums(){
       echo "line $lineno: $line"
       return 1
     fi
+    entries=$((entries+1))
   done < "$f"
+  if [ "$entries" -eq 0 ]; then
+    echo "no entries"
+    return 1
+  fi
   return 0
 }
 
@@ -49,6 +59,51 @@ validate_json(){
   return 1
 }
 
+# SHA256SUMS 가 나열한 파일이 ARTIFACT_DIR(기본: SHA256SUMS 가 있는 릴리스 디렉터리)
+# 아래에 실제로 있고 해시가 일치하는지 검사한다. 위반 내용을 stdout으로 출력하고 1을 반환한다.
+# 실제 릴리스의 SHA256SUMS 는 packer/dist 의 .box 해시를 나열하므로 그 경우
+# ARTIFACT_DIR=packer/dist 로 지정한다. 해시 검사를 건너뛰는 옵션은 없다.
+# (macOS 에는 sha256sum 이 없을 수 있어 shasum -a 256 으로 대체한다.)
+verify_sha256sums_hashes(){
+  local f="$1" dir base hasher line want name got target
+  dir="${ARTIFACT_DIR:-$(dirname "$f")}"
+  if command -v sha256sum >/dev/null 2>&1; then hasher="sha256sum"
+  elif command -v shasum >/dev/null 2>&1; then hasher="shasum -a 256"
+  else echo "no sha256 tool available"; return 1; fi
+  base=$(realpath "$dir" 2>/dev/null) || { echo "artifact dir not found: $dir"; return 1; }
+  while IFS= read -r line || [ -n "$line" ]; do
+    [[ "$line" =~ ^[[:space:]]*$ ]] && continue
+    want="${line:0:64}"
+    name="${line:65}"; name="${name# }"; name="${name#\*}"
+    case "/$name/" in
+      //*|*/../*) echo "path escapes artifact dir: $name"; return 1;;
+    esac
+    if [ ! -e "$base/$name" ]; then
+      echo "listed file missing: $name (in $dir; set ARTIFACT_DIR, e.g. ARTIFACT_DIR=packer/dist)"
+      return 1
+    fi
+    # 심볼릭 링크로 디렉터리 밖을 가리키는 항목을 막기 위해 실경로로 포함 여부를 확인한다.
+    target=$(realpath "$base/$name" 2>/dev/null) || { echo "listed file missing: $name"; return 1; }
+    case "$target" in
+      "${base%/}"/*) ;;
+      *) echo "path escapes artifact dir: $name"; return 1;;
+    esac
+    [ -f "$target" ] || { echo "listed file missing: $name (not a regular file)"; return 1; }
+    got=$($hasher -- "$target" 2>/dev/null | cut -d' ' -f1)
+    if [ "$got" != "$want" ]; then echo "hash mismatch: $name"; return 1; fi
+  done < "$f"
+  return 0
+}
+
+# security-report.json / license-report.json 의 status 를 읽는다. 필드가 없으면 빈 문자열.
+report_status(){
+  python3 -c "
+import json,sys
+d=json.load(open(sys.argv[1]))
+s=d.get('status') if isinstance(d,dict) else None
+print(s if isinstance(s,str) else '')" "$1"
+}
+
 # 5개 evidence 파일 중 하나를 검사한다. 유효하면 아무것도 출력하지 않고 0을 반환,
 # 무효/누락이면 사유를 stdout에 출력하고 1을 반환한다.
 evidence_error(){
@@ -59,13 +114,41 @@ evidence_error(){
     return 1
   fi
   if [ "$base" = "SHA256SUMS" ]; then
-    if detail=$(validate_sha256sums "$path"); then return 0; fi
-    echo "invalid ($detail)"
+    if ! detail=$(validate_sha256sums "$path"); then
+      echo "invalid ($detail)"
+      return 1
+    fi
+    if ! detail=$(verify_sha256sums_hashes "$path"); then
+      echo "invalid ($detail)"
+      return 1
+    fi
+    return 0
+  fi
+  if ! detail=$(validate_json "$path"); then
+    echo "invalid JSON ($detail)"
     return 1
   fi
-  if detail=$(validate_json "$path"); then return 0; fi
-  echo "invalid JSON ($detail)"
-  return 1
+  # status 를 가진 리포트만 게이트한다(sbom.json/verification.json 은 해당 없음).
+  # PASS 만 통과. UNKNOWN 은 건강하지 않음 -> 기본 차단, ALLOW_UNKNOWN_EVIDENCE=1 일 때만 경고 후 허용.
+  case "$base" in
+    security-report.json|license-report.json)
+      detail=$(report_status "$path")
+      case "$detail" in
+        PASS) ;;
+        UNKNOWN)
+          if [ "${ALLOW_UNKNOWN_EVIDENCE:-0}" = 1 ]; then
+            echo "WARNING: $base status=UNKNOWN allowed by ALLOW_UNKNOWN_EVIDENCE=1" >&2
+          else
+            echo "status UNKNOWN (set ALLOW_UNKNOWN_EVIDENCE=1 to override)"
+            return 1
+          fi
+          ;;
+        "") echo "status field missing"; return 1;;
+        *) echo "status $detail"; return 1;;
+      esac
+      ;;
+  esac
+  return 0
 }
 
 evidence_valid(){ evidence_error "$1" >/dev/null; }
