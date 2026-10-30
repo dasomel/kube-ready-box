@@ -26,7 +26,7 @@ Capture a fresh report after provisioning/customization and compare it with the 
 tools/node-readiness-drift.sh
 ```
 
-A changed effective security/runtime/network/storage state is reported as `DRIFT`.
+A changed effective security/runtime/network/storage state is reported as `DRIFT`. If the fresh report cannot be produced or is not valid JSON, the script exits 2 (never `NO_DRIFT`). An unreadable `info.json` version is recorded as `UNKNOWN` in the manifest.
 
 ## Offline reproducibility
 
