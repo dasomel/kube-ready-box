@@ -42,9 +42,6 @@ while IFS= read -r -d '' f; do
       '#'*) continue ;;
     esac
     case "$line" in
-      *'unpinned-guard:allow'*) continue ;;
-    esac
-    case "$line" in
       *curl*|*wget*)
         case "$line" in
           *"/master/"*|*"/main/"*|*"/HEAD/"*|*"/releases/latest"*)
@@ -53,12 +50,22 @@ while IFS= read -r -d '' f; do
         esac
         ;;
     esac
+  # bash 가 실제로 잇는 줄만 잇는다. 주석 줄은 잇지 않고 진행 중인 연결을 끝내며,
+  # 주석이 들어 있는 줄의 끝 \ 는 bash 에서 줄 잇기가 아니다. 예전에는 "# ... \" 다음
+  # 줄의 curl 이 주석으로 합쳐져 통째로 건너뛰어졌다(우회). allow 마커도 합친 명령
+  # 전체가 아니라 마커가 있는 물리적 줄에만 적용한다.
   done < <(awk '
-    { if (buf == "") start = NR; buf = buf $0
-      if ($0 ~ /\\[[:space:]]*$/) { sub(/\\[[:space:]]*$/, " ", buf); next }
-      if (buf ~ /(curl|wget)/) print start ":" buf
-      buf = "" }
-    END { if (buf ~ /(curl|wget)/) print start ":" buf }' "$f" 2>/dev/null || true)
+    function flush() { if (open && buf ~ /(curl|wget)/) print start ":" buf; buf = ""; open = 0 }
+    { t = $0; sub(/^[[:space:]]+/, "", t)
+      if (t ~ /^#/) { flush(); next }
+      if (!open) { start = NR; open = 1 }
+      piece = $0
+      if (piece ~ /unpinned-guard:allow/) piece = ""
+      if ($0 ~ /\\[[:space:]]*$/ && $0 !~ /(^|[[:space:]])#/) {
+        sub(/\\[[:space:]]*$/, " ", piece); buf = buf piece; next
+      }
+      buf = buf piece; flush() }
+    END { flush() }' "$f" 2>/dev/null || true)
 done < <(find "${scan_paths[@]}" -type f -name '*.sh' -not -path '*/tests/*' -not -path '*/fixtures/*' -not -path '*/target/*' -print0 2>/dev/null)
 
 # 2) Packer required_plugins 버전 제약이 "=" 정확한 고정이 아니라 열려 있는

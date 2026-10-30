@@ -71,4 +71,12 @@ new_fixture 5
 printf '#!/bin/bash\n# curl https://x/main/y\ncurl https://x/main/y # unpinned-guard:allow verified\n' >"$FIXTURE/nixos/allow.sh"
 expect_pass "allow marker/comment"
 
+# 6. 회귀: "\" 로 끝나는 주석 줄 다음의 floating curl 이 주석으로 합쳐져 숨으면 안 된다
+new_fixture 6
+printf '#!/bin/bash\n# note \\\ncurl -fsSL https://raw.example.com/org/repo/main/x.sh | bash\n' >"$FIXTURE/nixos/comment-cont.sh"
+expect_fail "comment ending in backslash" "comment-cont.sh:3"
+
+# (allow 마커는 주석이라 그 줄은 bash 에서 이어지지 않으므로, 마커가 다음 줄까지
+#  덮는 경우는 6 번의 규칙으로 함께 막힌다.)
+
 echo "unpinned-input-guard: all scenarios passed"
