@@ -19,18 +19,32 @@ to_stage).
 Gate per transition:
 
 - **candidate → staging**: all 5 evidence files below must be present, non-empty, and
-  structurally valid.
+  structurally valid, and the content gates below must hold.
 - **staging → production**: the same evidence check, PLUS full matrix coverage — every target
   in `required-matrix.txt` must appear in `verification.json` with status `PASS`
   (case-insensitive). Any missing or non-PASS target blocks promotion and is listed by name.
 
+Content gates (both transitions, bash `release-promote.sh` and the Rust `verify-evidence`
+cross-check apply identical rules):
+
+- `security-report.json` and `license-report.json` must have `status` exactly `PASS` (no
+  trimming). `FAIL`, any other value, or a missing `status` blocks. `UNKNOWN` blocks unless
+  `ALLOW_UNKNOWN_EVIDENCE=1` is set (prints a warning); the opt-in applies to BOTH
+  transitions (candidate → staging and staging → production).
+- `SHA256SUMS` must list at least one entry, use LF line endings (CR is rejected), and every
+  listed file must exist and match its hash. Entries are resolved under `ARTIFACT_DIR`
+  (default: this release directory); real releases list the `.box` digests that live in
+  `packer/dist`, so run with `ARTIFACT_DIR=packer/dist`. A missing listed file blocks; there
+  is no option to skip hashing. Entries with `..`, absolute paths, or symlinks resolving
+  outside `ARTIFACT_DIR` are rejected. The `*` binary marker (`sha256sum -b`) is accepted.
+
 ## Required evidence (candidate → staging gate)
 
 - `verification.json` — provider/architecture/filesystem smoke-test matrix (must parse as JSON)
-- `SHA256SUMS` — artifact integrity (checksum manifest, see format below — not JSON)
+- `SHA256SUMS` — artifact integrity (checksum manifest, see format below — not JSON; listed files must exist under `ARTIFACT_DIR` and hash correctly)
 - `sbom.json` — SBOM (must parse as JSON)
-- `security-report.json` — security scan (must parse as JSON)
-- `license-report.json` — license evidence (must parse as JSON)
+- `security-report.json` — security scan (must parse as JSON, `status` must be `PASS`)
+- `license-report.json` — license evidence (must parse as JSON, `status` must be `PASS`)
 - `release-state.env` — candidate/staging/production/rolled_back state
 
 ## `verification.json` contract
@@ -58,7 +72,8 @@ Not JSON — a checksum manifest. Every non-blank line must match:
 ```
 
 i.e. a 64-character lowercase hex digest, then a space or `*` (binary/text mode marker), then an
-optional space, then the filename. Example:
+optional space, then the filename. The file must contain at least one entry, and CRLF line
+endings are rejected. Example:
 
 ```
 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08  kube-ready-vmware-arm64.box
@@ -67,7 +82,8 @@ optional space, then the filename. Example:
 ## Verification (`verify`)
 
 ```bash
-VERSION=vX.Y.Z ./tools/release-promote.sh verify
+# SHA256SUMS lists the .box digests; point ARTIFACT_DIR at the directory holding them.
+ARTIFACT_DIR=packer/dist VERSION=vX.Y.Z ./tools/release-promote.sh verify
 ```
 
 Always checks: state file well-formed (`schema_version`, `version` matching `VERSION`, known

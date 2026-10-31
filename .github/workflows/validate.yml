@@ -98,7 +98,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Reject floating downloads / open plugin version constraints
-        run: bash tools/unpinned-input-guard.sh
+        run: |
+          bash tools/unpinned-input-guard.sh
+          bash tools/tests/unpinned-input-guard-test.sh
 
   rust:
     name: Rust verifier
@@ -175,6 +177,14 @@ jobs:
           bash tools/tests/node-readiness-attest-apparmor-test.sh
           bash tools/tests/packer-embedded-apparmor-test.sh
           bash tools/tests/sandbox-seccomp-mode-test.sh
+          bash tools/tests/image-security-evidence-test.sh
+          bash tools/test-identity-capability-detection.sh
+          bash tools/tests/release-promote-test.sh
+          bash tools/tests/node-readiness-drift-test.sh
+          bash tools/tests/airgap-bundle-verify-test.sh
+          bash tools/tests/node-time-readiness-test.sh
+          bash tools/tests/contracts-execution-context-test.sh
+          bash tools/tests/sbom-license-gate-root-test.sh
       - name: Benchmark Rust verifier vs shell (informational, non-blocking)
         continue-on-error: true
         run: |

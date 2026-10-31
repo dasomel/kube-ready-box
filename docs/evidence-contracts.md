@@ -180,3 +180,16 @@ Deterministic fixture coverage (both the mode-`2` allow case and the mode-`1` de
 `tools/tests/sandbox-seccomp-mode-test.sh` against a PATH-stubbed `kubectl`, wired into `make test`
 and CI; no cluster is required. The cluster-level `Seccomp: 2` allow case is also linked from
 `security/README.md` per T-035.
+
+## Execution context (`kube-ready-contracts/v1`, #54)
+
+The aggregator `tools/kube-ready-contracts.sh` adds a top-level, additive `execution_context` object so a result can be traced to the kernel and target it actually ran on. Existing consumers read only `schema` and `reports[]` (`tools/openforge-project-status.sh`), so the extra key is ignored by them.
+
+| Field | Source | When unknown |
+|---|---|---|
+| `kernel_release` | `uname -r` | `UNKNOWN` |
+| `virtualization` | `systemd-detect-virt` output (`none` is a real answer on bare metal) | `UNKNOWN` (never guessed) |
+| `declared_target` | env `KUBE_READY_EXECUTION_TARGET` (a claim by the caller, not detected) | `UNKNOWN` |
+| `full_image_conformance` | `false` when `declared_target` is `smolvm`, otherwise the string `UNKNOWN` | -- |
+
+`full_image_conformance` is never `true`: no single run can establish full image conformance. It is `false` for a smolvm target because that guest boots its own libkrunfw kernel. Every other case is the string `"UNKNOWN"`, not `false`, so an unestablished property is never mapped to a definite value (`UNKNOWN` is not healthy and not a verdict). The field mixes a boolean and a string, so consumers must compare explicitly (`== false`, `== "UNKNOWN"`) rather than test truthiness: `"UNKNOWN"` is truthy in most languages. See `docs/smolvm-validation-target.md`.

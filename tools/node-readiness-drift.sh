@@ -4,7 +4,18 @@ BASELINE="${1:-/etc/vagrant-box/node-readiness.json}"
 CURRENT="${2:-/tmp/node-readiness-current.json}"
 
 [ -s "$BASELINE" ] || { echo "missing baseline: $BASELINE" >&2; exit 2; }
-READINESS_OUTPUT="$CURRENT" STRICT_READINESS=0 "$(dirname "$0")/node-readiness-attest.sh" >/dev/null || true
+ATTEST="${READINESS_ATTEST_SCRIPT:-$(dirname "$0")/node-readiness-attest.sh}"
+
+# 이전 실행의 stale CURRENT가 비교 대상이 되면 거짓 NO_DRIFT가 나온다 -> 먼저 제거
+rm -f "$CURRENT"
+# attest 종료 코드는 readiness FAIL(정상 결과)을 반영하므로 무시하되, 결과 파일은 검증한다.
+# 실행 비트에 의존하지 않도록 bash로 호출한다.
+READINESS_OUTPUT="$CURRENT" STRICT_READINESS=0 bash "$ATTEST" >/dev/null || true
+
+if [ ! -s "$CURRENT" ] || ! python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$CURRENT" 2>/dev/null; then
+  echo "attest did not produce a valid JSON report: $CURRENT (script: $ATTEST)" >&2
+  exit 2
+fi
 
 python3 - "$BASELINE" "$CURRENT" <<'PY'
 import json,sys

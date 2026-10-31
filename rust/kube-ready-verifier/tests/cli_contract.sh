@@ -121,8 +121,8 @@ mkdir -p "$WORK/evidence-truncated"
 printf '{}' > "$WORK/evidence-truncated/verification.json"
 printf 'deadbeef  a.txt\n' > "$WORK/evidence-truncated/SHA256SUMS"
 printf '{}' > "$WORK/evidence-truncated/sbom.json"
-printf '{}' > "$WORK/evidence-truncated/security-report.json"
-printf '{}' > "$WORK/evidence-truncated/license-report.json"
+printf '{"status":"PASS"}' > "$WORK/evidence-truncated/security-report.json"
+printf '{"status":"PASS"}' > "$WORK/evidence-truncated/license-report.json"
 set +e
 "$BIN" verify-evidence "$WORK/evidence-truncated" > "$WORK/evidence-truncated.json"
 rc=$?
@@ -145,10 +145,11 @@ echo "verify-evidence truncated SHA256SUMS isolates the one bad file: PASS"
 mkdir -p "$WORK/evidence-valid"
 printf '{}' > "$WORK/evidence-valid/verification.json"
 digest=$(printf test | sha256sum | cut -d' ' -f1)
+printf test > "$WORK/evidence-valid/a.txt"
 printf '%s  a.txt\n' "$digest" > "$WORK/evidence-valid/SHA256SUMS"
 printf '{}' > "$WORK/evidence-valid/sbom.json"
-printf '{}' > "$WORK/evidence-valid/security-report.json"
-printf '{}' > "$WORK/evidence-valid/license-report.json"
+printf '{"status":"PASS"}' > "$WORK/evidence-valid/security-report.json"
+printf '{"status":"PASS"}' > "$WORK/evidence-valid/license-report.json"
 "$BIN" verify-evidence "$WORK/evidence-valid" > "$WORK/evidence-valid.json"
 python3 - <<'PY' "$WORK/evidence-valid.json"
 import json, sys
@@ -157,5 +158,89 @@ assert x["status"] == "PASS"
 assert x["failures"] == 0
 PY
 echo "verify-evidence valid fixture: PASS"
+
+# --- verify-evidence: UNKNOWN 리포트는 FAIL, 명시적 opt-in 시에만 PASS -----
+cp -R "$WORK/evidence-valid" "$WORK/evidence-unknown"
+printf '{"status":"UNKNOWN"}' > "$WORK/evidence-unknown/security-report.json"
+set +e
+"$BIN" verify-evidence "$WORK/evidence-unknown" > "$WORK/evidence-unknown.json"
+rc=$?
+set -e
+test "$rc" -eq 1
+grep -q '"status":"FAIL"' "$WORK/evidence-unknown.json"
+ALLOW_UNKNOWN_EVIDENCE=1 "$BIN" verify-evidence "$WORK/evidence-unknown" > "$WORK/evidence-unknown-ok.json"
+grep -q '"failures":0' "$WORK/evidence-unknown-ok.json"
+echo "verify-evidence UNKNOWN fails, passes only with ALLOW_UNKNOWN_EVIDENCE=1: PASS"
+
+# --- verify-evidence: SHA256SUMS 의 '..'/절대경로 항목은 FAIL ---------------
+cp -R "$WORK/evidence-valid" "$WORK/evidence-escape"
+printf '%s  ../evidence-valid/a.txt\n' "$digest" > "$WORK/evidence-escape/SHA256SUMS"
+set +e
+"$BIN" verify-evidence "$WORK/evidence-escape" > "$WORK/evidence-escape.json"
+rc=$?
+set -e
+test "$rc" -eq 1
+grep -q 'escapes artifact dir' "$WORK/evidence-escape.json"
+echo "verify-evidence SHA256SUMS path escape rejected: PASS"
+
+# --- verify-evidence: 회귀 케이스(symlink 탈출/CRLF/status trim/빈 목록/'*' 마커/ARTIFACT_DIR) ---
+expect_evidence_fail() {  # $1=label $2=dir
+  set +e
+  "$BIN" verify-evidence "$2" > "$2.json"
+  local rc=$?
+  set -e
+  test "$rc" -eq 1 || { echo "$1: exit $rc (expected 1)" >&2; exit 1; }
+}
+mkdir -p "$WORK/outside"; printf test > "$WORK/outside/secret"
+cp -R "$WORK/evidence-valid" "$WORK/evidence-flink"
+ln -s "$WORK/outside/secret" "$WORK/evidence-flink/flink"
+printf '%s  flink\n' "$digest" > "$WORK/evidence-flink/SHA256SUMS"
+expect_evidence_fail "symlink file escape" "$WORK/evidence-flink"
+grep -q 'escapes artifact dir' "$WORK/evidence-flink.json"
+cp -R "$WORK/evidence-valid" "$WORK/evidence-dlink"
+ln -s "$WORK/outside" "$WORK/evidence-dlink/dlink"
+printf '%s  dlink/secret\n' "$digest" > "$WORK/evidence-dlink/SHA256SUMS"
+expect_evidence_fail "symlink dir escape" "$WORK/evidence-dlink"
+grep -q 'escapes artifact dir' "$WORK/evidence-dlink.json"
+cp -R "$WORK/evidence-valid" "$WORK/evidence-crlf"
+printf '%s  a.txt\r\n' "$digest" > "$WORK/evidence-crlf/SHA256SUMS"
+expect_evidence_fail "CRLF" "$WORK/evidence-crlf"
+cp -R "$WORK/evidence-valid" "$WORK/evidence-trim"
+printf '{"status":" PASS "}' > "$WORK/evidence-trim/license-report.json"
+expect_evidence_fail "status trim" "$WORK/evidence-trim"
+cp -R "$WORK/evidence-valid" "$WORK/evidence-empty"
+printf '  \n\n' > "$WORK/evidence-empty/SHA256SUMS"
+expect_evidence_fail "empty SHA256SUMS" "$WORK/evidence-empty"
+cp -R "$WORK/evidence-valid" "$WORK/evidence-star"
+printf '%s *a.txt\n' "$digest" > "$WORK/evidence-star/SHA256SUMS"
+"$BIN" verify-evidence "$WORK/evidence-star" | grep -q '"failures":0'
+cp -R "$WORK/evidence-valid" "$WORK/evidence-artdir"
+mkdir -p "$WORK/dist"; printf test > "$WORK/dist/k.box"
+printf '%s  k.box\n' "$digest" > "$WORK/evidence-artdir/SHA256SUMS"
+expect_evidence_fail "box missing without ARTIFACT_DIR" "$WORK/evidence-artdir"
+grep -q 'ARTIFACT_DIR' "$WORK/evidence-artdir.json"
+ARTIFACT_DIR="$WORK/dist" "$BIN" verify-evidence "$WORK/evidence-artdir" | grep -q '"failures":0'
+echo "verify-evidence regression cases (symlink/CRLF/trim/empty/star/ARTIFACT_DIR): PASS"
+
+# --- 사용법 오류: 잘못된 플래그/값은 조용히 무시되지 않고 exit 2 -----------
+expect_usage_error() {
+  local label="$1"; shift
+  set +e
+  "$BIN" "$@" >"$WORK/usage.out" 2>"$WORK/usage.err"
+  local rc=$?
+  set -e
+  test "$rc" -eq 2 || { echo "$label: exit $rc (expected 2)" >&2; exit 1; }
+  grep -q 'error:' "$WORK/usage.err" || { echo "$label: stderr 에 error 메시지 없음" >&2; exit 1; }
+  echo "$label exit 2: PASS"
+}
+expect_usage_error "preflight bad --require-sandbox value" preflight --require-sandbox=gvisr
+expect_usage_error "preflight unknown flag" preflight --strict-runtme
+expect_usage_error "verify-sha256 unknown flag" verify-sha256 --bogus "$WORK/manifest.good"
+expect_usage_error "verify-evidence unknown flag" verify-evidence --bogus "$WORK/evidence-valid"
+# 유효한 호출은 그대로 동작 (exit 0 또는 1, 2 아님)
+rc=0
+"$BIN" preflight --require-sandbox=gvisor --strict-runtime >/dev/null 2>&1 || rc=$?
+test "$rc" -eq 0 -o "$rc" -eq 1
+echo "preflight valid flags still accepted: PASS"
 
 echo "Rust CLI contract: PASS"
