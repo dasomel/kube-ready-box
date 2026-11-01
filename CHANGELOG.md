@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Ubuntu 26.04 boxes still carry the installer kernel's 7.0.0-14 leftovers (3 `rc` packages and an
   8.6 MB depmod index); no CVE impact. Verified by running the block in a chroot of the shipped
   26.04 image: leftovers gone, 7.0.0-42 image, `/boot` symlinks and GRUB entries intact.
+- Ubuntu boxes no longer boot with the installer's kernel arguments. subiquity copied
+  `autoinstall ds=nocloud-net;s=http://<packer-host>:<port>/ ---` into `GRUB_CMDLINE_LINUX_DEFAULT`, so
+  0.3.0 and earlier boot with them; cloud-init is disabled in the boxes, but enabling it would make
+  the VM fetch user-data from the build host address. `99-cleanup.sh` strips those tokens (keeping
+  `console=`, `rootflags=prjquota`, `crashkernel=`), runs `update-grub` and fails the build if any
+  remain. Rocky boxes were checked and are not affected.
 
 ## [0.3.0] - 2026-11-01
 
