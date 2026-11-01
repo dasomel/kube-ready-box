@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unreadable disk is UNKNOWN, never PASS. NixOS is reported UNKNOWN (no dpkg/rpm database).
   Tests: `tools/tests/box-cve-scan-test.sh`.
 
+### Fixed
+- Ubuntu cleanup (`99-cleanup.sh`) purges kernel packages left in `rc` state by the upgrade and
+  removes `/lib/modules/<ver>` directories with no installed `linux-modules-<ver>`. The 0.3.0
+  Ubuntu 26.04 boxes still carry the installer kernel's 7.0.0-14 leftovers (3 `rc` packages and an
+  8.6 MB depmod index); no CVE impact. Verified by running the block in a chroot of the shipped
+  26.04 image: leftovers gone, 7.0.0-42 image, `/boot` symlinks and GRUB entries intact.
+
 ## [0.3.0] - 2026-11-01
 
 > **Version line reset.** The Ubuntu boxes follow Vagrant Cloud 1.1.0 with 0.3.0, continuing the
