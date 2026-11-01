@@ -3,6 +3,19 @@
   "description": "Kubernetes-ready ubuntu-26.04-ext4 box (arm64, vmware_desktop). MIT License. https://github.com/dasomel/kube-ready-box",
   "versions": [
     {
+      "version": "0.3.1",
+      "providers": [
+        {
+          "name": "vmware_desktop",
+          "url": "https://github.com/dasomel/kube-ready-box/releases/download/v0.3.1/ubuntu-26.04-ext4-vmware_desktop-arm64-0.3.1.box",
+          "checksum_type": "sha256",
+          "checksum": "364f2fe6adb313b07c124df96fb8f63d7cbcd78fdc351768da134f888f5ee6d9",
+          "architecture": "arm64",
+          "default_architecture": true
+        }
+      ]
+    },
+    {
       "version": "0.3.0",
       "providers": [
         {

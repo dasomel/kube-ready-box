@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-02
+
+Ubuntu-only rebuild (`vmware_desktop` arm64) that ships the two cleanup fixes below. Rocky (0.1.1)
+and NixOS (0.2.2) are unchanged and stay assets of the `v0.3.0` release.
+
+| Box | Version | Provider | Kernel | Size |
+|---|---|---|---|---|
+| `dasomel/ubuntu-24.04-ext4` | 0.3.1 | vmware_desktop | 6.8.0-147-generic | 1.46 GiB |
+| `dasomel/ubuntu-24.04-xfs` | 0.3.1 | vmware_desktop | 6.8.0-147-generic | 1.56 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 0.3.1 | vmware_desktop | 7.0.0-42-generic | 1.75 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 0.3.1 | vmware_desktop | 7.0.0-42-generic | 1.97 GiB |
+
+Boot-verified on VMware Fusion (Apple Silicon): `/proc/cmdline` and `/etc/default/grub` carry no
+installer arguments, `/lib/modules` holds only the running kernel, no `rc` kernel packages, growroot
+PASS, cloud-init disabled, clean after `vagrant reload`, `test-vm/verify_box.sh` failures=0.
+
 ### Added
 - Weekly box CVE scan (`.github/workflows/box-cve-scan.yml`, `tools/box-cve-scan.sh`,
   `tools/box-pkgdb-extract.sh`): downloads each shipped box through its Pages catalog, verifies the
@@ -681,7 +697,8 @@ vagrant up
 
 ---
 
-[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/dasomel/kube-ready-box/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/dasomel/kube-ready-box/releases/tag/v0.3.0
 [0.2.3]: https://github.com/dasomel/kube-ready-box/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/dasomel/kube-ready-box/compare/v0.2.1...v0.2.2
