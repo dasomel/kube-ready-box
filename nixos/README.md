@@ -17,7 +17,7 @@
 
 ## 현재 상태 (2026-11-01)
 
-**`dasomel/nixos-kube-ready` 0.2.2 배포됨** (libvirt / arm64, v1.2.0 GitHub Release 자산 + GitHub Pages 카탈로그). Vagrant Cloud(HCP Vagrant)는 종료되어 더 이상 쓰지 않습니다 ([box-distribution.md](../docs/box-distribution.md)). 변경 내용은 [CHANGELOG](../CHANGELOG.md) 참고.
+**`dasomel/nixos-kube-ready` 0.2.2 배포됨** (libvirt / arm64, v0.3.0 GitHub Release 자산 + GitHub Pages 카탈로그). Vagrant Cloud(HCP Vagrant)는 종료되어 더 이상 쓰지 않습니다 ([box-distribution.md](../docs/box-distribution.md)). 변경 내용은 [CHANGELOG](../CHANGELOG.md) 참고.
 디스크 이미지를 빌드한 뒤 `package-box.sh`로 직접 Vagrant 박스로 포장하는 구조입니다.
 
 | 경로 | 상태 |

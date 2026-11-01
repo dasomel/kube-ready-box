@@ -9,16 +9,18 @@
 
 OS 수준 최적화가 적용된 Kubernetes-ready Ubuntu Vagrant Box. **24.04 LTS** (Noble Numbat, 기본값)과 **26.04 LTS** (Resolute Raccoon, 커널 Linux 7.0) 지원.
 
-> **배포 경로 변경 (v1.2.0+)**: HCP Vagrant(구 Vagrant Cloud)가 종료됩니다. 2026-10-01부터 신규 업로드가 막혔고, 2026-12-31 이후 `dasomel/*`를 포함한 모든 호스팅 박스가 삭제됩니다. 박스는 이제 GitHub Release 자산으로, Vagrant 카탈로그는 GitHub Pages로 제공합니다. [Box 배포](docs/box-distribution.md) 참고.
+> **배포 경로 변경 (v0.3.0+)**: HCP Vagrant(구 Vagrant Cloud)가 종료됩니다. 2026-10-01부터 신규 업로드가 막혔고, 2026-12-31 이후 `dasomel/*`를 포함한 모든 호스팅 박스가 삭제됩니다. 박스는 이제 GitHub Release 자산으로, Vagrant 카탈로그는 GitHub Pages로 제공합니다. [Box 배포](docs/box-distribution.md) 참고.
 >
 > | Box | 버전 | Provider (모두 arm64) |
 > |---|---|---|
-> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 1.2.0 | `vmware_desktop` |
-> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 1.2.0 | `vmware_desktop` |
+> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.0 | `vmware_desktop` |
+> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.0 | `vmware_desktop` |
 > | `dasomel/rocky-9-ext4`, `dasomel/rocky-9-xfs` | 0.1.1 | `vmware_desktop` |
 > | `dasomel/nixos-kube-ready` | 0.2.2 | `libvirt` (`vagrant-qemu` 가능) |
 >
-> VirtualBox와 amd64 박스는 v1.2.0에 포함되지 않습니다 (빌드 호스트에서 VirtualBox SSH를 검증할 수 없고, arm64 빌드 호스트에서 amd64를 빌드할 수 없음).
+> VirtualBox와 amd64 박스는 v0.3.0에 포함되지 않습니다 (빌드 호스트에서 VirtualBox SSH를 검증할 수 없고, arm64 빌드 호스트에서 amd64를 빌드할 수 없음).
+>
+> **Ubuntu 버전 재정렬**: Ubuntu 박스는 Vagrant Cloud 1.1.0 다음 버전이 **0.3.0**입니다(1.1.0은 GitHub Release 자산이 아니었고 Vagrant Cloud와 함께 삭제됩니다). Vagrant는 1.1.0을 0.3.0보다 높게 보므로 기존 버전을 먼저 지우세요: `vagrant box remove dasomel/<box> --box-version 1.1.0`.
 
 ## 24.04 vs 26.04
 
@@ -77,7 +79,7 @@ vagrant box add https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-xfs.
 | **적합한 용도** | 범용 | K8s 워크로드, 대용량 파일 |
 | **K8s Quota** | 미지원 | `--local-storage-capacity-isolation` |
 | **온라인 축소** | 지원 | 미지원 |
-| **Box 크기 (v1.2.0 `.box`, arm64)** | 24.04: 1.45 GiB, 26.04: 1.84 GiB, Rocky 9: 1.77 GiB | 24.04: 1.58 GiB, 26.04: 1.97 GiB, Rocky 9: 1.93 GiB |
+| **Box 크기 (v0.3.0 `.box`, arm64)** | 24.04: 1.45 GiB, 26.04: 1.84 GiB, Rocky 9: 1.77 GiB | 24.04: 1.58 GiB, 26.04: 1.97 GiB, Rocky 9: 1.93 GiB |
 
 ### Vagrantfile 예제
 

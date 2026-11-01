@@ -93,7 +93,7 @@ booted guest confirmed `"status":"PASS"` (failures:0, unknowns:2 -- both
 expected by design: `containerd_systemdcgroup` since this box doesn't
 install a container runtime, and `rocky10_x86_64_v3` since this is Rocky
 9, not 10). Published to Vagrant Cloud as `dasomel/rocky-9-ext4` 0.1.0
-(vmware_desktop/arm64); 0.1.1 ships via the v1.2.0 GitHub Release (Vagrant Cloud
+(vmware_desktop/arm64); 0.1.1 ships via the v0.3.0 GitHub Release (Vagrant Cloud
 is EOL, see `docs/box-distribution.md`).
 
 **xfs added** (`packer/http/rocky-9-xfs/ks.cfg`,
