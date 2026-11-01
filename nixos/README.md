@@ -61,10 +61,10 @@ macOS에 별도 박스가 필요 없습니다. vagrant-qemu가 `box_format: "lib
 ./nixos/package-box.sh -p vmware_desktop # -> dist/dasomel-...-arm64-vmware_desktop.box
 
 # 3. Vagrant Cloud 배포 (검증된 프로바이더만 좁혀서)
-PROVIDERS=libvirt VERSION=0.2.1 ./nixos/upload-nixos.sh
+PROVIDERS=libvirt VERSION=0.2.2 ./nixos/upload-nixos.sh
 
 # 부가: SBOM(SPDX 2.3 JSON) 생성 — 박스에 내장되지 않고 dist/에 별도 파일로 떨어집니다
-VERSION=0.2.1 ./nixos/build.sh sbom
+VERSION=0.2.2 ./nixos/build.sh sbom
 ```
 
 파일명 규칙은 `box-common.sh` 한 곳에서만 정의하며 세 스크립트가 공유합니다. 이름을 각자 조립하면
@@ -76,7 +76,7 @@ VERSION=0.2.1 ./nixos/build.sh sbom
 
 ```bash
 # nixpkgs 리비전은 flake.lock 의 nixpkgs 와 같은 값으로 고정한다 (컨테이너 이미지의 채널에 의존하지 않기 위해).
-REV=718f670e845328e9c2cecdd832835712b2cbd065
+REV=fa1373130d5a21c040a47c5dbe1913d59ed91808
 docker run --rm -v nixcache:/nix -v "$(pwd)/nixos:/build" -w /build \
   -e NIX_PATH="nixpkgs=https://github.com/NixOS/nixpkgs/archive/$REV.tar.gz" nixos/nix sh -c "
   echo 'system-features = kvm benchmark big-parallel nixos-test uid-range' >> /etc/nix/nix.conf

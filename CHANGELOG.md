@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
+- **NixOS box 0.2.2: kernel 6.18.57 -> 6.18.60, OpenSSH 10.5p1 -> 10.6p1.** 0.2.2 builds from
+  `nixos-26.05` rev `fa137313...` (2026-10-31), pinned in `nixos/flake.lock` and in the `NIX_PATH`
+  of the documented Docker build. OpenSSH 10.6p1 fixes CVE-2026-106552 and CVE-2026-106583
+  (nixpkgs cherry-pick: https://github.com/NixOS/nixpkgs/commit/fd7929af1c84418e19ef7479f10f069b280241ad).
+  Evaluated closure versions: `boot.kernelPackages.kernel.version` = 6.18.60,
+  `services.openssh.package.version` = 10.6p1 (x86_64-linux and aarch64-linux).
+- **NixOS CVE-2026-98432 (IPv4 TCP use-after-free)**: already fixed upstream in 6.18.56
+  (kernel.org `ChangeLog-6.18.56` carries "commit e3f33b0a1d89 upstream"), so NixOS 0.2.1 (6.18.57)
+  and 0.2.2 (6.18.60) are fixed. The 0.2.0 image was built from `nixos-26.05` `714a5f8c...`, whose
+  `kernels-org.json` pins 6.18.36, which predates the fix: 0.2.0 is affected.
 - **NixOS box 0.2.1: OpenSSH 10.3p1 -> 10.5p1.** The 0.2.0 image was built from an older
   `nixos-26.05` revision (`714a5f8c...`) that shipped OpenSSH 10.3p1, which lacks the 10.4-10.5
   fixes. 0.2.1 builds from `nixos-26.05` rev `718f670e...` (2026-10-26) and pins that revision in
