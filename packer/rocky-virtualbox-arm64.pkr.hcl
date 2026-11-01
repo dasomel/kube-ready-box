@@ -62,6 +62,7 @@ build {
       "scripts/06-nic-tuning.sh",
       "scripts/rocky-tuning.sh",
       "scripts/08-security-check-rocky.sh",
+      "scripts/09-kernel-prune-rocky.sh",
       "scripts/license-info.sh",
       "scripts/generate-sbom.sh",
       "scripts/10-sandbox-runtime.sh",

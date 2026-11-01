@@ -14,7 +14,12 @@ elif command -v rpm >/dev/null 2>&1; then
 else
   ARCH="$(uname -m)"
 fi
-KERNEL="$(uname -r)"
+# 출하 커널 = 부팅될 가장 새 설치 커널(/boot/vmlinuz-*, 버전 정렬). 빌드 중
+# RUNNING 커널(uname -r)은 설치기 커널일 수 있어 쓰지 않는다. 확정 못 하면
+# 추측하지 않고 UNKNOWN.
+KERNEL="$(find "${KUBE_READY_BOOT_DIR:-/boot}" -maxdepth 1 -name 'vmlinuz-*' 2>/dev/null \
+  | sed 's|.*/vmlinuz-||' | grep -v 'rescue' | sort -V | tail -1 || true)"
+[ -n "$KERNEL" ] || KERNEL="UNKNOWN"
 BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 # SBOM generation is deliberately offline. The image build must provide the
