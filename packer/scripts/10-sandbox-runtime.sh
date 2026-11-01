@@ -33,41 +33,83 @@ trap 'rm -rf "$tmp_dir"' EXIT
 
 cd "$tmp_dir"
 
-# release/latest 는 빌드마다 다른 결과를 내는 움직이는 타깃이라 재현 가능한 이미지를
-# 만들 수 없다(#7 오프라인 번들, #8 immutable promotion, #10 SBOM 과 직접 충돌).
-# GVISOR_RELEASE 로 고정하고, 미지정 시에만 latest 를 쓰되 그 사실을 경고한다.
-# 기본값은 실제로 설치·검증한 릴리스로 고정한다. "latest" 는 빌드 시점마다 달라져
-# 검증한 것과 배포되는 것이 달라진다(2026-08-21 검증: release-20260817.0, spec 1.2.1).
-gvisor_release="${GVISOR_RELEASE:-20260817.0}"
-if [ "$gvisor_release" = "latest" ]; then
-  echo "[WARN] GVISOR_RELEASE=latest - 빌드 시점마다 결과가 달라지며 재현 가능한 빌드가 아닙니다." >&2
-fi
-base_url="https://storage.googleapis.com/gvisor/releases/release/${gvisor_release}/${target_arch}"
-
-echo "[INFO] gVisor 릴리스 바이너리 및 체크섬 다운로드 중 ($base_url)..."
-curl -sSL -f -O "${base_url}/runsc"
-curl -sSL -f -O "${base_url}/runsc.sha512"
-curl -sSL -f -O "${base_url}/containerd-shim-runsc-v1"
-curl -sSL -f -O "${base_url}/containerd-shim-runsc-v1.sha512"
-
-# 4. 체크섬 검증
-echo "[INFO] 다운로드한 바이너리 체크섬(SHA512) 검증 중..."
-if ! sha512sum -c runsc.sha512; then
-  echo "[ERROR] runsc sha512 체크섬 검증 실패!" >&2
+# D1: 20261026.0 부터 tarball 만 배포하므로 아키텍처별 SHA-256 을 코드에 고정한다.
+# 새 릴리스는 해시 추가 또는 GVISOR_SHA256 지정이 필요하지만, 불일치 시 설치 전에 중단한다.
+gvisor_release="${GVISOR_RELEASE:-20261026.0}"
+case "${gvisor_release}:${target_arch}" in
+  20261026.0:x86_64) pinned_sha256="096589d2d6078ba4caa26aa0200932f571aa5da9d08a5156b98ab1d93fa54468" ;;
+  20261026.0:aarch64) pinned_sha256="6b03c9d53f46b5ac56fd32522f38f108645e9f80a26a335e86ad1e09dcdaefda" ;;
+  *) pinned_sha256="" ;;
+esac
+gvisor_sha256="${GVISOR_SHA256:-$pinned_sha256}"
+if [ -z "$gvisor_sha256" ]; then
+  echo "[ERROR] GVISOR_RELEASE=${gvisor_release} (${target_arch}) 에 고정된 SHA-256 이 없습니다. GVISOR_SHA256 을 지정하세요." >&2
   exit 1
 fi
+archive="gvisor-${target_arch}.tar.bz2"
+base_url="https://github.com/google/gvisor/releases/download/release-${gvisor_release}"
 
-if ! sha512sum -c containerd-shim-runsc-v1.sha512; then
-  echo "[ERROR] containerd-shim-runsc-v1 sha512 체크섬 검증 실패!" >&2
+echo "[INFO] gVisor 릴리스 tarball 다운로드 중 (${base_url}/${archive})..."
+curl -sSL -f -o "$archive" "${base_url}/${archive}"
+
+# 4. 체크섬 검증 및 필요한 바이너리만 추출
+echo "[INFO] 다운로드한 tarball 체크섬(SHA-256) 검증 중..."
+if ! echo "${gvisor_sha256}  ${archive}" | sha256sum -c -; then
+  echo "[ERROR] gVisor tarball SHA-256 체크섬 검증 실패!" >&2
   exit 1
 fi
-
-echo "[INFO] 체크섬 검증 성공."
+# D2: gVisor sidecar 는 runsc 옆 gvisor-bin/ 에서 실행된다. 목록을 먼저 검사하고
+# 일반 파일만 이름으로 추출한다. 새 릴리스의 구성 변경 시 이 검사를 갱신해야 한다.
+tar -tjf "$archive" > archive-members.txt
+tar -tvjf "$archive" > archive-listing.txt
+mapfile -t archive_members < archive-members.txt
+mapfile -t archive_listing < archive-listing.txt
+if [ "${#archive_members[@]}" -ne "${#archive_listing[@]}" ]; then
+  echo "[ERROR] gVisor tarball 멤버 목록이 일치하지 않습니다." >&2
+  exit 1
+fi
+helper_members=()
+for i in "${!archive_members[@]}"; do
+  member="${archive_members[$i]}"
+  case "$member" in
+    gvisor-bin/)
+      if [ "${archive_listing[$i]:0:1}" != "d" ]; then
+        echo "[ERROR] gvisor-bin/ 멤버가 디렉터리가 아닙니다." >&2
+        exit 1
+      fi
+      ;;
+    gvisor-bin/*)
+      helper_name="${member#gvisor-bin/}"
+      if [[ ! "$helper_name" =~ ^[a-zA-Z0-9._-]+$ || "$helper_name" == "." || "$helper_name" == ".." || "${archive_listing[$i]:0:1}" != "-" ]]; then
+        echo "[ERROR] 잘못된 gVisor helper 멤버: $member" >&2
+        exit 1
+      fi
+      helper_members+=("$member")
+      ;;
+  esac
+done
+if [ "${#helper_members[@]}" -eq 0 ]; then
+  echo "[ERROR] gVisor helper 멤버가 없습니다." >&2
+  exit 1
+fi
+tar -xjf "$archive" -- runsc containerd-shim-runsc-v1 "${helper_members[@]}"
+echo "[INFO] 체크섬 검증 및 추출 성공."
 
 # 5. 바이너리 설치
-echo "[INFO] /usr/local/bin 에 runsc 및 containerd-shim-runsc-v1 설치 중..."
-chmod 0755 runsc containerd-shim-runsc-v1
-cp -f runsc containerd-shim-runsc-v1 /usr/local/bin/
+runsc_install_path="/usr/local/bin/runsc"
+install_dir="$(dirname "$runsc_install_path")"
+echo "[INFO] $install_dir 에 runsc, shim 및 gVisor helper 설치 중..."
+rm -rf "$install_dir/gvisor-bin"
+mkdir -p "$install_dir/gvisor-bin"
+install -m 0755 runsc "$runsc_install_path"
+install -m 0755 containerd-shim-runsc-v1 "$install_dir/containerd-shim-runsc-v1"
+for member in "${helper_members[@]}"; do
+  install -m 0755 "$member" "$install_dir/gvisor-bin/${member#gvisor-bin/}"
+done
+if [ ! -x "$install_dir/gvisor-bin/gvisor_sentry" ]; then
+  echo "[ERROR] gVisor sidecar gvisor_sentry 설치 확인 실패!" >&2
+  exit 1
+fi
 
 # 6. containerd 런타임 핸들러 설정
 # 주의: containerd 는 /etc/containerd/config.toml.d 같은 드롭인 디렉터리를 자동으로
@@ -110,6 +152,7 @@ mkdir -p /etc/vagrant-box
 python3 - "$containerd_configured" /etc/vagrant-box/sandbox-manifest.json "$gvisor_release" <<'PY'
 import datetime
 import json
+import os
 import subprocess
 import sys
 
@@ -131,6 +174,7 @@ def get_file_hash(algo, filepath):
 
 runsc_path = "/usr/local/bin/runsc"
 shim_path = "/usr/local/bin/containerd-shim-runsc-v1"
+helper_dir = os.path.join(os.path.dirname(runsc_path), "gvisor-bin")
 
 runsc_version = get_cmd_output([runsc_path, "--version"])
 if runsc_version:
@@ -140,7 +184,7 @@ manifest = {
     "schema": "kube-ready-sandbox/v1",
     "sandbox_profile": 1,
     "gvisor_release": gvisor_release,
-    "integrity_note": "sha512 checksums fetched from the same origin as the binaries; verifies transfer integrity, not authenticity",
+    "integrity_note": "release tarball verified against a pinned SHA-256 before extracting binaries",
     "installed_at": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
     "runsc": {
         "path": runsc_path,
@@ -153,6 +197,14 @@ manifest = {
         "sha256": get_file_hash("sha256", shim_path),
         "sha512": get_file_hash("sha512", shim_path),
     },
+    "helpers": [
+        {
+            "name": name,
+            "path": os.path.join(helper_dir, name),
+            "sha256": get_file_hash("sha256", os.path.join(helper_dir, name)),
+        }
+        for name in sorted(os.listdir(helper_dir))
+    ],
     "containerd_configured": containerd_configured,
 }
 
