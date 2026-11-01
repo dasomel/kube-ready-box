@@ -13,6 +13,15 @@ set -euo pipefail
 disk=${1:?usage: box-pkgdb-extract.sh <disk-image> <out-dir>}
 out=${2:?usage: box-pkgdb-extract.sh <disk-image> <out-dir>}
 [ -f "$disk" ] || { echo "disk not found: $disk" >&2; exit 2; }
+# 이전 실행의 패키지 DB 가 남아 있으면 새 이미지에서 못 꺼낸 것을 성공으로 오인한다
+# (UNKNOWN -> PASS). 비어 있지 않은 출력 디렉터리는 거부한다.
+if [ -e "$out" ] && [ -n "$(ls -A "$out" 2>/dev/null)" ]; then
+  echo "output dir not empty: $out" >&2; exit 2
+fi
+# 모든 Ubuntu 박스의 VG 는 ubuntu-vg, Rocky 는 rocky-vg 다. 같은 호스트에서 동시에
+# 두 박스를 열면 VG 이름이 겹치므로 한 번에 하나만 처리한다.
+exec 9>/run/lock/box-pkgdb-extract.lock 2>/dev/null || exec 9>/tmp/box-pkgdb-extract.lock
+flock -w 1800 9 || { echo "another extraction holds the lock" >&2; exit 2; }
 
 work=$(mktemp -d)
 raw="$work/disk.raw"
@@ -42,6 +51,13 @@ pvscan --cache >/dev/null 2>&1 || true
 for l in "${loops[@]}"; do
   vg=$(pvs --noheadings -o vg_name "$l" 2>/dev/null | tr -d ' ' || true)
   if [ -n "$vg" ]; then
+    # 같은 이름의 VG 가 호스트에 이미 있으면(박스 밖의 PV 가 섞이면) 손대지 않는다.
+    for pv in $(pvs --noheadings -o pv_name -S "vg_name=$vg" 2>/dev/null); do
+      case " ${loops[*]} " in
+        *" $pv "*) ;;
+        *) echo "VG $vg also exists outside this image ($pv); refusing to activate" >&2; exit 2 ;;
+      esac
+    done
     vgchange -ay "$vg" >/dev/null
     # udev 없는 컨테이너에서는 /dev/<vg>/<lv> 노드가 생기지 않는다.
     vgmknodes "$vg" >/dev/null 2>&1 || true
