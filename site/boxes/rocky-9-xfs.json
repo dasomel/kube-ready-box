@@ -7,7 +7,7 @@
       "providers": [
         {
           "name": "vmware_desktop",
-          "url": "https://github.com/dasomel/kube-ready-box/releases/download/v1.2.0/rocky-9-xfs-vmware_desktop-arm64-0.1.1.box",
+          "url": "https://github.com/dasomel/kube-ready-box/releases/download/v0.3.0/rocky-9-xfs-vmware_desktop-arm64-0.1.1.box",
           "checksum_type": "sha256",
           "checksum": "a6aa3be44110045c3b556bd9e7a4e62a2c377c84692c78daeae8055b49f673b6",
           "architecture": "arm64",

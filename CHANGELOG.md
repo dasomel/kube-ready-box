@@ -7,20 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.2.0] - 2026-11-01
+## [0.3.0] - 2026-11-01
+
+> **Version line reset.** The Ubuntu boxes follow Vagrant Cloud 1.1.0 with 0.3.0, continuing the
+> 0.2.x line; 1.1.0 was only ever a Vagrant Cloud upload (no GitHub Release assets) and is deleted
+> with Vagrant Cloud on 2026-12-31. Vagrant ranks 1.1.0 above 0.3.0, so anyone who has 1.1.0 must
+> run `vagrant box remove dasomel/<box> --box-version 1.1.0` once. This release briefly existed as
+> GitHub Release v1.2.0 on the same day and was renamed; the box files are byte-identical.
+> Rocky (0.1.1) and NixOS (0.2.2) keep their own version lines.
 
 Security rebuild of every box this host can build and verify, plus a new distribution path:
 HCP Vagrant (Vagrant Cloud) stopped accepting new boxes and versions on 2026-10-01 and deletes all
-hosted boxes on 2026-12-31, so 1.2.0 ships as GitHub Release assets with a Vagrant catalog on GitHub
+hosted boxes on 2026-12-31, so 0.3.0 ships as GitHub Release assets with a Vagrant catalog on GitHub
 Pages (`config.vm.box_url = "https://dasomel.github.io/kube-ready-box/boxes/<box>.json"`, see
 `docs/box-distribution.md`). Security response history: `docs/security-response.md`.
 
 | Box (arm64) | Version | Provider | Kernel | Box size |
 |---|---|---|---|---|
-| `dasomel/ubuntu-24.04-ext4` | 1.2.0 | vmware_desktop | 6.8.0-147-generic | 1.45 GiB |
-| `dasomel/ubuntu-24.04-xfs` | 1.2.0 | vmware_desktop | 6.8.0-147-generic | 1.58 GiB |
-| `dasomel/ubuntu-26.04-ext4` | 1.2.0 | vmware_desktop | 7.0.0-42-generic | 1.84 GiB |
-| `dasomel/ubuntu-26.04-xfs` | 1.2.0 | vmware_desktop | 7.0.0-42-generic | 1.97 GiB |
+| `dasomel/ubuntu-24.04-ext4` | 0.3.0 | vmware_desktop | 6.8.0-147-generic | 1.45 GiB |
+| `dasomel/ubuntu-24.04-xfs` | 0.3.0 | vmware_desktop | 6.8.0-147-generic | 1.58 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 0.3.0 | vmware_desktop | 7.0.0-42-generic | 1.84 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 0.3.0 | vmware_desktop | 7.0.0-42-generic | 1.97 GiB |
 | `dasomel/rocky-9-ext4` | 0.1.1 | vmware_desktop | 5.14.0-687.61.1.el9_8 | 1.77 GiB |
 | `dasomel/rocky-9-xfs` | 0.1.1 (first release) | vmware_desktop | 5.14.0-687.61.1.el9_8 | 1.93 GiB |
 | `dasomel/nixos-kube-ready` | 0.2.2 | libvirt | 6.18.60 | 0.97 GiB |
@@ -28,7 +35,7 @@ Pages (`config.vm.box_url = "https://dasomel.github.io/kube-ready-box/boxes/<box
 Every Ubuntu/Rocky box was built from 1d3abd3 or later (the Ubuntu images built before 549239d
 lack only an ordering line that names Rocky-only `sshd-keygen@` units, a no-op on Ubuntu), boot-verified on VMware Fusion (NixOS on
 QEMU/hvf) and scanned with trivy against its package database: **0 CVEs with a fixed version
-available** in each image. VirtualBox and amd64 boxes are not part of 1.2.0 (VirtualBox SSH cannot
+available** in each image. VirtualBox and amd64 boxes are not part of 0.3.0 (VirtualBox SSH cannot
 be verified on the build host; amd64 cannot be built on it).
 
 ### Breaking / action required
@@ -83,7 +90,7 @@ be verified on the build host; amd64 cannot be built on it).
   only in `nixos-unstable` at the time of writing and is not included.
 - **Ubuntu and Rocky rebuilt with all released distro fixes.** Per trivy on the extracted package
   databases, the shipped Rocky 9 0.1.0 line carried 438 fixable CVEs (5 critical) and the unpublished
-  Ubuntu 26.04 1.2.0 build 1,141 (2 critical); both are 0 in 1.2.0. Kernel CVE-2026-98432 has no
+  Ubuntu 26.04 pre-release build 1,141 (2 critical); both are 0 in 0.3.0. Kernel CVE-2026-98432 has no
   Ubuntu or Rocky fix yet and remains open (see `docs/security-response.md`).
 - **Supply chain** (#83, #85): the unpinned-input guard now scans every shell directory and no longer
   misses a fetch hidden after a backslash-ending comment (35a5606, 45c3ec4); `packer init` uses
@@ -221,6 +228,8 @@ be verified on the build host; amd64 cannot be built on it).
 > 이 버전의 박스는 기동되지 않습니다. 0.1.1을 사용하세요. 제약과 빌드 경로는 [nixos/README.md](nixos/README.md) 참고.
 
 ## [1.1.0] - 2026-07-18
+
+> Vagrant Cloud only. The next Ubuntu release is 0.3.0 (version line reset, see above).
 
 ### Added
 - Ubuntu 26.04 LTS (Resolute Raccoon, kernel Linux 7.0) coexist support
@@ -651,7 +660,8 @@ vagrant up
 
 ---
 
-[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/dasomel/kube-ready-box/releases/tag/v0.3.0
 [0.2.3]: https://github.com/dasomel/kube-ready-box/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/dasomel/kube-ready-box/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/dasomel/kube-ready-box/compare/v0.2.0...v0.2.1

@@ -1,6 +1,6 @@
 # Box Distribution
 
-How kube-ready-box ships Vagrant boxes since v1.2.0 (decision D7), and why it left Vagrant Cloud.
+How kube-ready-box ships Vagrant boxes since v0.3.0 (decision D7), and why it left Vagrant Cloud.
 
 ## Why Vagrant Cloud is gone
 
@@ -45,19 +45,24 @@ vagrant box add https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-ext4
 
 Vagrant verifies the catalog checksum. `vagrant box outdated` and `vagrant box update` work through the catalog.
 
-### v1.2.0 box set (all arm64)
+### v0.3.0 box set (all arm64)
 
 | Box | Version | Provider |
 |---|---|---|
-| `ubuntu-24.04-ext4` | 1.2.0 | `vmware_desktop` |
-| `ubuntu-24.04-xfs` | 1.2.0 | `vmware_desktop` |
-| `ubuntu-26.04-ext4` | 1.2.0 | `vmware_desktop` |
-| `ubuntu-26.04-xfs` | 1.2.0 | `vmware_desktop` |
+| `ubuntu-24.04-ext4` | 0.3.0 | `vmware_desktop` |
+| `ubuntu-24.04-xfs` | 0.3.0 | `vmware_desktop` |
+| `ubuntu-26.04-ext4` | 0.3.0 | `vmware_desktop` |
+| `ubuntu-26.04-xfs` | 0.3.0 | `vmware_desktop` |
 | `rocky-9-ext4` | 0.1.1 | `vmware_desktop` |
 | `rocky-9-xfs` | 0.1.1 | `vmware_desktop` |
 | `nixos-kube-ready` | 0.2.2 | `libvirt` (vagrant-libvirt, or vagrant-qemu) |
 
-Asset names look like `ubuntu-24.04-ext4-vmware_desktop-arm64-1.2.0.box`.
+Asset names look like `ubuntu-24.04-ext4-vmware_desktop-arm64-0.3.0.box`.
+
+Ubuntu versions were reset from 1.1.0 (the last Vagrant Cloud upload, never a GitHub Release
+asset) to 0.3.0. Vagrant compares versions numerically, so a machine that still has 1.1.0 keeps
+booting it and `vagrant box outdated` reports nothing. Remove it once:
+`vagrant box remove dasomel/<box> --box-version 1.1.0`. Rocky and NixOS keep their own version lines.
 
 Not in this release:
 
@@ -72,7 +77,7 @@ The root LV is 16 GiB in the image and grows to the whole disk on first boot (`k
 
 1. Build and verify the boxes (`docs/DEPLOY_CHECKLIST.md`).
 2. Compute the SHA-256 of each final `.box` file.
-3. Create the GitHub Release tag (for example `v1.2.0`) and upload each `.box` as a release asset. Do not commit `.box` files.
+3. Create the GitHub Release tag (for example `v0.3.0`) and upload each `.box` as a release asset. Do not commit `.box` files.
 4. Add each box to its catalog under `site/boxes/`, then verify all catalogs:
 
    ```bash

@@ -1,7 +1,7 @@
 Ubuntu 24.04 Cloud-based multi-architecture (ARM/AMD64) optimized OS for Kubernetes installation
 
 > GitHub: https://github.com/dasomel/kube-ready-box
-> Distribution (v1.2.0+): GitHub Release assets + GitHub Pages catalog, see [box-distribution.md](../docs/box-distribution.md)
+> Distribution (v0.3.0+): GitHub Release assets + GitHub Pages catalog, see [box-distribution.md](../docs/box-distribution.md)
 > Vagrant Cloud (HCP Vagrant) is deprecated: no new versions since 2026-10-01, all hosted boxes deleted after 2026-12-31
 
 ## 1. Box Overview

@@ -8,9 +8,9 @@
 
 | 발견 사항·영향받는 박스 | 상태·수정 버전 | 근거 |
 | --- | --- | --- |
-| Rocky 9 게시 0.1.0 계열: 수정 가능한 CVE CRITICAL 5 / HIGH 411 / MEDIUM 22(총 438). 빌드 후 재부팅하지 않아 설치 커널 5.14.0-687.10.1이 남았고, 여기에 CVE 399건이 포함됨. | **로컬 재빌드에서 수정(아직 미게시):** 수정 가능 CVE 0건. 부팅 검증에서 커널 5.14.0-687.61.1.el9_8만 확인. | [커널 제거 c2e6de3](https://github.com/dasomel/kube-ready-box/commit/c2e6de3), [PR #84](https://github.com/dasomel/kube-ready-box/pull/84), [Rocky xfs 빌드 수정 PR #86](https://github.com/dasomel/kube-ready-box/pull/86) |
-| Ubuntu 26.04 로컬 1.2.0 빌드: 수정 가능 CVE CRITICAL 2 / HIGH 104 / MEDIUM 866 / LOW 169. | **로컬 재빌드에서 수정(아직 미게시):** 수정 가능 CVE 0건. 커널 7.0.0-42, curl 8.18.0-1ubuntu2.8, OpenSSL 3.5.5-1ubuntu3.7. | [PR #84](https://github.com/dasomel/kube-ready-box/pull/84), [재빌드 기록](../research/evidence/2026-11.jsonl) |
-| Ubuntu 24.04 재빌드 박스. | **로컬 재빌드에서 수정(아직 미게시):** 수정 가능 CVE 0건. 커널 6.8.0-147. | [재빌드 기록](../research/evidence/2026-11.jsonl), [PR #84](https://github.com/dasomel/kube-ready-box/pull/84) |
+| Rocky 9 게시 0.1.0 계열: 수정 가능한 CVE CRITICAL 5 / HIGH 411 / MEDIUM 22(총 438). 빌드 후 재부팅하지 않아 설치 커널 5.14.0-687.10.1이 남았고, 여기에 CVE 399건이 포함됨. | **v0.3.0에서 수정(2026-11-01):** 수정 가능 CVE 0건. 부팅 검증에서 커널 5.14.0-687.61.1.el9_8만 확인. | [커널 제거 c2e6de3](https://github.com/dasomel/kube-ready-box/commit/c2e6de3), [PR #84](https://github.com/dasomel/kube-ready-box/pull/84), [Rocky xfs 빌드 수정 PR #86](https://github.com/dasomel/kube-ready-box/pull/86) |
+| Ubuntu 26.04 로컬 사전 빌드: 수정 가능 CVE CRITICAL 2 / HIGH 104 / MEDIUM 866 / LOW 169. | **v0.3.0에서 수정(2026-11-01):** 수정 가능 CVE 0건. 커널 7.0.0-42, curl 8.18.0-1ubuntu2.8, OpenSSL 3.5.5-1ubuntu3.7. | [PR #84](https://github.com/dasomel/kube-ready-box/pull/84), [재빌드 기록](../research/evidence/2026-11.jsonl) |
+| Ubuntu 24.04 재빌드 박스. | **v0.3.0에서 수정(2026-11-01):** 수정 가능 CVE 0건. 커널 6.8.0-147. | [재빌드 기록](../research/evidence/2026-11.jsonl), [PR #84](https://github.com/dasomel/kube-ready-box/pull/84) |
 | NixOS 게시 0.2.0(커널 6.18.36): CVE-2026-98432(Linux IPv4 TCP use-after-free). | **0.2.1·0.2.2에서 수정됨:** 업스트림 수정 e3f33b0a1d89는 Linux 6.18.56부터 포함. 0.2.2는 커널 6.18.60 및 CVE-2026-106552·CVE-2026-106583을 수정한 OpenSSH 10.6p1 사용. 게시된 0.2.0은 영향받음. | [NixOS 갱신 169bb21](https://github.com/dasomel/kube-ready-box/commit/169bb21), [kernel.org ChangeLog-6.18.56](https://cdn.kernel.org/pub/linux/kernel/v6.x/ChangeLog-6.18.56) |
 | Ubuntu 24.04/26.04 및 Rocky 9: CVE-2026-98432. | **업스트림 수정 대기(open-upstream):** 작성 당시 USN/RHSA 없음. 배포판 수정판이 나오면 재빌드. | [업스트림 수정 e3f33b0a1d89](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=e3f33b0a1d89) |
 | gVisor 20260817.0: CVE-2026-95702 및 Go 표준 라이브러리 CVE-2026-78660, CVE-2026-97031, CVE-2026-111943. | **수정됨(재빌드):** gVisor 20261026.0. 리뷰 중 `runsc`에 `gvisor-bin/gvisor_sentry`가 필요한 sidecar 회귀를 발견해 조치. | [갱신 4d579ce](https://github.com/dasomel/kube-ready-box/commit/4d579ce), [빌드 입력](build-inputs.md) |
@@ -37,7 +37,7 @@
 
 ## 배포 및 사용자 조치
 
-Vagrant Cloud(HCP Vagrant) 서비스가 종료됩니다. 기존 게시 버전은 2026-12-31까지 남지만 수정판이 제공되지 않습니다. 패치된 박스는 GitHub Release v1.2.0(작성 시점에 아직 미출시)과 Pages 카탈로그를 통해 배포할 예정입니다. v1.2.0 출시 후 게시된 0.2.0, 1.1.0, 0.1.0 사용자는 해당 박스로 이동하거나 `apt`/`dnf` 업그레이드 후 재부팅해야 합니다. 이 저장소 기록만으로 원격 릴리스의 모든 산출물을 독립 검증하지는 않았습니다.
+Vagrant Cloud(HCP Vagrant) 서비스가 종료됩니다. 기존 게시 버전은 2026-12-31까지 남지만 수정판이 제공되지 않습니다. 패치된 박스는 GitHub Release v0.3.0(2026-11-01 출시)과 Pages 카탈로그로 배포합니다. 게시된 0.2.0, 1.1.0, 0.1.0 사용자는 해당 박스로 이동하거나 `apt`/`dnf` 업그레이드 후 재부팅해야 합니다. 이 저장소 기록만으로 원격 릴리스의 모든 산출물을 독립 검증하지는 않았습니다.
 
 ## 대응 방식
 
