@@ -13,14 +13,14 @@ OS 수준 최적화가 적용된 Kubernetes-ready Ubuntu Vagrant Box. **24.04 LT
 >
 > | Box | 버전 | Provider (모두 arm64) |
 > |---|---|---|
-> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.0 | `vmware_desktop` |
-> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.0 | `vmware_desktop` |
+> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.1 | `vmware_desktop` |
+> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.1 | `vmware_desktop` |
 > | `dasomel/rocky-9-ext4`, `dasomel/rocky-9-xfs` | 0.1.1 | `vmware_desktop` |
 > | `dasomel/nixos-kube-ready` | 0.2.2 | `libvirt` (`vagrant-qemu` 가능) |
 >
-> VirtualBox와 amd64 박스는 v0.3.0에 포함되지 않습니다 (빌드 호스트에서 VirtualBox SSH를 검증할 수 없고, arm64 빌드 호스트에서 amd64를 빌드할 수 없음).
+> VirtualBox와 amd64 박스는 v0.3.x에 포함되지 않습니다 (빌드 호스트에서 VirtualBox SSH를 검증할 수 없고, arm64 빌드 호스트에서 amd64를 빌드할 수 없음).
 >
-> **Ubuntu 버전 재정렬**: Ubuntu 박스는 Vagrant Cloud 1.1.0 다음 버전이 **0.3.0**입니다(1.1.0은 GitHub Release 자산이 아니었고 Vagrant Cloud와 함께 삭제됩니다). Vagrant는 1.1.0을 0.3.0보다 높게 보므로 기존 버전을 먼저 지우세요: `vagrant box remove dasomel/<box> --box-version 1.1.0`.
+> **Ubuntu 버전 재정렬**: Ubuntu 박스는 Vagrant Cloud 1.1.0 다음 버전이 **0.3.x**입니다(1.1.0은 GitHub Release 자산이 아니었고 Vagrant Cloud와 함께 삭제됩니다). Vagrant는 1.1.0을 0.3.x보다 높게 보므로 기존 버전을 먼저 지우세요: `vagrant box remove dasomel/<box> --box-version 1.1.0`.
 
 ## 24.04 vs 26.04
 
@@ -79,7 +79,7 @@ vagrant box add https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-xfs.
 | **적합한 용도** | 범용 | K8s 워크로드, 대용량 파일 |
 | **K8s Quota** | 미지원 | `--local-storage-capacity-isolation` |
 | **온라인 축소** | 지원 | 미지원 |
-| **Box 크기 (v0.3.0 `.box`, arm64)** | 24.04: 1.45 GiB, 26.04: 1.84 GiB, Rocky 9: 1.77 GiB | 24.04: 1.58 GiB, 26.04: 1.97 GiB, Rocky 9: 1.93 GiB |
+| **Box 크기 (`.box`, arm64; Ubuntu 0.3.1, Rocky 0.1.1)** | 24.04: 1.46 GiB, 26.04: 1.75 GiB, Rocky 9: 1.77 GiB | 24.04: 1.56 GiB, 26.04: 1.97 GiB, Rocky 9: 1.93 GiB |
 
 ### Vagrantfile 예제
 

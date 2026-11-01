@@ -5,9 +5,9 @@
 > **배포 경로 변경 (v0.3.0+)**: HCP Vagrant(Vagrant Cloud)가 종료되어 Box는 GitHub Release 자산 + GitHub Pages 카탈로그로 제공됩니다.
 > 모든 예제에서 `config.vm.box_url`(또는 `vagrant box add <카탈로그 URL>`)이 필요합니다. 상세: [box-distribution.md](box-distribution.md).
 > 박스 이름은 `dasomel/ubuntu-24.04-ext4`처럼 filesystem 접미사를 포함합니다 (`dasomel/ubuntu-24.04` 단일 이름은 더 이상 게시되지 않음).
-> v0.3.0 박스: Ubuntu/Rocky는 `vmware_desktop` arm64, NixOS(`nixos-kube-ready`)는 `libvirt` arm64입니다. 루트 LV는 16 GiB로 시작해 첫 부팅 시 디스크 전체로 확장됩니다.
-> **VirtualBox와 amd64 박스는 v0.3.0에 없습니다.** 이 문서의 예제는 arm64 VMware 기준이며, 그 외 조합에서는 `vagrant up`이 실패합니다. 이전 Vagrant Cloud 버전은 2026-12-31까지만 받을 수 있습니다.
-> Ubuntu 1.1.0(Vagrant Cloud)을 받은 적이 있다면 먼저 지우세요: `vagrant box remove dasomel/<box> --box-version 1.1.0`. 0.3.0이 1.1.0보다 낮은 번호라 그대로 두면 1.1.0이 계속 쓰입니다.
+> 현재 박스(Ubuntu 0.3.1, Rocky 0.1.1, NixOS 0.2.2): Ubuntu/Rocky는 `vmware_desktop` arm64, NixOS(`nixos-kube-ready`)는 `libvirt` arm64입니다. 루트 LV는 16 GiB로 시작해 첫 부팅 시 디스크 전체로 확장됩니다.
+> **VirtualBox와 amd64 박스는 v0.3.x에 없습니다.** 이 문서의 예제는 arm64 VMware 기준이며, 그 외 조합에서는 `vagrant up`이 실패합니다. 이전 Vagrant Cloud 버전은 2026-12-31까지만 받을 수 있습니다.
+> Ubuntu 1.1.0(Vagrant Cloud)을 받은 적이 있다면 먼저 지우세요: `vagrant box remove dasomel/<box> --box-version 1.1.0`. 0.3.x가 1.1.0보다 낮은 번호라 그대로 두면 1.1.0이 계속 쓰입니다.
 
 ## 1. Vagrantfile 예시
 
@@ -18,7 +18,7 @@ Vagrant.configure("2") do |config|
   config.vm.box = "dasomel/ubuntu-24.04-ext4"
   config.vm.box_url = "https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-ext4.json"
 
-  # v0.3.0은 arm64 VMware(Apple Silicon)만 제공
+  # v0.3.x는 arm64 VMware(Apple Silicon)만 제공
   config.vm.provider "vmware_desktop" do |v|
     v.vmx["memsize"] = "4096"
     v.vmx["numvcpus"] = "2"
@@ -33,7 +33,7 @@ end
 
 ```ruby
 Vagrant.configure("2") do |config|
-  # v0.3.0은 vmware_desktop arm64만 제공 (VirtualBox/amd64 없음)
+  # v0.3.x는 vmware_desktop arm64만 제공 (VirtualBox/amd64 없음)
   PROVIDER = ENV['VAGRANT_PROVIDER'] || "vmware_desktop"
 
   # 노드 설정
