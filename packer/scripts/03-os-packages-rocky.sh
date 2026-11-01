@@ -32,6 +32,8 @@ dnf install -y \
 echo "Installing Kubernetes ecosystem tools..."
 dnf install -y \
   jq \
+  bzip2 \
+  tar \
   bash-completion \
   nfs-utils \
   sshpass
@@ -43,11 +45,11 @@ dnf install -y \
 # 그대로 재사용한다 - yq 바이너리는 배포판 무관 정적 Go 바이너리라 같은
 # YQ_VERSION이면 동일 아티팩트/체크섬이다.
 echo "Installing yq..."
-YQ_VERSION="${YQ_VERSION:-v4.44.3}"
+YQ_VERSION="${YQ_VERSION:-v4.54.1}"
 ARCH=$(uname -m)
 case "$ARCH" in
-  x86_64) YQ_ARCH=amd64; YQ_SHA256="${YQ_SHA256:-a2c097180dd884a8d50c956ee16a9cec070f30a7947cf4ebf87d5f36213e9ed7}" ;;
-  aarch64) YQ_ARCH=arm64; YQ_SHA256="${YQ_SHA256:-0e7e1524f68d91b3ff9b089872d185940ab0fa020a5a9052046ef10547023156}" ;;
+  x86_64) YQ_ARCH=amd64; YQ_SHA256="${YQ_SHA256:-8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702ea5f}" ;;
+  aarch64) YQ_ARCH=arm64; YQ_SHA256="${YQ_SHA256:-189088da0c6429ec5178dfaab1a114805f6cab0b61b165ab236efedf1d57a71b}" ;;
   *) echo "No pinned yq checksum for architecture '$ARCH'; refusing to install unverified binary" >&2; exit 1 ;;
 esac
 curl -sL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${YQ_ARCH}" -o /tmp/yq

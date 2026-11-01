@@ -29,7 +29,7 @@ log `trivy not installed; generating deterministic dpkg inventory only` and
 skip the two SBOM-format files entirely. `manifest.json`'s
 `sbom_generator` field always records which case applied
 (`trivy version --format json` output, or the literal string
-`offline-dpkg-inventory`) — check that field before assuming
+`offline-dpkg-inventory` on Ubuntu / `offline-rpm-inventory` on Rocky) — check that field before assuming
 `sbom-spdx.json`/`sbom-cyclonedx.json` exist on a given box.
 
 ## Spec versions actually emitted

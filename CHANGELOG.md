@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
+- **gVisor 20260817.0 -> 20261026.0** (`packer/scripts/10-sandbox-runtime.sh`): fixes CVE-2026-95702
+  and rebuilds with Go 1.27.3 (CVE-2026-78660, CVE-2026-97031, CVE-2026-111943). Upstream now ships
+  `gvisor-<arch>.tar.bz2`; the script verifies a pinned SHA-256 and installs `runsc`, the shim and the
+  `gvisor-bin/` sidecars, without which `runsc` cannot create a sandbox (`sidecar "gvisor_sentry" not
+  usable`). `GVISOR_RELEASE` overrides now require `GVISOR_SHA256`.
+- **yq v4.44.3 -> v4.54.1** (Go 1.22.5 -> 1.27.1). Remaining Go CVEs and the unfixed `dool` 1.3.8 CVEs
+  are recorded as exceptions in `docs/build-inputs.md`.
+- **Rocky 9: ship only the patched kernel.** The box kept the installer kernel (5.14.0-687.10.1,
+  399 CVEs per trivy) beside the updated one because the build never reboots;
+  `09-kernel-prune-rocky.sh` now removes it before the SBOM is generated.
+- **CI:** `hashicorp/setup-packer@main` in the build workflows pinned to the v3.4.0 commit.
+- **NixOS box 0.2.2: kernel 6.18.57 -> 6.18.60, OpenSSH 10.5p1 -> 10.6p1.** 0.2.2 builds from
+  `nixos-26.05` rev `fa137313...` (2026-10-31), pinned in `nixos/flake.lock` and in the `NIX_PATH`
+  of the documented Docker build. OpenSSH 10.6p1 fixes CVE-2026-106552 and CVE-2026-106583
+  (nixpkgs cherry-pick: https://github.com/NixOS/nixpkgs/commit/fd7929af1c84418e19ef7479f10f069b280241ad).
+  Evaluated closure versions: `boot.kernelPackages.kernel.version` = 6.18.60,
+  `services.openssh.package.version` = 10.6p1 (x86_64-linux and aarch64-linux).
+- **NixOS CVE-2026-98432 (IPv4 TCP use-after-free)**: already fixed upstream in 6.18.56
+  (kernel.org `ChangeLog-6.18.56` carries "commit e3f33b0a1d89 upstream"), so NixOS 0.2.1 (6.18.57)
+  and 0.2.2 (6.18.60) are fixed. The 0.2.0 image was built from `nixos-26.05` `714a5f8c...`, whose
+  `kernels-org.json` pins 6.18.36, which predates the fix: 0.2.0 is affected.
 - **NixOS box 0.2.1: OpenSSH 10.3p1 -> 10.5p1.** The 0.2.0 image was built from an older
   `nixos-26.05` revision (`714a5f8c...`) that shipped OpenSSH 10.3p1, which lacks the 10.4-10.5
   fixes. 0.2.1 builds from `nixos-26.05` rev `718f670e...` (2026-10-26) and pins that revision in

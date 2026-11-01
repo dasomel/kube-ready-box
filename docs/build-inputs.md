@@ -147,12 +147,19 @@ box provider.
 |---|---|---|---|
 | `00-vagrant-setup.sh` | Vagrant insecure SSH pubkey | fetched from `hashicorp/vagrant@main` (floating; this key is a long-stable public constant with no versioned release to pin to) | fetched content is compared against the RSA/ED25519 key values embedded in the script; on mismatch OR fetch failure, the embedded keys are used instead — the fetch is never trusted blindly |
 | `03-os-packages.sh` | `dool` (dstat replacement) | `DOOL_VERSION` (default `1.3.8`), GitHub release `.deb` | `DOOL_SHA256` checked via `sha256sum -c` before `dpkg -i` |
-| `03-os-packages.sh` | `yq` (YAML processor) | `YQ_VERSION` (default `v4.44.3`) | `YQ_SHA256` (per-arch) checked via `sha256sum -c` before install; values cross-checked against yq's own `releases/<tag>/checksums` file via its `extract-checksum.sh` |
-| `10-sandbox-runtime.sh` | gVisor `runsc` / `containerd-shim-runsc-v1` | `GVISOR_RELEASE` (defaults to a pinned, verified release; `latest` is accepted but logs a loud warning that it breaks reproducibility) | `.sha512` fetched from the same release origin as the binary — verifies transfer integrity, not upstream authenticity (no upstream signature to check against as of this writing) |
+| `03-os-packages.sh` | `yq` (YAML processor) | `YQ_VERSION` (default `v4.54.1`; was `v4.44.3`, built with Go 1.22.5) | `YQ_SHA256` (per-arch) checked via `sha256sum -c` before install; values cross-checked against yq's own `releases/<tag>/checksums` file via its `extract-checksum.sh` |
+| `10-sandbox-runtime.sh` | gVisor `runsc`, `containerd-shim-runsc-v1` and the `gvisor-bin/` sidecar helpers (`gvisor_sentry` etc., required by `runsc` since the tarball releases) | `GVISOR_RELEASE` (default `20261026.0`, which fixes CVE-2026-95702; any other release must also pass `GVISOR_SHA256`, and `latest` is rejected) | the release tarball `gvisor-<arch>.tar.bz2` is checked against a SHA-256 pinned in the script (cross-checked with the release's `SHA256SUMS`), member types are validated, and only the named members are extracted. This proves the bytes match what was pinned, not upstream authenticity (no upstream signature) |
 
-All four values above (`DOOL_SHA256`, `YQ_SHA256` per-arch, and the gVisor
-default release) were computed by downloading the artifact directly and
-running `sha256sum`/`sha512sum`, not copied from a third party.
+All pinned values above (`DOOL_SHA256`, `YQ_SHA256` per-arch, and the gVisor
+tarball SHA-256 per-arch) were computed by downloading the artifact directly and
+running `sha256sum`, then compared with the upstream checksum file where one exists.
+
+### Known unfixed upstream issues (accepted exceptions)
+
+| Input | Issue | Why it stays | Exit condition |
+|---|---|---|---|
+| `dool` 1.3.8 | CVE-2026-56651 (`--devel` log follows symlinks), CVE-2026-56652 (CSV formula injection), per [CERT Polska](https://cert.pl/en/posts/2026/08/CVE-2026-56651/) | Fixes are merged upstream (PRs #116, #117) but no release contains them; 1.3.8 is the latest release. Both need the operator to run `dool` with `--devel` or open its CSV output in a spreadsheet; the box never runs it automatically. | Bump to the first release that contains both fixes. |
+| `yq` v4.54.1 | Built with Go 1.27.1, which predates the fixes for CVE-2026-78660, CVE-2026-97031, CVE-2026-111943 (Go 1.27.2/1.27.3) | Still the latest yq release; it replaces v4.44.3 (Go 1.22.5), which carried far more Go stdlib CVEs. Reachability in yq is unverified. | Bump to the first yq release built with Go >= 1.27.3. |
 
 ## OS package version reproducibility (apt)
 

@@ -7,14 +7,23 @@ SBOM_DIR="/etc/vagrant-box"
 mkdir -p "$SBOM_DIR"
 
 . /etc/os-release
+# trivy 가 없을 때 sbom_generator 에 남길 오프라인 인벤토리 이름(패키지 관리자 기준).
 if command -v dpkg >/dev/null 2>&1; then
   ARCH="$(dpkg --print-architecture 2>/dev/null || uname -m)"
+  OFFLINE_INVENTORY="offline-dpkg-inventory"
 elif command -v rpm >/dev/null 2>&1; then
   ARCH="$(rpm --eval '%{_arch}')"
+  OFFLINE_INVENTORY="offline-rpm-inventory"
 else
   ARCH="$(uname -m)"
+  OFFLINE_INVENTORY="UNKNOWN"
 fi
-KERNEL="$(uname -r)"
+# 출하 커널 = 부팅될 가장 새 설치 커널(/boot/vmlinuz-*, 버전 정렬). 빌드 중
+# RUNNING 커널(uname -r)은 설치기 커널일 수 있어 쓰지 않는다. 확정 못 하면
+# 추측하지 않고 UNKNOWN.
+KERNEL="$(find "${KUBE_READY_BOOT_DIR:-/boot}" -maxdepth 1 -name 'vmlinuz-*' 2>/dev/null \
+  | sed 's|.*/vmlinuz-||' | grep -v 'rescue' | sort -V | tail -1 || true)"
+[ -n "$KERNEL" ] || KERNEL="UNKNOWN"
 BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 # SBOM generation is deliberately offline. The image build must provide the
@@ -58,7 +67,7 @@ cat > "$SBOM_DIR/manifest.json" <<EOF
   "kernel": "${KERNEL}",
   "build_date": "${BUILD_DATE}",
   "timestamp": "${BUILD_DATE}",
-  "sbom_generator": "$(command -v trivy >/dev/null 2>&1 && trivy version --format json 2>/dev/null | tr '\n' ' ' || echo 'offline-dpkg-inventory')",
+  "sbom_generator": "$(command -v trivy >/dev/null 2>&1 && trivy version --format json 2>/dev/null | tr '\n' ' ' || echo "$OFFLINE_INVENTORY")",
   "sbom_formats": ["spdx-json", "cyclonedx-json", "dpkg-tsv"],
   "package_count": $(command -v dpkg >/dev/null 2>&1 && dpkg-query -W | wc -l || rpm -qa | wc -l),
   "source": "https://github.com/dasomel/kube-ready-box",
