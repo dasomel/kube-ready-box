@@ -1,17 +1,24 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build AMD64](https://github.com/dasomel/kube-ready-box/actions/workflows/build-amd64.yml/badge.svg)](https://github.com/dasomel/kube-ready-box/actions/workflows/build-amd64.yml)
-[![Vagrant Cloud - 24.04 ext4](https://img.shields.io/badge/Vagrant-24.04--ext4-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4)
-[![Vagrant Cloud - 24.04 xfs](https://img.shields.io/badge/Vagrant-24.04--xfs-green)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs)
-[![Vagrant Cloud - 26.04 ext4](https://img.shields.io/badge/Vagrant-26.04--ext4-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-26.04-ext4)
-[![Vagrant Cloud - 26.04 xfs](https://img.shields.io/badge/Vagrant-26.04--xfs-green)](https://app.vagrantup.com/dasomel/boxes/ubuntu-26.04-xfs)
+[![Box - 24.04 ext4](https://img.shields.io/badge/Vagrant-24.04--ext4-blue)](https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-ext4.json)
+[![Box - 24.04 xfs](https://img.shields.io/badge/Vagrant-24.04--xfs-green)](https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-xfs.json)
+[![Box - 26.04 ext4](https://img.shields.io/badge/Vagrant-26.04--ext4-blue)](https://dasomel.github.io/kube-ready-box/boxes/ubuntu-26.04-ext4.json)
+[![Box - 26.04 xfs](https://img.shields.io/badge/Vagrant-26.04--xfs-green)](https://dasomel.github.io/kube-ready-box/boxes/ubuntu-26.04-xfs.json)
 
 **Languages**: [English](README.md) | [한국어](README-ko.md)
 
 Kubernetes-ready Ubuntu Vagrant Box with OS-level optimizations. Supports **24.04 LTS** (Noble Numbat, default) and **26.04 LTS** (Resolute Raccoon, kernel Linux 7.0).
 
-> **Vagrant Cloud (v1.1.0)**:
-> - 24.04 ext4: `dasomel/ubuntu-24.04-ext4` / xfs: `dasomel/ubuntu-24.04-xfs`
-> - 26.04 ext4: `dasomel/ubuntu-26.04-ext4` / xfs: `dasomel/ubuntu-26.04-xfs`
+> **Distribution moved (v1.2.0+)**: HCP Vagrant (Vagrant Cloud) is shutting down — new uploads have been disabled since 2026-10-01 and all hosted boxes, including `dasomel/*`, are deleted after 2026-12-31. Boxes are now GitHub Release assets with a Vagrant catalog on GitHub Pages. See [Box Distribution](docs/box-distribution.md).
+>
+> | Box | Version | Provider (all arm64) |
+> |---|---|---|
+> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 1.2.0 | `vmware_desktop` |
+> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 1.2.0 | `vmware_desktop` |
+> | `dasomel/rocky-9-ext4`, `dasomel/rocky-9-xfs` | 0.1.1 | `vmware_desktop` |
+> | `dasomel/nixos-kube-ready` | 0.2.2 | `libvirt` (also `vagrant-qemu`) |
+>
+> VirtualBox and amd64 boxes are not part of v1.2.0 (VirtualBox SSH cannot be verified on the build host; amd64 cannot be built on the arm64 build host).
 
 ## 24.04 vs 26.04
 
@@ -33,35 +40,35 @@ Kubernetes-ready Ubuntu Vagrant Box with OS-level optimizations. Supports **24.0
 - **Multi-Provider**: VirtualBox, VMware Fusion
 - **Filesystem Selection**: ext4 (default) or xfs
 - **K8s Ready**: OS tuning for Kubernetes (K8s not included)
-- **1TB Disk**: Large disk with thin provisioning (ext4 ~2.2GB, xfs ~3.4GB)
-- **Auto-Extension**: Disk auto-extends on boot (partition → PV → LV → filesystem)
+- **1TB Disk**: Thin-provisioned virtual disk of 1,000,000 MB; the root grows to ~975 GiB on first boot. The `.box` download is 0.97-1.97 GiB (see below)
+- **Auto-Extension**: Root LV is 16 GiB in the image and grows to the whole disk on first boot (`kube-ready-growroot.service`, evidence in `/etc/vagrant-box/growroot.json`); `/swap.img` was removed
 
-> **NixOS variant**: a declarative NixOS box is published separately as `dasomel/nixos-kube-ready` (libvirt / arm64 — also usable on Apple Silicon via `vagrant-qemu`). See [`nixos/`](nixos/).
+> **NixOS variant**: a declarative NixOS box is published separately as `dasomel/nixos-kube-ready` (0.2.2, libvirt `.box` 0.97 GiB) (libvirt / arm64 — also usable on Apple Silicon via `vagrant-qemu`). See [`nixos/`](nixos/).
 
 ### Build Matrix
 
 | Provider | AMD64 | ARM64 | Notes |
 |----------|-------|-------|-------|
 | VirtualBox | ✅ | ✅ | VirtualBox 7.1+ required for ARM64 |
-| VMware Fusion | ✅* | ✅ | Apple Silicon supported; *AMD64 is local-build only — Vagrant Cloud ships ARM64 (CI runner limitation) |
+| VMware Fusion | ✅* | ✅ | Apple Silicon supported; *AMD64 is local-build only — releases ship ARM64 (build host limitation) |
 
 ## Quick Start
 
 ### Installation
 
+Boxes are served through a catalog URL (Vagrant treats an HTTP URL as a catalog only when it returns `application/json`, which GitHub Pages does). Checksums are verified; `vagrant box outdated` and `vagrant box update` work.
+
 ```bash
 # 24.04 ext4 (default, stable, general purpose)
-vagrant init dasomel/ubuntu-24.04-ext4
+vagrant init dasomel/ubuntu-24.04-ext4 \
+  https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-ext4.json
 vagrant up --provider=vmware_desktop
 
-# 24.04 xfs (better for K8s ephemeral storage quota, large files)
-vagrant init dasomel/ubuntu-24.04-xfs
-vagrant up --provider=vmware_desktop
-
-# 26.04 (Resolute Raccoon, kernel Linux 7.0)
-vagrant init dasomel/ubuntu-26.04-ext4
-vagrant up --provider=vmware_desktop
+# Or add the box directly
+vagrant box add https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-xfs.json
 ```
+
+Catalog URL pattern: `https://dasomel.github.io/kube-ready-box/boxes/<box-name>.json` (`ubuntu-24.04-ext4`, `ubuntu-24.04-xfs`, `ubuntu-26.04-ext4`, `ubuntu-26.04-xfs`, `rocky-9-ext4`, `rocky-9-xfs`, `nixos-kube-ready`). Details: [Box Distribution](docs/box-distribution.md).
 
 ### Filesystem Comparison
 
@@ -70,7 +77,7 @@ vagrant up --provider=vmware_desktop
 | **Best for** | General purpose | K8s workloads, large files |
 | **K8s Quota** | No native support | `--local-storage-capacity-isolation` |
 | **Online Shrink** | Supported | Not supported |
-| **Box Size** | ~2.2GB | ~3.4GB |
+| **Box Size (v1.2.0 `.box`, arm64)** | 24.04: 1.45 GiB, 26.04: 1.84 GiB, Rocky 9: 1.77 GiB | 24.04: 1.58 GiB, 26.04: 1.97 GiB, Rocky 9: 1.93 GiB |
 
 ### Vagrantfile Example
 
@@ -79,6 +86,7 @@ Vagrant.configure("2") do |config|
   # 24.04: "dasomel/ubuntu-24.04-ext4" or "dasomel/ubuntu-24.04-xfs"
   # 26.04: "dasomel/ubuntu-26.04-ext4" or "dasomel/ubuntu-26.04-xfs"
   config.vm.box = "dasomel/ubuntu-24.04-ext4"
+  config.vm.box_url = "https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-ext4.json"
 
   config.vm.provider "virtualbox" do |vb|
     vb.memory = 4096
@@ -162,8 +170,9 @@ vagrant ssh -c "/bin/bash /etc/vagrant-box/check-tuning.sh"
 - [Box Usage Guide](docs/usage.md) - Detailed usage instructions
 - [K8s Post-Install](docs/k8s-post-install.md) - containerd/kubelet tuning
 - [Packer Build Guide](packer/README.md) - Building boxes from source
-- [Vagrant Cloud Guide](docs/VAGRANT_CLOUD.md) - Upload, manage, and delete boxes
-- [HCP Credentials Setup](docs/hcp-credentials.md) - Rotate HCP service principal keys
+- [Box Distribution](docs/box-distribution.md) - GitHub Release assets, Pages catalog, publishing, HCP Vagrant EOL timeline
+- [Vagrant Cloud Guide](docs/VAGRANT_CLOUD.md) - Deprecated (historical)
+- [HCP Credentials Setup](docs/hcp-credentials.md) - Deprecated (Vagrant Cloud publishing)
 - [Deploy Checklist](docs/DEPLOY_CHECKLIST.md) - Pre-release verification
 - [Legal & Licensing](docs/legal.md) - OSS licenses and compliance
 - [Changelog](CHANGELOG.md) - Release notes and version history
@@ -187,10 +196,9 @@ cd packer
 # Build all boxes
 ./build.sh all                         # 24.04 ext4
 ./build.sh all --version=26.04         # 26.04 ext4
-
-# Upload only validated providers (root script)
-PROVIDERS=vmware_desktop UBUNTU_VERSION=26.04 ./upload-boxes.sh
 ```
+
+> **Publishing**: `upload-boxes.sh` targets Vagrant Cloud and is deprecated. Publish through GitHub Release assets plus the Pages catalog: [Box Distribution](docs/box-distribution.md#publishing-maintainers).
 
 > **CI**: Use the `ubuntu_version` input in the GitHub Actions `workflow_dispatch` trigger to select 24.04 or 26.04.
 
@@ -238,9 +246,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Links
 
-- [Vagrant Cloud - 24.04 ext4](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-ext4)
-- [Vagrant Cloud - 24.04 xfs](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04-xfs)
-- [Vagrant Cloud - 26.04 ext4](https://app.vagrantup.com/dasomel/boxes/ubuntu-26.04-ext4)
-- [Vagrant Cloud - 26.04 xfs](https://app.vagrantup.com/dasomel/boxes/ubuntu-26.04-xfs)
+- [Releases (box downloads)](https://github.com/dasomel/kube-ready-box/releases)
+- [Box catalog (GitHub Pages)](https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-ext4.json)
 - [GitHub Repository](https://github.com/dasomel/kube-ready-box)
 - [Issue Tracker](https://github.com/dasomel/kube-ready-box/issues)

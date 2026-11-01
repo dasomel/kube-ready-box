@@ -1,7 +1,12 @@
 # dasomel/ubuntu-24.04 Box 사용 가이드
 
-> **참고**: 이 문서는 `dasomel/ubuntu-24.04` Box 사용법입니다.
-> Box 빌드는 [AGENTS.md](../AGENTS.md) 참조.
+> **참고**: 이 문서는 `dasomel` Box 사용법입니다. Box 빌드는 [AGENTS.md](../AGENTS.md) 참조.
+>
+> **배포 경로 변경 (v1.2.0+)**: HCP Vagrant(Vagrant Cloud)가 종료되어 Box는 GitHub Release 자산 + GitHub Pages 카탈로그로 제공됩니다.
+> 모든 예제에서 `config.vm.box_url`(또는 `vagrant box add <카탈로그 URL>`)이 필요합니다. 상세: [box-distribution.md](box-distribution.md).
+> 박스 이름은 `dasomel/ubuntu-24.04-ext4`처럼 filesystem 접미사를 포함합니다 (`dasomel/ubuntu-24.04` 단일 이름은 더 이상 게시되지 않음).
+> v1.2.0 박스: Ubuntu/Rocky는 `vmware_desktop` arm64, NixOS(`nixos-kube-ready`)는 `libvirt` arm64입니다. 루트 LV는 16 GiB로 시작해 첫 부팅 시 디스크 전체로 확장됩니다.
+> **VirtualBox와 amd64 박스는 v1.2.0에 없습니다.** 이 문서의 예제는 arm64 VMware 기준이며, 그 외 조합에서는 `vagrant up`이 실패합니다. 이전 Vagrant Cloud 버전은 2026-12-31까지만 받을 수 있습니다.
 
 ## 1. Vagrantfile 예시
 
@@ -9,22 +14,13 @@
 
 ```ruby
 Vagrant.configure("2") do |config|
-  # 아키텍처 자동 감지
-  host_arch = `uname -m`.strip
+  config.vm.box = "dasomel/ubuntu-24.04-ext4"
+  config.vm.box_url = "https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-ext4.json"
 
-  # dasomel/ubuntu-24.04 Box는 아키텍처 자동 선택
-  config.vm.box = "dasomel/ubuntu-24.04"
-
-  if host_arch == "arm64" || host_arch == "aarch64"
-    config.vm.provider "vmware_desktop" do |v|
-      v.vmx["memsize"] = "4096"
-      v.vmx["numvcpus"] = "2"
-    end
-  else
-    config.vm.provider "virtualbox" do |vb|
-      vb.memory = 4096
-      vb.cpus = 2
-    end
+  # v1.2.0은 arm64 VMware(Apple Silicon)만 제공
+  config.vm.provider "vmware_desktop" do |v|
+    v.vmx["memsize"] = "4096"
+    v.vmx["numvcpus"] = "2"
   end
 
   config.vm.hostname = "k8s-ready"
@@ -36,21 +32,20 @@ end
 
 ```ruby
 Vagrant.configure("2") do |config|
-  # Provider/아키텍처 설정
-  PROVIDER = ENV['VAGRANT_PROVIDER'] || "virtualbox"
-  host_arch = `uname -m`.strip
-  ARCH = host_arch == "arm64" || host_arch == "aarch64" ? "arm64" : "amd64"
+  # v1.2.0은 vmware_desktop arm64만 제공 (VirtualBox/amd64 없음)
+  PROVIDER = ENV['VAGRANT_PROVIDER'] || "vmware_desktop"
 
   # 노드 설정
   NODE_COUNT = 3
   NETWORK_PREFIX = "192.168.56"
 
-  # dasomel/ubuntu-24.04는 아키텍처 자동 선택
-  BOX_NAME = "dasomel/ubuntu-24.04"
+  BOX_NAME = "dasomel/ubuntu-24.04-ext4"
+  BOX_URL = "https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-ext4.json"
 
   (1..NODE_COUNT).each do |i|
     config.vm.define "node-#{i}" do |node|
       node.vm.box = BOX_NAME
+      node.vm.box_url = BOX_URL
       node.vm.hostname = "k8s-node-#{i}"
       node.vm.network "private_network", ip: "#{NETWORK_PREFIX}.#{10 + i}"
 
@@ -237,11 +232,11 @@ config.vm.network "public_network", bridge: "en0: Wi-Fi"
 
 ```bash
 # 캐시 정리
-vagrant box remove dasomel/ubuntu-24.04 --all
-rm -rf ~/.vagrant.d/boxes/dasomel-VAGRANTSLASH-ubuntu-24.04
+vagrant box remove dasomel/ubuntu-24.04-ext4 --all
+rm -rf ~/.vagrant.d/boxes/dasomel-VAGRANTSLASH-ubuntu-24.04-ext4
 
 # 재다운로드
-vagrant box add dasomel/ubuntu-24.04
+vagrant box add https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-ext4.json
 ```
 
 ### VM 시작 실패

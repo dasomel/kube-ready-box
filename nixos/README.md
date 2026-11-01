@@ -15,9 +15,9 @@
 
 ---
 
-## 현재 상태 (2026-09-29)
+## 현재 상태 (2026-11-01)
 
-**`dasomel/nixos-kube-ready` 0.1.1 배포됨** (libvirt / arm64, 공개). **0.2.0은 준비 중이며 아직 배포되지 않았습니다** (AppArmor 활성화, Docker 29 고정 -- [CHANGELOG](../CHANGELOG.md)).
+**`dasomel/nixos-kube-ready` 0.2.2 배포됨** (libvirt / arm64, v1.2.0 GitHub Release 자산 + GitHub Pages 카탈로그). Vagrant Cloud(HCP Vagrant)는 종료되어 더 이상 쓰지 않습니다 ([box-distribution.md](../docs/box-distribution.md)). 변경 내용은 [CHANGELOG](../CHANGELOG.md) 참고.
 디스크 이미지를 빌드한 뒤 `package-box.sh`로 직접 Vagrant 박스로 포장하는 구조입니다.
 
 | 경로 | 상태 |
@@ -38,7 +38,11 @@
 ## 🚀 사용
 
 ```bash
-vagrant init dasomel/nixos-kube-ready
+# libvirt 박스 (arm64). Vagrant 카탈로그는 GitHub Pages에서 제공
+vagrant box add https://dasomel.github.io/kube-ready-box/boxes/nixos-kube-ready.json
+# 또는 Vagrantfile에:
+#   config.vm.box     = "dasomel/nixos-kube-ready"
+#   config.vm.box_url = "https://dasomel.github.io/kube-ready-box/boxes/nixos-kube-ready.json"
 vagrant up --provider qemu       # macOS (Apple Silicon, vagrant-qemu 플러그인)
 vagrant up --provider libvirt    # Linux
 ```
@@ -60,8 +64,8 @@ macOS에 별도 박스가 필요 없습니다. vagrant-qemu가 `box_format: "lib
 ./nixos/package-box.sh                   # -> dist/dasomel-...-arm64-libvirt.box
 ./nixos/package-box.sh -p vmware_desktop # -> dist/dasomel-...-arm64-vmware_desktop.box
 
-# 3. Vagrant Cloud 배포 (검증된 프로바이더만 좁혀서)
-PROVIDERS=libvirt VERSION=0.2.2 ./nixos/upload-nixos.sh
+# 3. 배포: GitHub Release 자산 + Pages 카탈로그 (docs/box-distribution.md)
+#    (폐기됨: ./nixos/upload-nixos.sh 는 Vagrant Cloud용이며 신규 버전에 더 이상 동작하지 않음)
 
 # 부가: SBOM(SPDX 2.3 JSON) 생성 — 박스에 내장되지 않고 dist/에 별도 파일로 떨어집니다
 VERSION=0.2.2 ./nixos/build.sh sbom

@@ -1,5 +1,9 @@
 # HCP Credentials Setup & Rotation
 
+> **폐기됨 (DEPRECATED)**: HCP Vagrant(Vagrant Cloud)는 2026-10-01부터 신규 box/버전 생성이 불가하고 2026-12-31에 종료됩니다.
+> v1.2.0부터 배포는 GitHub Release + GitHub Pages 카탈로그이며 HCP 자격증명이 필요 없습니다 ([box-distribution.md](box-distribution.md)).
+> 이 문서와 CI의 `Publish to Vagrant Cloud` 단계는 이력용으로만 남습니다.
+
 > Vagrant Cloud(HCP Vagrant Registry) 게시용 Service Principal 키 발급 및 GitHub Secrets 갱신 절차.
 
 ## 배경
@@ -170,4 +174,5 @@ gh run watch --repo dasomel/kube-ready-box
 
 - `.github/workflows/build-amd64.yml` — Publish step (`HCP_CLIENT_ID`, `HCP_CLIENT_SECRET` 사용)
 - `.github/workflows/build-arm64.yml` — 동일
-- [VAGRANT_CLOUD.md](VAGRANT_CLOUD.md) — Vagrant Cloud 일반 사용법
+- [VAGRANT_CLOUD.md](VAGRANT_CLOUD.md) — Vagrant Cloud 일반 사용법 (폐기됨)
+- [box-distribution.md](box-distribution.md) — 현재 배포 경로

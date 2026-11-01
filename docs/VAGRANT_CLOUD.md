@@ -1,5 +1,10 @@
 # Vagrant Cloud 배포/관리 가이드
 
+> **폐기됨 (DEPRECATED, 2026-11-01)**: HCP Vagrant(구 Vagrant Cloud)가 종료됩니다. 2026-10-01부터 새 box/버전 생성이 차단되어
+> 업로드가 `resource creation is currently disabled`로 실패하며, 2026-12-31 운영 종료 시 `dasomel/*`를 포함한 모든 호스팅 box가 삭제됩니다.
+> 이 문서는 **이력 참고용**이며 아래 절차는 신규 버전에 더 이상 동작하지 않습니다.
+> 현재 배포 경로(GitHub Release 자산 + GitHub Pages 카탈로그)는 [box-distribution.md](box-distribution.md)를 따르세요.
+
 Vagrant Cloud에 box를 업로드, 관리, 삭제하는 방법을 설명합니다.
 
 ## 목차

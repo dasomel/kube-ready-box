@@ -1,7 +1,8 @@
 Ubuntu 24.04 Cloud-based multi-architecture (ARM/AMD64) optimized OS for Kubernetes installation
 
 > GitHub: https://github.com/dasomel/kube-ready-box
-> Vagrant Cloud: https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04
+> Distribution (v1.2.0+): GitHub Release assets + GitHub Pages catalog, see [box-distribution.md](../docs/box-distribution.md)
+> Vagrant Cloud (HCP Vagrant) is deprecated: no new versions since 2026-10-01, all hosted boxes deleted after 2026-12-31
 
 ## 1. Box Overview
 
@@ -718,7 +719,9 @@ systemctl is-active kubelet 2>/dev/null || echo "Not installed (normal - user in
 echo -e "\n=== K8s Ready OS Check Complete ==="
 ```
 
-## 6. Vagrant Cloud Upload
+## 6. Vagrant Cloud Upload (DEPRECATED)
+
+> **Deprecated**: HCP Vagrant rejects new versions (`resource creation is currently disabled`). Publish via GitHub Release assets plus the Pages catalog: [docs/box-distribution.md](../docs/box-distribution.md). The commands below are kept for history only.
 
 ### Upload 4 Boxes (per filesystem type)
 ```bash
