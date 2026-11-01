@@ -53,6 +53,9 @@ jobs:
       - name: Init
         working-directory: packer
         run: packer init .
+        # 비인증 GitHub API 는 러너 IP 단위로 한도가 걸려 plugin 조회가 403 으로 실패한다.
+        env:
+          PACKER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Validate all providers
         working-directory: packer
         run: |
