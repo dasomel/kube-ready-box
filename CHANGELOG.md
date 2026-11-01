@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Weekly box CVE scan (`.github/workflows/box-cve-scan.yml`, `tools/box-cve-scan.sh`,
+  `tools/box-pkgdb-extract.sh`): downloads each shipped box through its Pages catalog, verifies the
+  SHA-256, extracts the dpkg/rpm database read-only and runs Trivy 0.76.0 (fixable CVEs only).
+  CRITICAL/HIGH fail the run (rebuild trigger); no OS packages detected, a checksum mismatch or an
+  unreadable disk is UNKNOWN, never PASS. NixOS is reported UNKNOWN (no dpkg/rpm database).
+  Tests: `tools/tests/box-cve-scan-test.sh`.
+
 ## [0.3.0] - 2026-11-01
 
 > **Version line reset.** The Ubuntu boxes follow Vagrant Cloud 1.1.0 with 0.3.0, continuing the

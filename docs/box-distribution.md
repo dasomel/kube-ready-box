@@ -95,6 +95,14 @@ The root LV is 16 GiB in the image and grows to the whole disk on first boot (`k
 
 The catalog checksum must be the SHA-256 of the exact bytes attached to the Release. Compute it from the file you upload, after the final build. Never replace an asset, or rebuild a box, under a version that is already published. A new build gets a new version, and the old catalog entry stays. A mismatch makes `vagrant box add` fail for every user.
 
+## Ongoing CVE checks
+
+`.github/workflows/box-cve-scan.yml` scans the shipped boxes every Monday (and on demand). It reads
+each `site/boxes/*.json` catalog, downloads the box it points to, checks the SHA-256 and runs Trivy on
+the package database extracted from the disk. A CRITICAL or HIGH fixable CVE fails the run: rebuild and
+publish a new version. Run the same check locally on Linux with
+`tools/box-cve-scan.sh site/boxes/<box>.json <work-dir>` (needs root for loop/LVM mounts).
+
 ## Deprecated paths
 
 These target Vagrant Cloud and no longer work for new versions. They are kept unchanged for history. Do not use them.

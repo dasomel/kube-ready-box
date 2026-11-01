@@ -41,7 +41,7 @@ Vagrant Cloud (HCP Vagrant) is ending service. Older published versions remain t
 
 ## How we respond
 
-We scan package databases extracted from box disks with Trivy, rebuild with a full package upgrade, cross-review changes, boot-verify rebuilt images, and will publish patched boxes. Findings without an upstream fix stay open until a fixed distro package can be rebuilt. Local rebuild records are in [2026-11.jsonl](../research/evidence/2026-11.jsonl).
+We scan package databases extracted from box disks with Trivy, rebuild with a full package upgrade, cross-review changes, boot-verify rebuilt images, and publish patched boxes. Findings without an upstream fix stay open until a fixed distro package can be rebuilt. To catch those fixes, the [Box CVE scan](../.github/workflows/box-cve-scan.yml) workflow runs every Monday (`tools/box-cve-scan.sh`): it downloads each shipped box through its Pages catalog, verifies the checksum, extracts the dpkg/rpm database read-only and counts fixable CVEs with Trivy. A CRITICAL or HIGH finding fails the run, which is the rebuild trigger. NixOS has no dpkg/rpm database and is reported UNKNOWN, not PASS. Local rebuild records are in [2026-11.jsonl](../research/evidence/2026-11.jsonl).
 
 ## Reporting
 

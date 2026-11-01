@@ -41,7 +41,7 @@ Vagrant Cloud(HCP Vagrant) 서비스가 종료됩니다. 기존 게시 버전은
 
 ## 대응 방식
 
-박스 디스크에서 추출한 패키지 DB를 Trivy로 검사하고, 패키지 전체 업그레이드 후 재빌드·교차 리뷰·부팅 검증을 거쳐 패치된 박스를 게시할 예정입니다. 업스트림 수정판이 없는 항목은 배포판 수정판으로 재빌드할 수 있을 때까지 열린 상태로 둡니다. 로컬 재빌드 기록은 [2026-11.jsonl](../research/evidence/2026-11.jsonl)에 기록합니다.
+박스 디스크에서 추출한 패키지 DB를 Trivy로 검사하고, 패키지 전체 업그레이드 후 재빌드·교차 리뷰·부팅 검증을 거쳐 패치된 박스를 게시합니다. 업스트림 수정판이 없는 항목은 배포판 수정판으로 재빌드할 수 있을 때까지 열린 상태로 둡니다. 수정판이 나오는 시점을 놓치지 않도록 [Box CVE scan](../.github/workflows/box-cve-scan.yml) 워크플로가 매주 월요일 실행됩니다(`tools/box-cve-scan.sh`). 배포 중인 박스를 Pages 카탈로그 그대로 내려받아 체크섬을 확인하고, dpkg/rpm DB를 읽기 전용으로 꺼내 Trivy로 수정 가능한 CVE를 셉니다. CRITICAL 또는 HIGH가 있으면 실패하며, 이것이 재빌드 신호입니다. NixOS는 dpkg/rpm DB가 없어 PASS가 아닌 UNKNOWN으로 보고합니다. 로컬 재빌드 기록은 [2026-11.jsonl](../research/evidence/2026-11.jsonl)에 기록합니다.
 
 ## 취약점 보고
 
