@@ -7,7 +7,7 @@ This document separates repository-side implementation from host-side validation
 | #5 RFP profile | `test-vm/verify_box.sh --rfp-profile`, machine-readable report | Ubuntu 24.04/26.04 provider matrix and air-gapped VM run |
 | #6 Node preflight | `/usr/local/bin/k8s-node-preflight` is now installed by Packer in all four Ubuntu provider/architecture templates; `test-vm/matrix.sh` | Rebuild boxes, then full Ubuntu 24.04/26.04 × amd64/arm64 × ext4/xfs × VirtualBox/VMware |
 | #7 Offline inputs | `tools/airgap-bundle.sh` | Zero-egress Packer build consuming only bundle inputs |
-| #8 Release | immutable promotion/rollback evidence helpers | Real Vagrant Cloud publish/download and staging matrix |
+| #8 Release | immutable promotion/rollback evidence helpers | Real publish/download (GitHub Release + Pages catalog; Vagrant Cloud is EOL) and staging matrix |
 | #9 NixOS | common preflight, hardened SSH profile, flake/offline entrypoint | Nix store/cache offline build and provider smoke matrix |
 | #10 SBOM/license | SPDX/CycloneDX/package inventory and license gate | Release artifact evidence and upgrade diff replay |
 | #11 Sandbox | RuntimeClass, runsc handler contract, egress sample, effective/negative verifier | Real runsc/containerd E2E, resource/PID/network negative tests |

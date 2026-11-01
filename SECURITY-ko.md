@@ -20,3 +20,5 @@
 보안 취약점은 공개 이슈로 등록하지 마시고, GitHub Private Vulnerability Reporting을 통해 비공개로 보고해 주십시오.
 
 참조: [OpenForge Security Standard](https://github.com/dasomel/openforge/blob/main/docs/security.md)
+
+과거 발견 사항과 조치: [보안 대응 이력](docs/security-response-ko.md).

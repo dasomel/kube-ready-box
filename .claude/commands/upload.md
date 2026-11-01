@@ -1,5 +1,7 @@
 # /upload - Vagrant Cloud 업로드
 
+> **폐기됨 (DEPRECATED)**: Vagrant Cloud(HCP Vagrant) 업로드는 신규 버전에 더 이상 동작하지 않습니다. GitHub Release 자산 + Pages 카탈로그 경로는 `docs/box-distribution.md`를 따르세요.
+
 빌드된 Box를 Vagrant Cloud에 업로드합니다.
 
 ## 사전 확인

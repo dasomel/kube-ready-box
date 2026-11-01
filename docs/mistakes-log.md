@@ -149,3 +149,9 @@
     - 확인: 같은 디스크를 NVMe로 옮기면 로그인 프롬프트까지 부팅(xfs 0.1.0, ext4 1.2.0). VirtIO 컨트롤러는 EFI가 디스크를 못 읽어 부팅 불가(후보 아님)
     - 해결: `ovf.tpl`을 `StorageController type="NVMe"`로 변경. 이미 받은 박스의 임시 우회는 `VBoxManage storagectl <vm> --name SATA --remove` 후 `--add pcie --controller NVMe`로 NVMe 컨트롤러를 만들어 같은 vmdk를 `storageattach`
     - 미검증: 이 호스트에서는 VirtualBox NAT SSH가 24.04 대조군도 막혀 `vagrant up` 완료는 확인 못 함. 24.04 vbox 박스(템플릿 공유)와 `rocky-ovf.tpl`(여전히 AHCI)은 NVMe 부팅을 확인하지 않았음
+
+26. **VMware ARM64 빌드가 프로비저닝 도중 "Script disconnected unexpectedly"로 간헐 실패한다 — 재시도로만 통과, 근본 원인 미확정**
+    - 증상: packer 디버그 로그에 `[ERROR] Remote command exited without exit status or exit signal.` 후 빌드 실패. 2026-11-01 하루 VMware Fusion arm64 빌드에서 4회 발생. Ubuntu 26.04 3회(모두 `01-base.sh`의 "Waiting for cloud-init to finish..." 시작 후 약 60~70초), Rocky 9 1회(`05-disk-tuning-rocky.sh`의 dnf 다운로드 중). 같은 명령 재시도는 모두 통과
+    - 확인된 것: vmnet8 DHCP 리스 기록상 끊긴 시점에 게스트 IP는 바뀌지 않았다(26.04 ext4 사례 172.16.221.134 유지). 따라서 12번의 설치 후 IP 변경과는 다른 원인
+    - 가설(미검증): 26.04는 첫 부팅 cloud-init의 ssh 처리 단계가 sshd를 재시작하면서 기존 세션을 끊을 가능성. 게스트 journal을 남기지 못해 확정하지 못했다
+    - 대응: 빌드 러너는 `PACKER_LOG=1`과 vmnet8 리스 기록을 남기고 실패 시 1회 재시도한다(`.omc/logs/d5-builds*.sh` 패턴). 다음 재현 때는 실패 직후 VM을 지우기 전에 `journalctl -b -u ssh -u cloud-final`을 콘솔로 확보할 것

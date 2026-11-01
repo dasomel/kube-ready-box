@@ -75,11 +75,13 @@ else
   echo "    current: not enabled"
 fi
 
-echo "  LVM auto-extend service:"
-if systemctl is-enabled extend-lvm.service >/dev/null 2>&1; then
-  echo "    enabled: yes"
+echo "  First-boot root growth:"
+if [ -f /etc/vagrant-box/growroot.json ] && grep -Eq '"status"[[:space:]]*:[[:space:]]*"PASS"' /etc/vagrant-box/growroot.json; then
+  echo "    status: completed"
+elif [ ! -e /etc/vagrant-box/growroot.json ] && systemctl is-enabled --quiet kube-ready-growroot.service 2>/dev/null && ! systemctl is-active --quiet kube-ready-growroot.service 2>/dev/null; then
+  echo "    status: pending first boot"
 else
-  echo "    enabled: no"
+  echo "    status: unknown"
 fi
 
 echo -e "\n========================================"
@@ -214,10 +216,14 @@ else
   record filesystem FAIL "unsupported root filesystem: ${root_fstype:-unknown}"
 fi
 
-if systemctl is-enabled --quiet extend-lvm.service 2>/dev/null; then
-  record lvm_auto_extend PASS "enabled"
+# D6: 완료 증거 또는 아직 실행 전인 활성화 unit만 PASS로 판정한다.
+# 비용: 실패 후 UNKNOWN 증거가 있으면 unit이 남아도 UNKNOWN이다. 재시도 성공 시 PASS로 바뀐다.
+if [ -f /etc/vagrant-box/growroot.json ] && grep -Eq '"status"[[:space:]]*:[[:space:]]*"PASS"' /etc/vagrant-box/growroot.json; then
+  record lvm_auto_extend PASS "growroot completed"
+elif [ ! -e /etc/vagrant-box/growroot.json ] && systemctl is-enabled --quiet kube-ready-growroot.service 2>/dev/null && ! systemctl is-active --quiet kube-ready-growroot.service 2>/dev/null; then
+  record lvm_auto_extend PASS "growroot enabled, pending first boot"
 else
-  record lvm_auto_extend UNKNOWN "extend-lvm.service not enabled"
+  record lvm_auto_extend UNKNOWN "growroot completion unverified"
 fi
 
 if command -v containerd >/dev/null 2>&1; then

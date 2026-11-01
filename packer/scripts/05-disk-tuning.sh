@@ -5,151 +5,108 @@ set -euo pipefail
 
 echo "=== 05-disk-tuning.sh: Disk I/O Optimization ==="
 
-#=========================================
-# LVM 자동 확장 서비스 설치
-# Vagrantfile에서 디스크 크기를 늘리면 부팅 시 자동 확장
-#=========================================
-echo "Installing LVM auto-extend service..."
-
-# LVM 디렉토리 생성
+# D5: 빌드 중 16 GiB 루트를 유지하고 첫 부팅에서 확장한다.
+# 비용: 첫 부팅에 디스크 작업이 추가된다. 실패하면 unit을 남겨 재시도할 수 있다.
+echo "Installing first-boot LVM growth service..."
 mkdir -p /etc/lvm/archive /etc/lvm/backup
-
-# growpart 설치 (파티션 확장용)
 apt-get install -y cloud-guest-utils
-
-# 부팅 시 디스크 자동 확장 스크립트 (전체 체인: 파티션 → PV → LV → 파일시스템)
-cat > /usr/local/bin/extend-lvm.sh << 'LVMSCRIPT'
+install -d -m 0755 /usr/local/sbin /etc/systemd/system /etc/vagrant-box
+cat > /usr/local/sbin/kube-ready-growroot <<'SCRIPT'
 #!/bin/bash
-# Auto-extend disk: partition → PV → LV → filesystem
-# Supports both SATA (sda) and NVMe (nvme0n1) disks
-set -e
+set -euo pipefail
 
-LOG_TAG="extend-lvm"
+VG="ubuntu-vg"
+LV="/dev/ubuntu-vg/ubuntu-lv"
+EVIDENCE="/etc/vagrant-box/growroot.json"
 
-log() {
-  logger -t "$LOG_TAG" "$1"
-  echo "$1"
-}
+# UNKNOWN은 검증 전 상태다. 오류가 나면 unit을 남겨 다음 부팅에 재시도한다.
+install -d -m 0755 /etc/vagrant-box
+printf '{"schema":"kube-ready-growroot/v1","status":"UNKNOWN"}\n' > "$EVIDENCE"
+echo "Growing root LV $LV"
 
-# Wait for devices to be ready
-sleep 3
-
-# Find the disk device and LVM partition
-DISK=""
-PART_NUM=""
-PART_DEV=""
-
-# Check for NVMe disk first (common on VMware ARM64)
-if [ -b /dev/nvme0n1 ]; then
-  DISK="/dev/nvme0n1"
-  # Find LVM partition (usually partition 3 on Ubuntu autoinstall)
-  for p in 3 2 1; do
-    if [ -b "/dev/nvme0n1p${p}" ]; then
-      if pvs "/dev/nvme0n1p${p}" &>/dev/null; then
-        PART_NUM=$p
-        PART_DEV="/dev/nvme0n1p${p}"
-        break
-      fi
-    fi
-  done
-# Check for SATA/SCSI disk
-elif [ -b /dev/sda ]; then
-  DISK="/dev/sda"
-  for p in 3 2 1; do
-    if [ -b "/dev/sda${p}" ]; then
-      if pvs "/dev/sda${p}" &>/dev/null; then
-        PART_NUM=$p
-        PART_DEV="/dev/sda${p}"
-        break
-      fi
-    fi
-  done
+PV=$(pvs --noheadings -o pv_name --select "vg_name=$VG" | tr -d '[:space:]')
+if [ -z "$PV" ] || [ ! -b "$PV" ]; then
+  echo "LVM PV not found for $VG: $PV" >&2
+  exit 1
 fi
-
-if [ -z "$DISK" ] || [ -z "$PART_DEV" ]; then
-  log "No suitable disk/partition found for extension"
-  exit 0
+DISK_NAME=$(lsblk -dno PKNAME "$PV")
+PART_NUM=$(cat "/sys/class/block/$(basename "$PV")/partition")
+if [ -z "$DISK_NAME" ] || [ -z "$PART_NUM" ]; then
+  echo "PV is not a disk partition: $PV" >&2
+  exit 1
 fi
-
-log "Disk: $DISK, LVM partition: $PART_DEV (partition $PART_NUM)"
-
-# Step 1: Extend partition using growpart
-log "Step 1: Extending partition $PART_NUM on $DISK..."
-if growpart "$DISK" "$PART_NUM" 2>&1; then
-  log "  -> Partition extended successfully"
+DISK="/dev/$DISK_NAME"
+echo "Growing partition $PART_NUM on $DISK"
+if output=$(growpart "$DISK" "$PART_NUM" 2>&1); then
+  echo "$output"
+elif [[ "$output" == NOCHANGE:* ]]; then
+  echo "$output"
 else
-  log "  -> Partition already at maximum size or growpart failed"
+  echo "$output" >&2
+  exit 1
 fi
 
-# Step 2: Resize Physical Volume
-log "Step 2: Resizing PV $PART_DEV..."
-if pvresize "$PART_DEV" 2>&1; then
-  log "  -> PV resized successfully"
-else
-  log "  -> PV resize failed or not needed"
+pvresize "$PV"
+FREE=$(vgs --noheadings -o vg_free_count "$VG" | tr -d '[:space:]')
+if ! [[ "$FREE" =~ ^[0-9]+$ ]]; then
+  echo "Cannot determine free extents in $VG: $FREE" >&2
+  exit 1
+fi
+if [ "$FREE" -gt 0 ]; then
+  lvextend -l +100%FREE "$LV"
 fi
 
-# Step 3: Extend Logical Volume
-VG_FREE=$(vgs --noheadings -o vg_free --units g ubuntu-vg 2>/dev/null | tr -d ' g' | cut -d. -f1)
-if [ -n "$VG_FREE" ] && [ "$VG_FREE" -gt 0 ]; then
-  log "Step 3: Extending LV by ${VG_FREE}GB..."
-  if lvextend -l +100%FREE /dev/ubuntu-vg/ubuntu-lv 2>&1; then
-    log "  -> LV extended successfully"
-  else
-    log "  -> LV extend failed"
-  fi
-else
-  log "Step 3: No free space in VG, skipping LV extension"
-fi
-
-# Step 4: Resize filesystem (auto-detect ext4 or xfs)
-FSTYPE=$(blkid -o value -s TYPE /dev/ubuntu-vg/ubuntu-lv 2>/dev/null || echo "unknown")
-log "Step 4: Resizing filesystem (detected: $FSTYPE)..."
+FSTYPE=$(blkid -o value -s TYPE "$LV")
 case "$FSTYPE" in
-  ext4)
-    if resize2fs /dev/ubuntu-vg/ubuntu-lv 2>&1; then
-      log "  -> ext4 filesystem resized successfully"
-    else
-      log "  -> ext4 filesystem resize failed or not needed"
-    fi
-    ;;
+  ext4) resize2fs "$LV" ;;
   xfs)
-    if xfs_growfs / 2>&1; then
-      log "  -> xfs filesystem resized successfully"
-    else
-      log "  -> xfs filesystem resize failed or not needed"
-    fi
+    # D6: 루트 마운트를 직접 지정해 LV 경로와 /dev/mapper 별칭 차이를 피한다.
+    # 비용: 이 서비스는 루트 LV 전용이다. 다른 LV로 옮기면 마운트 검증을 추가한다.
+    xfs_growfs /
     ;;
   *)
-    log "  -> Unknown filesystem type: $FSTYPE, skipping resize"
+    echo "Unsupported root filesystem: $FSTYPE" >&2
+    exit 1
     ;;
 esac
 
-# Show final disk usage
-log "Disk extension complete. Current usage:"
-df -h / | logger -t "$LOG_TAG"
-LVMSCRIPT
-chmod +x /usr/local/bin/extend-lvm.sh
+FREE=$(vgs --noheadings -o vg_free_count "$VG" | tr -d '[:space:]')
+if [ "$FREE" != 0 ]; then
+  echo "VG still has free extents: $FREE" >&2
+  exit 1
+fi
+BYTES=$(blockdev --getsize64 "$LV")
+# 직접 실행하는 테스트에서는 unit이 없다. 실제 첫 부팅에서는 성공 후 제거한다.
+if [ -f /etc/systemd/system/kube-ready-growroot.service ]; then
+  systemctl disable kube-ready-growroot.service
+  rm -f /etc/systemd/system/kube-ready-growroot.service
+  systemctl daemon-reload
+fi
+printf '{"schema":"kube-ready-growroot/v1","status":"PASS","filesystem":"%s","lv_bytes":%s}\n' "$FSTYPE" "$BYTES" > "$EVIDENCE"
+echo "Root growth complete: $LV ($BYTES bytes, $FSTYPE)"
+SCRIPT
+chmod 0755 /usr/local/sbin/kube-ready-growroot
 
-# systemd 서비스 생성
-cat > /etc/systemd/system/extend-lvm.service << 'SVCFILE'
+cat > /etc/systemd/system/kube-ready-growroot.service <<'UNIT'
 [Unit]
-Description=Extend LVM to use full disk
-After=local-fs.target
-ConditionPathExists=/dev/ubuntu-vg/ubuntu-lv
+Description=Grow kube-ready-box root filesystem on first boot
+# D6: cloud-init growpart 완료 뒤 확장한다. 순서만 지정하므로 unit 부재 시에도 부팅한다.
+# 비용: 첫 부팅이 cloud-init 완료를 기다린다. cloud-init 제거 시 이 순서를 없앨 수 있다.
+After=local-fs.target cloud-init-local.service cloud-init.service
+Before=multi-user.target ssh.service sshd.service containerd.service kubelet.service
+ConditionPathExists=/usr/local/sbin/kube-ready-growroot
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/extend-lvm.sh
+ExecStart=/usr/local/sbin/kube-ready-growroot
 RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
-SVCFILE
-
+UNIT
 systemctl daemon-reload
-systemctl enable extend-lvm.service
-echo "  -> LVM auto-extend service installed"
+systemctl enable kube-ready-growroot.service
+echo "  -> First-boot LVM growth service installed"
 
 # I/O 스케줄러 설정 (SSD용 - none/noop)
 echo "Setting I/O scheduler for SSD..."

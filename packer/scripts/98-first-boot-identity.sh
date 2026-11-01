@@ -108,6 +108,10 @@ Description=kube-ready-box first boot identity initialization
 ConditionPathExists=/usr/local/sbin/kube-ready-first-boot
 After=local-fs.target
 Before=ssh.service sshd.service
+# Rocky 의 sshd-keygen@ 유닛도 비어 있는 호스트 키를 만든다. 순서가 없으면 두 쪽이
+# 같은 키를 동시에 쓰다 sshd-keygen 이 "Overwrite (y/n)?" 에서 실패한다. 이 서비스가
+# 먼저 끝나면 sshd-keygen 은 ConditionFileNotEmpty 로 건너뛴다. Ubuntu 에는 없는 유닛이라 무해하다.
+Before=sshd-keygen.target sshd-keygen@rsa.service sshd-keygen@ecdsa.service sshd-keygen@ed25519.service
 
 [Service]
 Type=oneshot

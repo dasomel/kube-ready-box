@@ -93,7 +93,8 @@ booted guest confirmed `"status":"PASS"` (failures:0, unknowns:2 -- both
 expected by design: `containerd_systemdcgroup` since this box doesn't
 install a container runtime, and `rocky10_x86_64_v3` since this is Rocky
 9, not 10). Published to Vagrant Cloud as `dasomel/rocky-9-ext4` 0.1.0
-(vmware_desktop/arm64).
+(vmware_desktop/arm64); 0.1.1 ships via the v1.2.0 GitHub Release (Vagrant Cloud
+is EOL, see `docs/box-distribution.md`).
 
 **xfs added** (`packer/http/rocky-9-xfs/ks.cfg`,
 `packer/scripts/05-disk-tuning-rocky.sh`'s xfs branch -- prjquota via
@@ -110,6 +111,8 @@ slice above. VirtualBox ARM64, AMD64, and Rocky 10 remain untested per
 the plan's explicit scope.
 
 ## Packer plugins
+
+Ubuntu (ext4/xfs)와 Rocky 9 (ext4/xfs) 설치기는 루트 LV를 16 GiB로 만든다. 빌드 중에는 이 크기를 유지해 `99-cleanup.sh`의 zero-fill을 제한하고, 박스의 첫 부팅 때 `kube-ready-growroot.service`가 PV 파티션, PV, LV, 파일시스템을 순서대로 확장한다. 결과는 `/etc/vagrant-box/growroot.json`에 남기며 실패 시 `UNKNOWN`으로 기록하고 다음 부팅에 재시도한다.
 
 Pinned to exact versions in `packer/plugins.pkr.hcl`'s `required_plugins`
 block (not `>=`), resolved against the versions actually installed and

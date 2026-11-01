@@ -60,13 +60,11 @@ ARTIFACT_DIR=packer/dist VERSION=vX.Y.Z ./tools/release-promote.sh verify
 
 `verify`는 stage=candidate에서는 evidence 준비 상태만 보고하고(부족해도 exit 0), stage=staging/production에서는 evidence가 없거나 무효하면 반드시 실패(exit 1)한다. `verification.json`과 required-matrix 계약은 [release-evidence/README.md](../release-evidence/README.md)를 참고.
 
-## 4. Vagrant Cloud 업로드
+## 4. GitHub Release + Pages 카탈로그 게시
 
-검증 완료된 provider만 명시적으로 업로드한다.
+> `upload-boxes.sh`, `nixos/upload-nixos.sh`, `packer/scripts/upload-all.sh`, CI의 `Publish to Vagrant Cloud` 단계는 폐기되었다 (HCP Vagrant가 신규 버전 생성을 차단). 사용하지 않는다.
 
-```bash
-PROVIDERS=vmware_desktop UBUNTU_VERSION=24.04 VERSION=vX.Y.Z ./upload-boxes.sh
-```
+검증 완료된 provider만 `.box`를 GitHub Release 자산으로 올리고, `site/boxes/<box-name>.json` 카탈로그를 재생성해 Pages로 배포한다. 절차와 체크섬 규칙은 [box-distribution.md](box-distribution.md)를 따른다.
 
 이미 공개된 버전은 덮어쓰거나 삭제하지 않는다. 새 빌드는 새 immutable version으로 발행한다.
 
@@ -74,7 +72,8 @@ PROVIDERS=vmware_desktop UBUNTU_VERSION=24.04 VERSION=vX.Y.Z ./upload-boxes.sh
 
 ```bash
 mkdir test-download && cd test-download
-vagrant init dasomel/ubuntu-24.04-ext4
+vagrant init dasomel/ubuntu-24.04-ext4 \
+  https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-ext4.json
 vagrant up --provider=vmware_desktop
 vagrant ssh -c "uname -a"
 vagrant ssh -c "cat /etc/vagrant-box/info.txt"
@@ -83,7 +82,7 @@ vagrant destroy -f
 
 ## 6. Rollback
 
-문제 발생 시 이전 정상 버전을 pin한다. Vagrant Cloud version이나 Git tag를 삭제하지 않는다.
+문제 발생 시 이전 정상 버전을 pin한다. GitHub Release 자산이나 Git tag를 삭제하지 않는다.
 
 `PREVIOUS_VERSION`은 반드시 stage가 `staging` 또는 `production`인 known-good이어야 한다. candidate로는 롤백할 수 없다(검증되지 않은 버전을 안전한 대상으로 취급하지 않기 위함).
 

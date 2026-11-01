@@ -20,3 +20,5 @@ English | [한국어](SECURITY-ko.md)
 Please do not open public issues for security vulnerabilities. Use GitHub Private Vulnerability Reporting or contact the maintainers directly.
 
 Reference: [OpenForge Security Standard](https://github.com/dasomel/openforge/blob/main/docs/security.md)
+
+Past findings and responses: [Security response history](docs/security-response.md).

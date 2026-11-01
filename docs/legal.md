@@ -124,7 +124,7 @@ sudo chmod +x /etc/update-motd.d/99-vagrant-box
 # dasomel/ubuntu-24.04
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Vagrant Cloud](https://img.shields.io/badge/Vagrant-Cloud-blue)](https://app.vagrantup.com/dasomel/boxes/ubuntu-24.04)
+[![Box](https://img.shields.io/badge/Vagrant-Box-blue)](https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-ext4.json)
 
 ## License
 
@@ -144,7 +144,9 @@ This box includes the following open source software:
 
 ---
 
-## 7. Vagrant Cloud 업로드 시 라이선스 명시
+## 7. Vagrant Cloud 업로드 시 라이선스 명시 (폐기됨)
+
+> HCP Vagrant 종료로 현재 배포는 GitHub Release + Pages 카탈로그다 ([box-distribution.md](box-distribution.md)). 라이선스는 Release 노트와 카탈로그 JSON의 `description`에 명시한다. 아래 예시는 이력용이다.
 
 ```bash
 # Box 설명에 라이선스 포함
@@ -426,7 +428,7 @@ build {
 | Box 내부 (`/etc/vagrant-box/sbom-*.json`) | SPDX/CycloneDX | Box 사용자 확인용 |
 | GitHub Release | JSON | 다운로드 전 확인용 |
 | GitHub Repository | JSON | 버전 관리 |
-| Vagrant Cloud 설명 | 링크 | 사용자 안내 |
+| 카탈로그 JSON `description` / Release 노트 | 링크 | 사용자 안내 |
 
 ### SBOM 체크리스트
 
@@ -447,7 +449,7 @@ build {
 - [ ] NOTICE 파일에 서드파티 고지 작성
 - [ ] README.md에 라이선스 배지 추가
 - [ ] Box 내부에 /etc/vagrant-box/LICENSE 포함
-- [ ] Vagrant Cloud 설명에 라이선스 명시
+- [ ] Release 노트/카탈로그 `description`에 라이선스 명시
 - [ ] GitHub 저장소 라이선스 설정
 - [ ] 라이선스 호환성 검토 완료
 - [ ] 상표권 침해 여부 확인
