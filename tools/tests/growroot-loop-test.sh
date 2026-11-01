@@ -42,7 +42,10 @@ for filesystem in ext4 xfs; do
   lvcreate -Zn -Wn -L 384M -n root "$VG" >/dev/null
   IFS=: read -r major minor < <(dmsetup info -c --noheadings -o major,minor "$VG-root" | tr -d ' ')
   mkdir -p "/dev/$VG"
-  mknod "/dev/$VG/root" b "$major" "$minor"
+  # udev 가 있는 실제 호스트(CI 러너)에서는 LVM 이 이미 노드/링크를 만든다.
+  # udev 없는 컨테이너에서만 직접 만든다.
+  udevadm settle 2>/dev/null || true
+  [ -e "/dev/$VG/root" ] || mknod "/dev/$VG/root" b "$major" "$minor"
   LV="/dev/$VG/root"
   if [ "$filesystem" = xfs ]; then
     mkfs.xfs -f "$LV" >/dev/null
