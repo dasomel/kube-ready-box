@@ -111,6 +111,8 @@ the plan's explicit scope.
 
 ## Packer plugins
 
+Ubuntu (ext4/xfs)와 Rocky 9 (ext4/xfs) 설치기는 루트 LV를 16 GiB로 만든다. 빌드 중에는 이 크기를 유지해 `99-cleanup.sh`의 zero-fill을 제한하고, 박스의 첫 부팅 때 `kube-ready-growroot.service`가 PV 파티션, PV, LV, 파일시스템을 순서대로 확장한다. 결과는 `/etc/vagrant-box/growroot.json`에 남기며 실패 시 `UNKNOWN`으로 기록하고 다음 부팅에 재시도한다.
+
 Pinned to exact versions in `packer/plugins.pkr.hcl`'s `required_plugins`
 block (not `>=`), resolved against the versions actually installed and
 validated in this repo's CI where noted below; VMware 2.1.4 has additionally

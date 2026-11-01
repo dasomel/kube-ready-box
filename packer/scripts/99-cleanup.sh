@@ -75,8 +75,24 @@ if [ "${KUBE_READY_HARDENED_SSH:-0}" = "1" ]; then
   rm -f /home/vagrant/.ssh/authorized_keys
 fi
 
-dd if=/dev/zero of=/EMPTY bs=1M 2>/dev/null || true
-rm -f /EMPTY
+# D5: 16 GiB 루트의 빈 공간만 채운다. 임시 호스트 사용량은 늘지만 압축은 쉬워진다.
+# 실패 시 오류를 노출하고 파일을 지운 뒤 재빌드할 수 있다.
+DD_ERR=$(mktemp /run/kube-ready-zero-fill.XXXXXX)
+if LC_ALL=C dd if=/dev/zero of=/EMPTY bs=1M 2>"$DD_ERR"; then
+  echo "Zero fill reached end of input unexpectedly" >&2
+  rm -f /EMPTY "$DD_ERR"
+  exit 1
+# GNU dd 는 "dd: error writing '/EMPTY': No space left on device", 26.04 의
+# uutils dd 는 "dd: IO error: No space left on device" 를 낸다. 문장 전체가 아니라
+# ENOSPC 문구로만 판정한다(정확 일치였을 때 26.04 빌드가 정상 ENOSPC 에서 실패했다).
+elif ! grep -Fq "No space left on device" "$DD_ERR"; then
+  cat "$DD_ERR" >&2
+  rm -f /EMPTY "$DD_ERR"
+  exit 1
+fi
+BYTES=$(stat -c %s /EMPTY)
+echo "Zero-filled $BYTES bytes"
+rm -f /EMPTY "$DD_ERR"
 sync
 
 echo "=== Cleanup Complete ==="

@@ -18,8 +18,62 @@ autoinstall:
     allow-pw: true
 
   storage:
-    layout:
-      name: lvm
+    config:
+      - id: disk0
+        type: disk
+        ptable: gpt
+        preserve: false
+        grub_device: true
+        match:
+          size: largest
+      - id: efi-partition
+        type: partition
+        size: 512M
+        device: disk0
+        flag: boot
+        grub_device: true
+      - id: efi-fs
+        type: format
+        fstype: fat32
+        volume: efi-partition
+      - id: boot-partition
+        type: partition
+        size: 1G
+        device: disk0
+      - id: boot-fs
+        type: format
+        fstype: ext4
+        volume: boot-partition
+      - id: lvm-partition
+        type: partition
+        size: -1
+        device: disk0
+      - id: ubuntu-vg
+        type: lvm_volgroup
+        name: ubuntu-vg
+        devices:
+          - lvm-partition
+      - id: ubuntu-lv
+        type: lvm_partition
+        name: ubuntu-lv
+        volgroup: ubuntu-vg
+        size: 16G
+      - id: root-fs
+        type: format
+        fstype: ext4
+        volume: ubuntu-lv
+      - id: mount-root
+        type: mount
+        path: /
+        device: root-fs
+      - id: mount-boot
+        type: mount
+        path: /boot
+        device: boot-fs
+      - id: mount-efi
+        type: mount
+        path: /boot/efi
+        device: efi-fs
 
   packages:
     - util-linux-extra

@@ -14,6 +14,9 @@ echo "=== 04-k8s-prereq.sh: Kubernetes Prerequisites ==="
 echo "Disabling swap..."
 swapoff -a
 sed -i '/swap/d' /etc/fstab
+# subiquity 설치기가 만든 swap 파일(약 4GB)은 swapoff/fstab 정리 후에도 남아
+# 박스 크기만 키웠다. 다시 쓰이지 않으므로 지운다.
+rm -f /swap.img
 
 # 필수 커널 모듈 로드
 echo "Loading required kernel modules..."

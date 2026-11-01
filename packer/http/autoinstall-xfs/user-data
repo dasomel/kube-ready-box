@@ -57,7 +57,7 @@ autoinstall:
         type: lvm_partition
         name: ubuntu-lv
         volgroup: ubuntu-vg
-        size: 100%
+        size: 16G
       - id: root-fs
         type: format
         fstype: xfs

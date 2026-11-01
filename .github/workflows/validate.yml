@@ -187,6 +187,7 @@ jobs:
           bash tools/tests/airgap-bundle-verify-test.sh
           bash tools/tests/node-time-readiness-test.sh
           bash tools/tests/contracts-execution-context-test.sh
+          bash tools/tests/growroot-preflight-test.sh
           bash tools/tests/sbom-license-gate-root-test.sh
       - name: Benchmark Rust verifier vs shell (informational, non-blocking)
         continue-on-error: true
@@ -280,6 +281,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+      - name: First-boot growroot on a real loop/LVM device (D5)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lvm2 xfsprogs cloud-guest-utils >/dev/null
+          sudo bash tools/tests/growroot-loop-test.sh
       - name: Real host-state readiness checks fail closed
         shell: bash
         run: |
