@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-01
+
+Security rebuild of every box this host can build and verify, plus a new distribution path:
+HCP Vagrant (Vagrant Cloud) stopped accepting new boxes and versions on 2026-10-01 and deletes all
+hosted boxes on 2026-12-31, so 1.2.0 ships as GitHub Release assets with a Vagrant catalog on GitHub
+Pages (`config.vm.box_url = "https://dasomel.github.io/kube-ready-box/boxes/<box>.json"`, see
+`docs/box-distribution.md`). Security response history: `docs/security-response.md`.
+
+| Box (arm64) | Version | Provider | Kernel | Box size |
+|---|---|---|---|---|
+| `dasomel/ubuntu-24.04-ext4` | 1.2.0 | vmware_desktop | 6.8.0-147-generic | 1.45 GiB |
+| `dasomel/ubuntu-24.04-xfs` | 1.2.0 | vmware_desktop | 6.8.0-147-generic | 1.58 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 1.2.0 | vmware_desktop | 7.0.0-42-generic | 1.84 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 1.2.0 | vmware_desktop | 7.0.0-42-generic | 1.97 GiB |
+| `dasomel/rocky-9-ext4` | 0.1.1 | vmware_desktop | 5.14.0-687.61.1.el9_8 | 1.77 GiB |
+| `dasomel/rocky-9-xfs` | 0.1.1 (first release) | vmware_desktop | 5.14.0-687.61.1.el9_8 | 1.93 GiB |
+| `dasomel/nixos-kube-ready` | 0.2.2 | libvirt | 6.18.60 | 0.97 GiB |
+
+Every Ubuntu/Rocky box was built from 1d3abd3 or later (the Ubuntu images built before 549239d
+lack only an ordering line that names Rocky-only `sshd-keygen@` units, a no-op on Ubuntu), boot-verified on VMware Fusion (NixOS on
+QEMU/hvf) and scanned with trivy against its package database: **0 CVEs with a fixed version
+available** in each image. VirtualBox and amd64 boxes are not part of 1.2.0 (VirtualBox SSH cannot
+be verified on the build host; amd64 cannot be built on it).
+
+### Breaking / action required
+- **Root grows on first boot (D5).** The image ships a 16 GiB root LV; `kube-ready-growroot.service`
+  grows partition, PV, LV and filesystem to the whole 1,000,000 MB virtual disk (~975 GiB) on first
+  boot, records `/etc/vagrant-box/growroot.json` (`UNKNOWN` on failure, retried next boot) and removes
+  itself. Anything that clones or inspects the disk before first boot sees 16 GiB. (1d3abd3)
+- **No `/swap.img`.** Ubuntu's unused 3.8 GiB installer swap file is deleted at build time; swap
+  stays off, as Kubernetes requires.
+- **Distribution moved off Vagrant Cloud.** `upload-boxes.sh`, `nixos/upload-nixos.sh`,
+  `packer/scripts/upload-all.sh` and the CI "Publish to Vagrant Cloud" steps can no longer publish
+  new versions. Existing Vagrant Cloud versions (Ubuntu 1.1.0, Rocky 0.1.0, NixOS 0.2.0) remain
+  downloadable only until 2026-12-31 and receive no fixes.
+- **Release promotion is strict** (#83, 243ddb8): security/license evidence must be exactly `PASS`
+  (`UNKNOWN` only with `ALLOW_UNKNOWN_EVIDENCE=1`), every `SHA256SUMS` entry must exist and hash
+  correctly under `ARTIFACT_DIR` (set it to `packer/dist` for real releases), and paths may not
+  escape it.
+- **Verifier CLI rejects unknown flags** (#83, 7c69e74): typos such as `--strict-runtme` or
+  `--require-sandbox=gvisr` now exit 2 instead of silently weakening the gate.
+- **Evidence semantics** (#83): `node-readiness-drift` exits 2 when no fresh report is produced;
+  `airgap-bundle verify` rejects bundles with missing debs, a wrong ISO hash or unlisted files;
+  `GVISOR_RELEASE` overrides need `GVISOR_SHA256`. Disabled AppArmor or permissive/disabled SELinux
+  is `FAIL` (D4, below).
+
 ### Security
 - **gVisor 20260817.0 -> 20261026.0** (`packer/scripts/10-sandbox-runtime.sh`): fixes CVE-2026-95702
   and rebuilds with Go 1.27.3 (CVE-2026-78660, CVE-2026-97031, CVE-2026-111943). Upstream now ships
@@ -35,8 +81,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `nixos/flake.lock`; the documented Docker build now passes it via `NIX_PATH` so the image no
   longer depends on whatever channel the `nixos/nix` image happens to carry. OpenSSH 10.6p1 is
   only in `nixos-unstable` at the time of writing and is not included.
+- **Ubuntu and Rocky rebuilt with all released distro fixes.** Per trivy on the extracted package
+  databases, the shipped Rocky 9 0.1.0 line carried 438 fixable CVEs (5 critical) and the unpublished
+  Ubuntu 26.04 1.2.0 build 1,141 (2 critical); both are 0 in 1.2.0. Kernel CVE-2026-98432 has no
+  Ubuntu or Rocky fix yet and remains open (see `docs/security-response.md`).
+- **Supply chain** (#83, #85): the unpinned-input guard now scans every shell directory and no longer
+  misses a fetch hidden after a backslash-ending comment (35a5606, 45c3ec4); `packer init` uses
+  `GITHUB_TOKEN` so plugin lookups are not rate-limited.
+
+### Added
+- **Rocky 9 xfs box** (first real build): `build.sh` never passed `--fs` to Rocky builds, so every
+  "xfs" Rocky build was ext4 (#86, 34a7e5c).
+- **GitHub Pages box catalog**: `tools/box-catalog.py add|verify`, `site/`, `.github/workflows/pages.yml`
+  and `docs/box-distribution.md`.
+- **First-boot growth evidence**: `/etc/vagrant-box/growroot.json`; `07-check-tuning.sh` reports it as
+  `lvm_auto_extend`.
+- **Smolvm applicability matrix and contract `execution_context`** (#54 Phase A, 18e2668).
+- Tests wired into `make test`/CI: release promotion, readiness drift, air-gap verify, time
+  readiness, license gate `ROOT=`, unpinned-input guard, execution context, growroot (incl. a real
+  loop/LVM run in CI) and the box catalog.
 
 ### Changed
+- **Box size (D5)**: the root stays 16 GiB during the build, so the final zero-fill can cover it.
+  The old fill wrote toward ~970 GB, which VMware Fusion backs with real host space (measured ~16 GB
+  per 10 s), so it was cut off and the failure hidden by `2>/dev/null || true`. It now fills to
+  ENOSPC and fails on any other error; ENOSPC is matched by message because Ubuntu 26.04's uutils
+  `dd` prints `IO error: No space left on device`. xfs boxes: Ubuntu 26.04 3.12 -> 1.97 GiB, Rocky 9
+  2.51 -> 1.93 GiB. Ubuntu ext4 now uses the same explicit storage layout as xfs.
+- **SBOM**: `manifest.json` records the kernel the box boots (newest `/boot/vmlinuz-*`) instead of the
+  build's running installer kernel, and labels the offline inventory `offline-dpkg-inventory` or
+  `offline-rpm-inventory` (c2e6de3, 7a4a68c).
 - **Host security evidence reclassification (#44 T-020/T-021/T-021b, D4)**: a disabled AppArmor
   or a permissive/disabled SELinux, on its native/capable host, is now `FAIL` instead of the
   previous `UNKNOWN`/`PASS` false-green. This is a **behavior change for consumers**: any host or
@@ -53,6 +127,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/evidence-contracts.md` for the full detail vocabulary and the known-consumers list, and
   revert the reclassification commit to restore the prior (less truthful) behavior if a consumer
   is not yet ready.
+
+### Fixed
+- Rocky first boot: `sshd-keygen@rsa` could fail ("Overwrite (y/n)?") racing the first-boot identity
+  service for the same host key; the identity service now runs before the `sshd-keygen@` units
+  (549239d).
+- Release promotion, license gate, readiness drift, air-gap verify and verifier CLI gaps that let
+  checks pass without verifying anything (#83: 243ddb8, a41f9e0, 5780f9d, 258535a, 7c69e74).
+- gVisor 20261026.0 needs its `gvisor-bin/` sidecars; without them `runsc` cannot start a sandbox
+  (caught in review, 4d579ce).
+
+### Known issues
+- VMware ARM64 builds occasionally fail with "Script disconnected unexpectedly" and pass on retry
+  (`docs/mistakes-log.md` #26).
+- Kernel CVE-2026-98432 is open upstream for Ubuntu 24.04/26.04 and Rocky 9.
 
 ## [Rocky-0.1.0] - 2026-08-26
 
