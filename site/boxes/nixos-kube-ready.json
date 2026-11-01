@@ -1,0 +1,19 @@
+{
+  "name": "dasomel/nixos-kube-ready",
+  "description": "Kubernetes-ready nixos-kube-ready box (arm64, libvirt). MIT License. https://github.com/dasomel/kube-ready-box",
+  "versions": [
+    {
+      "version": "0.2.2",
+      "providers": [
+        {
+          "name": "libvirt",
+          "url": "https://github.com/dasomel/kube-ready-box/releases/download/v1.2.0/nixos-kube-ready-libvirt-arm64-0.2.2.box",
+          "checksum_type": "sha256",
+          "checksum": "dcaaf8a50462089872c99cae2725c8a57594f808630ca2969e5922111397356d",
+          "architecture": "arm64",
+          "default_architecture": true
+        }
+      ]
+    }
+  ]
+}

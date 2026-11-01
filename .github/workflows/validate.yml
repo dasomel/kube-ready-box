@@ -188,6 +188,7 @@ jobs:
           bash tools/tests/node-time-readiness-test.sh
           bash tools/tests/contracts-execution-context-test.sh
           bash tools/tests/growroot-preflight-test.sh
+          bash tools/tests/box-catalog-test.sh
           bash tools/tests/sbom-license-gate-root-test.sh
       - name: Benchmark Rust verifier vs shell (informational, non-blocking)
         continue-on-error: true

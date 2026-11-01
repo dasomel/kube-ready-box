@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kube-ready-box catalogs</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:46rem;margin:2rem auto;padding:0 1rem}code,pre{background:#f2f2f2;padding:.1em .3em}pre{padding:.7em;overflow-x:auto}</style>
+</head>
+<body>
+<h1>kube-ready-box</h1>
+<p>Vagrant box catalogs. The <code>.box</code> files are GitHub Release assets; each catalog carries the URL and sha256 checksum.</p>
+<pre>vagrant box add https://dasomel.github.io/kube-ready-box/boxes/&lt;name&gt;.json</pre>
+<p>Pick a provider or architecture explicitly when needed:</p>
+<pre>vagrant box add --provider vmware_desktop --architecture arm64 \
+  https://dasomel.github.io/kube-ready-box/boxes/&lt;name&gt;.json</pre>
+<p>Catalogs are the <code>boxes/*.json</code> files in this site. Source and releases:
+<a href="https://github.com/dasomel/kube-ready-box">github.com/dasomel/kube-ready-box</a>.</p>
+</body>
+</html>
