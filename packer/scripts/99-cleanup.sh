@@ -47,6 +47,25 @@ if command -v apt-get >/dev/null 2>&1; then
       rm -rf "$moddir"
     fi
   done
+  # subiquity 는 설치기 커널 인자(autoinstall ds=nocloud-net;s=http://<packer 호스트>:<포트>/ ---)를
+  # GRUB_CMDLINE_LINUX_DEFAULT 로 복사한다. 0.3.0 까지의 박스는 이 인자를 달고 부팅했다.
+  # cloud-init 이 꺼져 있어 무해했지만, 켜는 순간 빌드 호스트 주소에서 user-data 를 받으려 한다.
+  # 다른 인자(console=, rootflags=prjquota, grub.d 의 crashkernel=)는 그대로 둔다.
+  if [ -f /etc/default/grub ] && grep -Eq '^GRUB_CMDLINE_LINUX_DEFAULT=.*(autoinstall|ds=nocloud)' /etc/default/grub; then
+    sed -i -E '/^GRUB_CMDLINE_LINUX_DEFAULT=/{
+      s/[[:space:]]*autoinstall//
+      s/[[:space:]]*ds=nocloud[^[:space:]"]*//
+      s/[[:space:]]*---//
+      s/="[[:space:]]+/="/
+      s/[[:space:]]+"$/"/
+    }' /etc/default/grub
+    update-grub
+  fi
+  if grep -Eq 'ds=nocloud|[[:space:]]autoinstall([[:space:]]|$)' /etc/default/grub /boot/grub/grub.cfg 2>/dev/null; then
+    echo "ERROR: installer kernel arguments still present in GRUB config" >&2
+    grep -En 'ds=nocloud|autoinstall' /etc/default/grub /boot/grub/grub.cfg >&2 || true
+    exit 1
+  fi
   apt-get clean
   rm -rf /var/lib/apt/lists/*
 elif command -v dnf >/dev/null 2>&1; then
