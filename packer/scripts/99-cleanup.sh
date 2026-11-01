@@ -28,7 +28,25 @@ if [ -f /etc/vagrant-box/egress-restrict.state ]; then
 fi
 
 if command -v apt-get >/dev/null 2>&1; then
-  apt-get autoremove -y
+  apt-get autoremove --purge -y
+  # 업그레이드로 밀려난 설치기 커널(예: 26.04 의 7.0.0-14)은 remove 만 되고 설정 파일이
+  # 남은 'rc' 상태로 남는다. 그 패키지들을 purge 하고, 설치된 linux-modules 패키지가
+  # 없는 /lib/modules/<ver> (depmod 색인만 남은 디렉터리)도 지운다. 실행 중 커널은 건드리지 않는다.
+  rc_kernel_pkgs=$(dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 'linux-*' 2>/dev/null \
+    | awk '$1 == "rc" {print $2}')
+  if [ -n "$rc_kernel_pkgs" ]; then
+    # shellcheck disable=SC2086 # 패키지 이름 목록을 단어 단위로 넘긴다
+    dpkg --purge $rc_kernel_pkgs
+  fi
+  for moddir in /lib/modules/*; do
+    [ -d "$moddir" ] || continue
+    kver=$(basename "$moddir")
+    [ "$kver" = "$(uname -r)" ] && continue
+    if ! dpkg-query -W -f='${db:Status-Abbrev}' "linux-modules-$kver" 2>/dev/null | grep -q '^ii'; then
+      echo "Removing orphan module directory $moddir (no installed linux-modules-$kver)"
+      rm -rf "$moddir"
+    fi
+  done
   apt-get clean
   rm -rf /var/lib/apt/lists/*
 elif command -v dnf >/dev/null 2>&1; then
