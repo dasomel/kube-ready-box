@@ -292,12 +292,12 @@ build_box() {
     exit 1
   fi
 
-  # Rocky templates don't take -var filesystem/ubuntu_version (they're
-  # ext4-only and versioned by rocky_version instead) -- keep the Ubuntu
-  # path passing zero unknown vars to Rocky and vice versa.
+  # Rocky templates take filesystem (ext4/xfs, adef825) but not
+  # ubuntu_version; they are versioned by rocky_version instead. Without the
+  # filesystem var, `--os=rocky --fs=xfs` silently built ext4.
   local -a os_vars=()
   if [ "$OS_NAME" = "rocky" ]; then
-    os_vars=(-var "rocky_version=${ROCKY_VERSION}")
+    os_vars=(-var "filesystem=$FILESYSTEM" -var "rocky_version=${ROCKY_VERSION}")
   else
     os_vars=(-var "filesystem=$FILESYSTEM" -var "ubuntu_version=${UBUNTU_VERSION}")
   fi
