@@ -137,6 +137,68 @@ jobs:
           tar -tzf "$BOX" >/dev/null || { echo "::error::Box archive is corrupt: $BOX"; exit 1; }
           echo "Box verified OK: $BOX"
 
+      # D9: amd64 박스는 로컬(arm64) 호스트에서 부팅할 수 없다. 같은 러너의 VirtualBox 로
+      # 실제 부팅해 검증한 박스만 아티팩트로 올린다(검증 못 한 박스는 배포 후보가 아니다).
+      - name: Install Vagrant
+        run: |
+          wget -qO- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq vagrant
+          vagrant --version
+
+      - name: Boot test
+        run: |
+          BOX="$GITHUB_WORKSPACE/packer/output-vagrant/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-amd64.box"
+          mkdir -p "$RUNNER_TEMP/boot" && cd "$RUNNER_TEMP/boot"
+          cat > Vagrantfile <<'EOF'
+          Vagrant.configure("2") do |config|
+            config.vm.box = "kube-ready-test/amd64"
+            config.vm.boot_timeout = 900
+            config.vm.synced_folder ".", "/vagrant", disabled: true
+            config.vm.provider "virtualbox" do |v|
+              v.memory = 4096
+              v.cpus = 2
+            end
+          end
+          EOF
+          vagrant box add --name kube-ready-test/amd64 --provider virtualbox "$BOX"
+          vagrant up --provider virtualbox
+          cat > guest-check.sh <<'EOF'
+          set -u
+          rc=0
+          for i in $(seq 1 90); do
+            [ -e /etc/vagrant-box/growroot.json ] && [ "$(systemctl is-system-running)" != starting ] && break
+            sleep 2
+          done
+          echo "kernel=$(uname -r) state=$(systemctl is-system-running)"
+          echo "cmdline=$(cat /proc/cmdline)"
+          failed=$(systemctl --failed --no-legend | wc -l); echo "failed_units=$failed"
+          [ "$failed" -eq 0 ] || { systemctl --failed --no-legend; rc=1; }
+          if sudo grep -Eq 'ds=nocloud|[[:space:]]autoinstall([[:space:]]|$)' /proc/cmdline /etc/default/grub /boot/grub/grub.cfg; then
+            echo "installer kernel args present"; rc=1
+          fi
+          mods=$(ls /lib/modules); echo "modules=$(echo $mods)"
+          [ "$mods" = "$(uname -r)" ] || { echo "extra /lib/modules entries"; rc=1; }
+          rcpk=$(dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 'linux-*' | awk '$1=="rc"{print $2}')
+          [ -z "$rcpk" ] || { echo "rc kernel packages: $rcpk"; rc=1; }
+          cat /etc/vagrant-box/growroot.json; echo
+          grep -q '"status":"PASS"' /etc/vagrant-box/growroot.json || { echo "growroot not PASS"; rc=1; }
+          [ -z "$(swapon --show)" ] || { echo "swap active"; rc=1; }
+          test -f /etc/cloud/cloud-init.disabled || { echo "cloud-init not disabled"; rc=1; }
+          findmnt -no FSTYPE,OPTIONS /
+          exit $rc
+          EOF
+          vagrant upload guest-check.sh /tmp/guest-check.sh
+          vagrant ssh -c 'bash /tmp/guest-check.sh'
+          vagrant reload
+          # shellcheck disable=SC2016 # 게스트에서 확장할 식이다
+          vagrant ssh -c 'echo "after_reload state=$(systemctl is-system-running)"; test "$(systemctl --failed --no-legend | wc -l)" -eq 0'
+          bash "$GITHUB_WORKSPACE/test-vm/verify_box.sh" virtualbox | tee verify.log
+          grep -Eq '^failures=0( |$)' verify.log || { echo "::error::verify_box reported failures"; exit 1; }
+          vagrant destroy -f
+          vagrant box remove -f kube-ready-test/amd64
+
       - name: Upload Box Artifact
         uses: actions/upload-artifact@v7
         with:
