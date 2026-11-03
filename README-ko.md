@@ -11,14 +11,14 @@ OS 수준 최적화가 적용된 Kubernetes-ready Ubuntu Vagrant Box. **24.04 LT
 
 > **배포 경로 변경 (v0.3.0+)**: HCP Vagrant(구 Vagrant Cloud)가 종료됩니다. 2026-10-01부터 신규 업로드가 막혔고, 2026-12-31 이후 `dasomel/*`를 포함한 모든 호스팅 박스가 삭제됩니다. 박스는 이제 GitHub Release 자산으로, Vagrant 카탈로그는 GitHub Pages로 제공합니다. [Box 배포](docs/box-distribution.md) 참고.
 >
-> | Box | 버전 | Provider (모두 arm64) |
+> | Box | 버전 | Provider (아키텍처) |
 > |---|---|---|
-> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.1 | `vmware_desktop` |
-> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.1 | `vmware_desktop` |
-> | `dasomel/rocky-9-ext4`, `dasomel/rocky-9-xfs` | 0.1.1 | `vmware_desktop` |
-> | `dasomel/nixos-kube-ready` | 0.2.2 | `libvirt` (`vagrant-qemu` 가능) |
+> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.1 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.1 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+> | `dasomel/rocky-9-ext4`, `dasomel/rocky-9-xfs` | 0.1.1 | `vmware_desktop` (arm64) |
+> | `dasomel/nixos-kube-ready` | 0.2.2 | `libvirt` (arm64, `vagrant-qemu` 가능) |
 >
-> VirtualBox와 amd64 박스는 v0.3.x에 포함되지 않습니다 (빌드 호스트에서 VirtualBox SSH를 검증할 수 없고, arm64 빌드 호스트에서 amd64를 빌드할 수 없음).
+> Ubuntu amd64 박스는 VirtualBox용만 있습니다. GitHub의 x86 러너에서 빌드하고 부팅까지 검증하는데, 그 러너에서는 VirtualBox는 돌지만 VMware는 돌릴 수 없습니다. VirtualBox arm64 박스(arm64 빌드 호스트에서 VirtualBox SSH를 검증할 수 없음)와 Rocky/NixOS amd64 박스는 없습니다.
 >
 > **Ubuntu 버전 재정렬**: Ubuntu 박스는 Vagrant Cloud 1.1.0 다음 버전이 **0.3.x**입니다(1.1.0은 GitHub Release 자산이 아니었고 Vagrant Cloud와 함께 삭제됩니다). Vagrant는 1.1.0을 0.3.x보다 높게 보므로 기존 버전을 먼저 지우세요: `vagrant box remove dasomel/<box> --box-version 1.1.0`.
 
