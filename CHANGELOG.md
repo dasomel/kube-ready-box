@@ -9,19 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.1] - 2026-11-02
 
-Ubuntu-only rebuild (`vmware_desktop` arm64) that ships the two cleanup fixes below. Rocky (0.1.1)
-and NixOS (0.2.2) are unchanged and stay assets of the `v0.3.0` release.
+Ubuntu-only rebuild that ships the two cleanup fixes below. Rocky (0.1.1) and NixOS (0.2.2) are
+unchanged and stay assets of the `v0.3.0` release.
 
-| Box | Version | Provider | Kernel | Size |
-|---|---|---|---|---|
-| `dasomel/ubuntu-24.04-ext4` | 0.3.1 | vmware_desktop | 6.8.0-147-generic | 1.46 GiB |
-| `dasomel/ubuntu-24.04-xfs` | 0.3.1 | vmware_desktop | 6.8.0-147-generic | 1.56 GiB |
-| `dasomel/ubuntu-26.04-ext4` | 0.3.1 | vmware_desktop | 7.0.0-42-generic | 1.75 GiB |
-| `dasomel/ubuntu-26.04-xfs` | 0.3.1 | vmware_desktop | 7.0.0-42-generic | 1.97 GiB |
+| Box | Version | Provider | Arch | Kernel | Size |
+|---|---|---|---|---|---|
+| `dasomel/ubuntu-24.04-ext4` | 0.3.1 | vmware_desktop | arm64 | 6.8.0-147-generic | 1.46 GiB |
+| `dasomel/ubuntu-24.04-xfs` | 0.3.1 | vmware_desktop | arm64 | 6.8.0-147-generic | 1.56 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 0.3.1 | vmware_desktop | arm64 | 7.0.0-42-generic | 1.75 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 0.3.1 | vmware_desktop | arm64 | 7.0.0-42-generic | 1.97 GiB |
+| `dasomel/ubuntu-24.04-ext4` | 0.3.1 | virtualbox | amd64 | 6.8.0-147-generic | 1.59 GiB |
+| `dasomel/ubuntu-24.04-xfs` | 0.3.1 | virtualbox | amd64 | 6.8.0-147-generic | 1.68 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 0.3.1 | virtualbox | amd64 | 7.0.0-42-generic | 1.70 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 0.3.1 | virtualbox | amd64 | 7.0.0-42-generic | 1.87 GiB |
 
-Boot-verified on VMware Fusion (Apple Silicon): `/proc/cmdline` and `/etc/default/grub` carry no
-installer arguments, `/lib/modules` holds only the running kernel, no `rc` kernel packages, growroot
-PASS, cloud-init disabled, clean after `vagrant reload`, `test-vm/verify_box.sh` failures=0.
+The arm64 boxes were boot-verified on VMware Fusion (Apple Silicon). The amd64 boxes were added to
+the same release on 2026-11-03: built from the same provisioning scripts by
+`.github/workflows/build-amd64.yml` on GitHub's x86 runners (packages may be a day newer) and
+boot-verified there with VirtualBox. Both sets passed the same checks: `/proc/cmdline` and the GRUB
+config carry no installer arguments, `/lib/modules` holds only the running kernel, no `rc` kernel
+packages, growroot PASS, no swap, cloud-init disabled, clean after `vagrant reload`,
+`test-vm/verify_box.sh` failures=0. There is no VMware amd64 box (the runners cannot run VMware) and
+no VirtualBox arm64 box.
 
 ### Added
 - Weekly box CVE scan (`.github/workflows/box-cve-scan.yml`, `tools/box-cve-scan.sh`,
@@ -29,7 +38,12 @@ PASS, cloud-init disabled, clean after `vagrant reload`, `test-vm/verify_box.sh`
   SHA-256, extracts the dpkg/rpm database read-only and runs Trivy 0.76.0 (fixable CVEs only).
   CRITICAL/HIGH fail the run (rebuild trigger); no OS packages detected, a checksum mismatch or an
   unreadable disk is UNKNOWN, never PASS. NixOS is reported UNKNOWN (no dpkg/rpm database).
-  Tests: `tools/tests/box-cve-scan-test.sh`.
+  Tests: `tools/tests/box-cve-scan-test.sh`. `PROVIDER`/`ARCH` pick a provider inside the latest
+  version (a missing one is UNKNOWN, never a fallback); the weekly matrix scans the Ubuntu
+  `virtualbox` amd64 boxes as well.
+- `build-amd64.yml` boots each VirtualBox amd64 box on the runner that built it (Vagrant +
+  VirtualBox, the checks above plus `test-vm/verify_box.sh`) and uploads the artifact only if it
+  passes.
 
 ### Fixed
 - Ubuntu cleanup (`99-cleanup.sh`) purges kernel packages left in `rc` state by the upgrade and

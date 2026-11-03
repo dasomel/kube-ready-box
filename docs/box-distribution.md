@@ -45,19 +45,21 @@ vagrant box add https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-ext4
 
 Vagrant verifies the catalog checksum. `vagrant box outdated` and `vagrant box update` work through the catalog.
 
-### Current box set (all arm64)
+### Current box set
 
-| Box | Version | Provider |
+| Box | Version | Provider (arch) |
 |---|---|---|
-| `ubuntu-24.04-ext4` | 0.3.1 | `vmware_desktop` |
-| `ubuntu-24.04-xfs` | 0.3.1 | `vmware_desktop` |
-| `ubuntu-26.04-ext4` | 0.3.1 | `vmware_desktop` |
-| `ubuntu-26.04-xfs` | 0.3.1 | `vmware_desktop` |
-| `rocky-9-ext4` | 0.1.1 | `vmware_desktop` |
-| `rocky-9-xfs` | 0.1.1 | `vmware_desktop` |
-| `nixos-kube-ready` | 0.2.2 | `libvirt` (vagrant-libvirt, or vagrant-qemu) |
+| `ubuntu-24.04-ext4` | 0.3.1 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+| `ubuntu-24.04-xfs` | 0.3.1 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+| `ubuntu-26.04-ext4` | 0.3.1 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+| `ubuntu-26.04-xfs` | 0.3.1 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+| `rocky-9-ext4` | 0.1.1 | `vmware_desktop` (arm64) |
+| `rocky-9-xfs` | 0.1.1 | `vmware_desktop` (arm64) |
+| `nixos-kube-ready` | 0.2.2 | `libvirt` (arm64; vagrant-libvirt, or vagrant-qemu) |
 
-Asset names look like `ubuntu-24.04-ext4-vmware_desktop-arm64-0.3.1.box`. The Ubuntu 0.3.1 boxes are
+Asset names look like `ubuntu-24.04-ext4-vmware_desktop-arm64-0.3.1.box` and
+`ubuntu-24.04-ext4-virtualbox-amd64-0.3.1.box`. Vagrant picks the provider and architecture that
+match the host from the same catalog version. The Ubuntu 0.3.1 boxes are
 assets of the `v0.3.1` release; Rocky 0.1.1 and NixOS 0.2.2 stay assets of `v0.3.0`, and each catalog
 keeps pointing at the release that holds its files. The Ubuntu catalogs still list 0.3.0.
 
@@ -68,8 +70,10 @@ booting it and `vagrant box outdated` reports nothing. Remove it once:
 
 Not in this release:
 
-- VirtualBox boxes: SSH cannot be verified on the build host.
-- amd64 boxes: they cannot be built on the arm64 build host.
+- VirtualBox arm64 boxes: SSH cannot be verified on the arm64 build host.
+- VMware amd64 boxes: amd64 boxes are built and boot-tested on GitHub's x86 runners
+  (`.github/workflows/build-amd64.yml`), which run VirtualBox but not VMware.
+- Rocky and NixOS amd64 boxes: no amd64 build path exists for them.
 
 ### Behavior change (D5)
 

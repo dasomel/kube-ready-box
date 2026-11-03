@@ -11,14 +11,14 @@ Kubernetes-ready Ubuntu Vagrant Box with OS-level optimizations. Supports **24.0
 
 > **Distribution moved (v0.3.0+)**: HCP Vagrant (Vagrant Cloud) is shutting down — new uploads have been disabled since 2026-10-01 and all hosted boxes, including `dasomel/*`, are deleted after 2026-12-31. Boxes are now GitHub Release assets with a Vagrant catalog on GitHub Pages. See [Box Distribution](docs/box-distribution.md).
 >
-> | Box | Version | Provider (all arm64) |
+> | Box | Version | Provider (arch) |
 > |---|---|---|
-> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.1 | `vmware_desktop` |
-> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.1 | `vmware_desktop` |
-> | `dasomel/rocky-9-ext4`, `dasomel/rocky-9-xfs` | 0.1.1 | `vmware_desktop` |
-> | `dasomel/nixos-kube-ready` | 0.2.2 | `libvirt` (also `vagrant-qemu`) |
+> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.1 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.1 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+> | `dasomel/rocky-9-ext4`, `dasomel/rocky-9-xfs` | 0.1.1 | `vmware_desktop` (arm64) |
+> | `dasomel/nixos-kube-ready` | 0.2.2 | `libvirt` (arm64; also `vagrant-qemu`) |
 >
-> VirtualBox and amd64 boxes are not part of v0.3.x (VirtualBox SSH cannot be verified on the build host; amd64 cannot be built on the arm64 build host).
+> Ubuntu amd64 boxes are VirtualBox only: they are built and boot-tested on GitHub's x86 runners, which run VirtualBox but not VMware. There are no VirtualBox arm64 boxes (VirtualBox SSH cannot be verified on the arm64 build host) and no Rocky/NixOS amd64 boxes.
 >
 > **Ubuntu version line reset**: the Ubuntu boxes go from Vagrant Cloud 1.1.0 to **0.3.x** (1.1.0 was never a GitHub Release asset and is deleted with Vagrant Cloud). Vagrant ranks 1.1.0 above 0.3.x, so remove the old version first: `vagrant box remove dasomel/<box> --box-version 1.1.0`.
 
