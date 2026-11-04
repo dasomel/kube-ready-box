@@ -172,7 +172,6 @@ gh run watch --repo dasomel/kube-ready-box
 
 ## 관련 파일
 
-- `.github/workflows/build-amd64.yml` — Publish step (`HCP_CLIENT_ID`, `HCP_CLIENT_SECRET` 사용)
-- `.github/workflows/build-arm64.yml` — 동일
+- `.github/workflows/build-amd64.yml`, `build-arm64.yml` — `HCP_CLIENT_ID`/`HCP_CLIENT_SECRET`을 쓰던 Publish job은 2026-11-04에 삭제됨
 - [VAGRANT_CLOUD.md](VAGRANT_CLOUD.md) — Vagrant Cloud 일반 사용법 (폐기됨)
 - [box-distribution.md](box-distribution.md) — 현재 배포 경로
