@@ -3,11 +3,6 @@ name: Build ARM64 Vagrant Boxes
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Box version (e.g., 0.2.1)'
-        required: false
-        type: string
-        default: ''
       ubuntu_version:
         description: 'Ubuntu version to build'
         required: false
@@ -34,11 +29,6 @@ on:
           - xfs
           - both
         default: both
-      publish:
-        description: 'Publish to Vagrant Cloud'
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -195,110 +185,3 @@ jobs:
         run: |
           rm -rf packer/output-*
           VBoxManage list vms | grep -oE '"[^"]+"' | tr -d '"' | xargs -I {} VBoxManage unregistervm "{}" --delete 2>/dev/null || true
-
-  publish:
-    name: Publish ${{ matrix.filesystem }} to Vagrant Cloud
-    needs: [build-vmware-arm64, build-virtualbox-arm64]
-    runs-on: ubuntu-latest
-    if: |
-      always() &&
-      inputs.publish == true &&
-      (needs.build-vmware-arm64.result == 'success' || needs.build-virtualbox-arm64.result == 'success')
-    strategy:
-      fail-fast: false
-      matrix:
-        filesystem:
-          - ext4
-          - xfs
-        exclude:
-          - filesystem: ${{ inputs.filesystem == 'xfs' && 'ext4' || 'none' }}
-          - filesystem: ${{ inputs.filesystem == 'ext4' && 'xfs' || 'none' }}
-
-    environment: production
-
-    steps:
-      - name: Download VMware Box
-        if: needs.build-vmware-arm64.result == 'success'
-        uses: actions/download-artifact@v8
-        with:
-          name: ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-vmware-arm64
-          path: ./boxes
-        continue-on-error: true
-
-      - name: Download VirtualBox Box
-        if: needs.build-virtualbox-arm64.result == 'success'
-        uses: actions/download-artifact@v8
-        with:
-          name: ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-arm64
-          path: ./boxes
-        continue-on-error: true
-
-      - name: Get Version
-        id: version
-        run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=$(date +%Y.%m.%d)" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Get FS Upper
-        id: fs
-        run: echo "upper=$(echo '${{ matrix.filesystem }}' | tr '[:lower:]' '[:upper:]')" >> "$GITHUB_OUTPUT"
-
-      - name: Setup Vagrant
-        run: |
-          wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-          sudo apt-get update
-          sudo apt-get install -y vagrant
-
-      - name: Publish VMware Box
-        if: needs.build-vmware-arm64.result == 'success'
-        env:
-          HCP_CLIENT_ID: ${{ secrets.HCP_CLIENT_ID }}
-          HCP_CLIENT_SECRET: ${{ secrets.HCP_CLIENT_SECRET }}
-        run: |
-          BOX_FILE="boxes/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-vmware-arm64.box"
-          [ ! -f "$BOX_FILE" ] && echo "Box file not found, skipping" && exit 0
-
-          vagrant cloud publish dasomel/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }} \
-            ${{ steps.version.outputs.version }} \
-            vmware_desktop \
-            "$BOX_FILE" \
-            --architecture arm64 \
-            --force \
-            --version-description "Kubernetes-ready Ubuntu ${{ env.UBUNTU_VERSION }} LTS (${{ steps.fs.outputs.upper }} filesystem) v${{ steps.version.outputs.version }}
-
-          ## Filesystem: ${{ steps.fs.outputs.upper }}
-          - ext4: Mature, stable, supports online shrink
-          - xfs: Better for large files, parallel I/O, K8s ephemeral storage quota
-
-          ## Features
-          - Ubuntu ${{ env.UBUNTU_VERSION }} LTS with OS optimizations for Kubernetes
-          - Multi-architecture support (AMD64, ARM64)
-          - Multi-provider support (VirtualBox, VMware)
-          - 1TB disk with auto-extension at boot (thin provisioning)
-          - Filesystem selection: ext4 or xfs
-
-          ## Documentation
-          https://github.com/dasomel/kube-ready-box" \
-            --release \
-            --short-description "K8s-ready Ubuntu ${{ env.UBUNTU_VERSION }} (${{ steps.fs.outputs.upper }}) Vagrant Box"
-
-      - name: Add VirtualBox Provider
-        if: needs.build-virtualbox-arm64.result == 'success'
-        env:
-          HCP_CLIENT_ID: ${{ secrets.HCP_CLIENT_ID }}
-          HCP_CLIENT_SECRET: ${{ secrets.HCP_CLIENT_SECRET }}
-        run: |
-          BOX_FILE="boxes/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-arm64.box"
-          [ ! -f "$BOX_FILE" ] && echo "Box file not found, skipping" && exit 0
-
-          vagrant cloud provider create dasomel/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }} \
-            ${{ steps.version.outputs.version }} virtualbox \
-            --architecture arm64 2>/dev/null || echo "Provider already exists"
-
-          vagrant cloud provider upload dasomel/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }} \
-            ${{ steps.version.outputs.version }} virtualbox \
-            arm64 "$BOX_FILE"

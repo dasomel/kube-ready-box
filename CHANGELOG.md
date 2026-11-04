@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- The `Publish to Vagrant Cloud` jobs and their `publish`/`version` dispatch inputs in
+  `build-amd64.yml` and `build-arm64.yml`. Vagrant Cloud (HCP Vagrant) is shut down; boxes ship as
+  GitHub Release assets plus the Pages catalog.
+
 ### Fixed
 
 - The box info shown at login (`/etc/vagrant-box/info.txt`, NixOS motd) pointed at the retired

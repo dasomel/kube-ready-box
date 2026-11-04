@@ -116,7 +116,9 @@ These target Vagrant Cloud and no longer work for new versions. They are kept un
 - `upload-boxes.sh`
 - `nixos/upload-nixos.sh`
 - `packer/scripts/upload-all.sh`
-- The `Publish to Vagrant Cloud` steps in `.github/workflows/build-amd64.yml` and `.github/workflows/build-arm64.yml`
 - [VAGRANT_CLOUD.md](VAGRANT_CLOUD.md) and [hcp-credentials.md](hcp-credentials.md)
+
+The `Publish to Vagrant Cloud` jobs (and their `publish`/`version` inputs) were removed from
+`.github/workflows/build-amd64.yml` and `.github/workflows/build-arm64.yml` on 2026-11-04.
 
 The path is GitHub Release plus the Pages catalog.
