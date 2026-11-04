@@ -226,7 +226,7 @@ in
     License:      MIT License
 
     Source:       https://github.com/dasomel/kube-ready-box
-    Box URL:      https://app.vagrantup.com/dasomel/boxes/nixos-kube-ready
+    Box Catalog:  https://dasomel.github.io/kube-ready-box/boxes/nixos-kube-ready.json
 
     ===============================================
       Pre-installed Optimizations & Pre-requisites

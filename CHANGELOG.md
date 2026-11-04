@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The box info shown at login (`/etc/vagrant-box/info.txt`, NixOS motd) pointed at the retired
+  Vagrant Cloud page (`app.vagrantup.com/dasomel/boxes/...`). It now points at the GitHub Pages
+  catalog (`https://dasomel.github.io/kube-ready-box/boxes/<name>.json`). `license-info.sh` also
+  names the box after its catalog: root filesystem suffix (`ubuntu-24.04-ext4`) and Rocky major
+  version only (`rocky-9-xfs`). Takes effect from the next build; shipped boxes keep the old URL.
+
 ## [0.3.1] - 2026-11-02
 
 Ubuntu-only rebuild that ships the two cleanup fixes below. Rocky (0.1.1) and NixOS (0.2.2) are

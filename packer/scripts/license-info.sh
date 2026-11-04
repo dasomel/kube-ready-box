@@ -9,22 +9,30 @@ echo "=== license-info.sh: Installing License Information ==="
 . /etc/os-release
 BOX_DISTRO_ID="${ID}"
 BOX_VER="${VERSION_ID}"
+# 카탈로그 이름은 Rocky 는 메이저 버전만 쓴다(rocky-9-xfs), Ubuntu 는 24.04 그대로.
+case "${ID}" in rocky) BOX_VER="${VERSION_ID%%.*}" ;; esac
+# 박스는 루트 파일시스템별로 나뉜다(ubuntu-24.04-ext4). 알 수 없으면 접미사 없이 둔다.
+BOX_FS=$(findmnt -no FSTYPE / 2>/dev/null || true)
+case "${BOX_FS}" in
+  ext4|xfs) BOX_NAME="${BOX_DISTRO_ID}-${BOX_VER}-${BOX_FS}" ;;
+  *) BOX_NAME="${BOX_DISTRO_ID}-${BOX_VER}" ;;
+esac
 
 # Box 정보 파일 생성
 mkdir -p /etc/vagrant-box
 
 cat <<EOF > /etc/vagrant-box/info.txt
 ===============================================
-  dasomel/${BOX_DISTRO_ID}-${BOX_VER} Vagrant Box
+  dasomel/${BOX_NAME} Vagrant Box
 ===============================================
 
-Box Name:     dasomel/${BOX_DISTRO_ID}-${BOX_VER}
+Box Name:     dasomel/${BOX_NAME}
 Base OS:      ${PRETTY_NAME} (Cloud Image)
 Purpose:      Kubernetes-ready optimized OS
 License:      MIT License
 
 Source:       https://github.com/dasomel/kube-ready-box
-Box URL:      https://app.vagrantup.com/dasomel/boxes/${BOX_DISTRO_ID}-${BOX_VER}
+Box Catalog:  https://dasomel.github.io/kube-ready-box/boxes/${BOX_NAME}.json
 
 ===============================================
   Build Provenance
