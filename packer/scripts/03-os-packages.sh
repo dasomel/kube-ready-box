@@ -23,7 +23,7 @@ apt-get install -y \
 echo "Installing dool (dstat replacement)..."
 DOOL_VERSION="${DOOL_VERSION:-1.3.8}"
 DOOL_SHA256="${DOOL_SHA256:-818c833551b365a89f6ae29f07df5ea34588563e2eebaf3b2f93d64f6c9787fd}"
-curl -sL "https://github.com/scottchiefbaker/dool/releases/download/v${DOOL_VERSION}/dool-${DOOL_VERSION}.deb" -o /tmp/dool.deb
+curl -fsSL --retry 5 --retry-all-errors --connect-timeout 10 --max-time 120 "https://github.com/scottchiefbaker/dool/releases/download/v${DOOL_VERSION}/dool-${DOOL_VERSION}.deb" -o /tmp/dool.deb
 echo "${DOOL_SHA256}  /tmp/dool.deb" | sha256sum -c -
 dpkg -i /tmp/dool.deb
 rm -f /tmp/dool.deb
