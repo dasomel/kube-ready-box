@@ -160,6 +160,7 @@
     - 2026-11-08 AMD64 XFS 빌드는 `packer init`의 VMware 2.1.4 ZIP/SHA256SUMS 다운로드에서 HTTP 504가 반복됐다. PR 검증의 actionlint 다운로드도 실패했고, `curl -sL`이 HTTP 오류를 성공으로 처리해 뒤의 SHA256 검사에서만 실패했다.
     - 같은 날 dool 설치도 SHA256 불일치로 두 번 실패했다. 실패 응답 본문은 남지 않아 원인은 확정하지 못했지만, 재확인한 공식 1.3.8 파일은 macOS/Linux 모두 기존 핀 `818c8335…9787fd`와 일치했다. 핀을 바꿀 근거가 아니다.
     - 대응: HTTP 실패를 `curl -f`로 드러내고 제한된 재시도를 한다. Packer/CI 도구의 다운로드 실패에는 공식 GitHub API 경로로 같은 고정 릴리스만 재다운로드하고, 체크섬 확인 뒤 설치한다. 무결성 검사 실패를 무시하거나 기대 SHA를 다운로드 결과에 맞춰 바꾸지 않는다. 회귀 증거: `tools/tests/packer-init-test.sh`의 손상/누락 체크섬 거부 및 최종 실패 전파.
+    - 원인 확인(같은 날 19:30 전후): 우리 v0.3.1 `SHA256SUMS`를 포함해 `github.com/<owner>/<repo>/releases/download/...` 경로 전체가 504였고, `api.github.com/repos/<repo>/releases/assets/<id>` + `Accept: application/octet-stream`은 302 → `release-assets.githubusercontent.com` → 200이었다(받은 dool이 핀과 일치). 게스트 쪽 dool/yq(Ubuntu·Rocky)/gVisor 다운로드는 `fetch_release_asset`로 같은 고정 릴리스를 API 경로로 받고 기존 SHA-256 검사를 그대로 거친다. 빌드 egress 허용 목록에 `api.github.com`, `release-assets.githubusercontent.com` 추가.
 
 28. **Ubuntu 26.04 ARM64 설치기 정체는 대상 커널과 분리해 진단할 것**
     - 2026-11-08 VMware XFS 설치에서 ISO 커널 `7.0.0-14-generic`이 `ovl_iterate_merged`에서 Oops를 냈다. `ubuntu-drivers`와 `rsync`가 D 상태로 `ovl_dir_release`에 대기했고 `/target` 사용량은 224 MiB에 멈췄다. 게스트 도구로 수집한 dmesg와 `/proc/<pid>/stack`으로 확인했다.

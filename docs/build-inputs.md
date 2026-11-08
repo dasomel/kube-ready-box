@@ -149,9 +149,9 @@ box provider.
 | Script | What | Pin | Verification |
 |---|---|---|---|
 | `00-vagrant-setup.sh` | Vagrant insecure SSH pubkey | fetched from `hashicorp/vagrant@main` (floating; this key is a long-stable public constant with no versioned release to pin to) | fetched content is compared against the RSA/ED25519 key values embedded in the script; on mismatch OR fetch failure, the embedded keys are used instead — the fetch is never trusted blindly |
-| `03-os-packages.sh` | `dool` (dstat replacement) | `DOOL_VERSION` (default `1.3.8`), GitHub release `.deb` | `DOOL_SHA256` checked via `sha256sum -c` before `dpkg -i` |
-| `03-os-packages.sh` | `yq` (YAML processor) | `YQ_VERSION` (default `v4.54.1`; was `v4.44.3`, built with Go 1.22.5) | `YQ_SHA256` (per-arch) checked via `sha256sum -c` before install; values cross-checked against yq's own `releases/<tag>/checksums` file via its `extract-checksum.sh` |
-| `10-sandbox-runtime.sh` | gVisor `runsc`, `containerd-shim-runsc-v1` and the `gvisor-bin/` sidecar helpers (`gvisor_sentry` etc., required by `runsc` since the tarball releases) | `GVISOR_RELEASE` (default `20261026.0`, which fixes CVE-2026-95702; any other release must also pass `GVISOR_SHA256`, and `latest` is rejected) | the release tarball `gvisor-<arch>.tar.bz2` is checked against a SHA-256 pinned in the script (cross-checked with the release's `SHA256SUMS`), member types are validated, and only the named members are extracted. This proves the bytes match what was pinned, not upstream authenticity (no upstream signature) |
+| `03-os-packages.sh` | `dool` (dstat replacement) | `DOOL_VERSION` (default `1.3.8`), GitHub release `.deb` (`fetch_release_asset`: `-f` + retries, falls back to the `api.github.com` release-asset API if `releases/download` fails) | `DOOL_SHA256` checked via `sha256sum -c` before `dpkg -i` (on whichever download path succeeded) |
+| `03-os-packages.sh` | `yq` (YAML processor) | `YQ_VERSION` (default `v4.54.1`; was `v4.44.3`, built with Go 1.22.5) | `YQ_SHA256` (per-arch) checked via `sha256sum -c` before install, on either download path (same `fetch_release_asset` API fallback; also in `03-os-packages-rocky.sh`); values cross-checked against yq's own `releases/<tag>/checksums` file via its `extract-checksum.sh` |
+| `10-sandbox-runtime.sh` | gVisor `runsc`, `containerd-shim-runsc-v1` and the `gvisor-bin/` sidecar helpers (`gvisor_sentry` etc., required by `runsc` since the tarball releases) | `GVISOR_RELEASE` (default `20261026.0`, which fixes CVE-2026-95702; any other release must also pass `GVISOR_SHA256`, and `latest` is rejected) | the release tarball `gvisor-<arch>.tar.bz2` (downloaded via the same `fetch_release_asset` API fallback) is checked against a SHA-256 pinned in the script (cross-checked with the release's `SHA256SUMS`), member types are validated, and only the named members are extracted. This proves the bytes match what was pinned, not upstream authenticity (no upstream signature) |
 
 All pinned values above (`DOOL_SHA256`, `YQ_SHA256` per-arch, and the gVisor
 tarball SHA-256 per-arch) were computed by downloading the artifact directly and
@@ -217,7 +217,7 @@ first, before any other provisioning script, and:
 
 The allowed-domain list lives at the top of the script and should stay in
 sync with this file's tables above (Ubuntu mirrors, GitHub/githubusercontent
-for the pinned release downloads, storage.googleapis.com for gVisor, and the
+for the pinned release downloads, `api.github.com` + `release-assets.githubusercontent.com` for the release-asset API fallback used when `github.com/.../releases/download` fails (504 on 2026-11-08; mistakes-log #27), storage.googleapis.com for gVisor, and the
 Korean NTP servers `01-base.sh` configures).
 
 **What this does and does not cover, honestly:**

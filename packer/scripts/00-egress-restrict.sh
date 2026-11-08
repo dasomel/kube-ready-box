@@ -54,6 +54,10 @@ ALLOWED_DOMAINS=(
   raw.githubusercontent.com
   objects.githubusercontent.com
   codeload.github.com
+  # D-fetch: github.com/releases/download 504 시 폴백 경로(03-os-packages*.sh,
+  # 10-sandbox-runtime.sh 의 fetch_release_asset): API 가 release-assets 로 302 한다.
+  api.github.com
+  release-assets.githubusercontent.com
   storage.googleapis.com
   time.bora.net
   time.kriss.re.kr
