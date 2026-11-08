@@ -95,28 +95,7 @@ jobs:
 
       - name: Packer Init
         working-directory: packer
-        run: |
-          if ! packer init .; then
-            # D10: Packer's VMware asset download repeatedly returned HTTP 504.
-            # Use the same pinned release through GitHub's API, checking its archive
-            # digest before execution. Cost: extra API calls; remove when upstream recovers.
-            version=$(awk '/vmware =/{found=1;next} found && /version =/{sub(/.*"= */, ""); sub(/".*/, ""); print; exit}' plugins.pkr.hcl)
-            [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
-            archive="packer-plugin-vmware_v${version}_x5.0_linux_amd64.zip"
-            sums="packer-plugin-vmware_v${version}_SHA256SUMS"
-            stage=$(mktemp -d)
-            gh release download "v${version}" --repo vmware/packer-plugin-vmware \
-              --pattern "$archive" --pattern "$sums" --dir "$stage"
-            (
-              cd "$stage"
-              awk -v archive="$archive" '$2 == archive {print}' "$sums" > archive.sha256
-              test -s archive.sha256
-              sha256sum --check archive.sha256
-              unzip -q "$archive"
-              packer plugins install --path "./${archive%.zip}" github.com/vmware/vmware
-            )
-            packer init .
-          fi
+        run: bash ../tools/packer-init.sh
         # 비인증 GitHub API 는 러너 IP 단위로 한도가 걸려 plugin 조회가 403 으로 실패한다.
         env:
           PACKER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}

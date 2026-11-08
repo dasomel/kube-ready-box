@@ -52,10 +52,11 @@ jobs:
         run: packer fmt -check -diff .
       - name: Init
         working-directory: packer
-        run: packer init .
+        run: bash ../tools/packer-init.sh
         # 비인증 GitHub API 는 러너 IP 단위로 한도가 걸려 plugin 조회가 403 으로 실패한다.
         env:
           PACKER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Validate all providers
         working-directory: packer
         run: |
@@ -89,10 +90,19 @@ jobs:
         run: |
           ACTIONLINT_VERSION=1.7.12
           ACTIONLINT_SHA256=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
-          curl -sL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" -o /tmp/actionlint.tar.gz
+          asset="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          if ! curl -fsSL --retry 3 --retry-delay 3 \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${asset}" -o /tmp/actionlint.tar.gz; then
+            stage=$(mktemp -d)
+            gh release download "v${ACTIONLINT_VERSION}" --repo rhysd/actionlint \
+              --pattern "$asset" --dir "$stage"
+            cp "$stage/$asset" /tmp/actionlint.tar.gz
+          fi
           echo "${ACTIONLINT_SHA256}  /tmp/actionlint.tar.gz" | sha256sum -c -
           tar -xzf /tmp/actionlint.tar.gz -C /tmp actionlint
           /tmp/actionlint -color .github/workflows/*.yml
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   supply-chain-guard:
     name: Unpinned build input guard (#30)
