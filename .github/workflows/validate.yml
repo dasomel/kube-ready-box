@@ -198,6 +198,7 @@ jobs:
           bash tools/tests/node-time-readiness-test.sh
           bash tools/tests/contracts-execution-context-test.sh
           bash tools/tests/growroot-preflight-test.sh
+          bash tools/tests/packer-init-test.sh
           bash tools/tests/box-catalog-test.sh
           bash tools/tests/box-cve-scan-test.sh
           bash tools/tests/box-cve-report-test.sh
