@@ -2,7 +2,18 @@
 
 [English](security-response.md) | 한국어
 
-최신순으로 정리한 발견·대응 기록입니다. 아래 Trivy 수치는 박스 디스크에서 추출한 패키지 DB를 검사해 집계한 **수정 버전이 존재하는 고유 CVE ID**입니다. 이 수치가 0이어도 업스트림 수정판이 없는 취약점은 남습니다. 로컬 재빌드 측정값이며, 게시된 모든 provider 이미지를 검사했다는 뜻은 아닙니다. 수치는 박스 디스크에서 추출한 패키지 DB의 Trivy rootfs 검사 결과(2026-11-01 세션 측정, 원본 출력은 커밋되지 않음)입니다. 아래 커널·패키지 버전은 2026-11-01 재빌드 박스의 부팅 검증에서 확인했습니다. 빌드 기록은 [2026-11.jsonl](../research/evidence/2026-11.jsonl)에 있습니다([1차 기록](https://github.com/dasomel/kube-ready-box/commit/325f107), [2차 기록](https://github.com/dasomel/kube-ready-box/commit/5528164)).
+최신순으로 정리한 발견·대응 기록입니다. Trivy는 박스 디스크에서 추출한 패키지 DB에서 배포판 수정 버전이 존재하는 항목을 집계합니다. 수정 가능 항목이 0이어도 모든 취약점이 없다는 뜻은 아니며, 업스트림 미수정 취약점과 독립 실행 파일은 이 측정 범위에 포함되지 않습니다. 2026-11-08 기록은 패키지/CVE 쌍을 집계하며 배포한 각 provider 이미지의 검증 근거를 연결합니다. 이전 기록은 당시 측정 범위와 [11월 재빌드 기록](../research/evidence/2026-11.jsonl)을 유지합니다.
+
+## 2026-11-08 — 일일 Box CVE 스캔(#100) 및 v0.3.2 재빌드
+
+| 발견 사항·영향받는 박스 | 상태·수정 버전 | 근거 |
+| --- | --- | --- |
+| Ubuntu 24.04 게시 0.3.1(`ext4`·`xfs`, `vmware_desktop` arm64 및 `virtualbox` amd64): 수정 가능한 CVE HIGH 4(패키지/CVE 쌍, `apt` 계열의 `CVE-2026-109518`) / MEDIUM 21. | **v0.3.2 / 박스 0.3.2에서 수정(2026-11-08):** 수정 가능 CVE 0건(릴리스 전 후보 박스를 로컬 Trivy로 검사). `apt` 2.8.4ubuntu0.1, 커널 6.8.0-149-generic. | [이슈 #100](https://github.com/dasomel/kube-ready-box/issues/100), [PR #98](https://github.com/dasomel/kube-ready-box/pull/98), [재빌드 기록](releases/v0.3.2-evidence.json) |
+| Ubuntu 26.04 게시 0.3.1(`ext4`·`xfs`, `vmware_desktop` arm64 및 `virtualbox` amd64): 수정 가능한 CVE HIGH 3(패키지/CVE 쌍, `apt` 계열의 `CVE-2026-109518`) / MEDIUM 22. | **v0.3.2 / 박스 0.3.2에서 수정(2026-11-08):** 수정 가능 CVE 0건(릴리스 전 후보 박스를 로컬 Trivy로 검사). `apt` 3.2.1ubuntu0.1, 커널 7.0.0-43-generic. | [이슈 #100](https://github.com/dasomel/kube-ready-box/issues/100), [PR #98](https://github.com/dasomel/kube-ready-box/pull/98), [재빌드 기록](releases/v0.3.2-evidence.json) |
+| Rocky 9 게시 0.1.1(`ext4`·`xfs`, `vmware_desktop` arm64): 커널 errata(5.14.0-687.64.1 / 687.66.1에서 수정)로 인한 수정 가능한 CVE HIGH 198건(패키지/CVE 쌍)(이전에 Rocky에서 open-upstream으로 분류됐던 CVE-2026-98432 포함). | **v0.3.2 / 박스 0.1.2에서 수정(2026-11-08):** 수정 가능 CVE 0건(릴리스 전 후보 박스를 로컬 Trivy로 검사). 커널 5.14.0-687.66.1.el9_8.aarch64. | [이슈 #100](https://github.com/dasomel/kube-ready-box/issues/100), [PR #98](https://github.com/dasomel/kube-ready-box/pull/98), [재빌드 기록](releases/v0.3.2-evidence.json) |
+| Ubuntu 24.04/26.04: CVE-2026-98432. | **버전 대조 확인 / 배포판 추적은 pending:** 후보의 커널 패키지 `6.8.0-149.149`·`7.0.0-43.43`는 Canonical이 수정 포함 빌드로 안내한 버전과 일치한다. 2026-11-08 확인한 CVE JSON은 두 LTS를 여전히 `pending`으로 표시한다. 수정 가능 CVE 스캔만으로 이 추적 상태를 PASS로 바꾸지 않는다. | [Canonical 수정 빌드 안내](https://ubuntu.com/blog/fixes-available-in-proposed-pocket-for-cve-2026-98432), [공식 CVE JSON](https://ubuntu.com/security/cves/CVE-2026-98432.json), [재빌드 기록](releases/v0.3.2-evidence.json) |
+
+일일 Box CVE 스캔([PR #98](https://github.com/dasomel/kube-ready-box/pull/98))이 2026-11-08 [이슈 #100](https://github.com/dasomel/kube-ready-box/issues/100)을 자동으로 열어 시작된 재빌드입니다. `v0.3.2`는 기록된 소스 리비전과 기존 실행 파일 핀으로 재빌드했고, PR #101의 다운로드 오류 처리 보완을 포함하며, 종료된 Vagrant Cloud 페이지 대신 GitHub Pages 카탈로그를 가리키도록 `/etc/vagrant-box/info.txt`를 고친 `license-info.sh` 카탈로그 URL 수정([PR #94](https://github.com/dasomel/kube-ready-box/pull/94), [c630456](https://github.com/dasomel/kube-ready-box/commit/c630456))도 함께 반영됩니다. 빌드·부팅 검증 경로는 0.3.1과 동일합니다(`vmware_desktop` arm64는 로컬 VMware Fusion에서 빌드·부팅 검증, `virtualbox` amd64는 `.github/workflows/build-amd64.yml`에서 빌드·부팅 테스트). NixOS 0.2.2는 변경 없이 `v0.3.0`에 유지됩니다.
 
 ## 2026-11-01 — 박스 패키지·커널 조치
 
@@ -41,7 +52,7 @@ Vagrant Cloud(HCP Vagrant) 서비스가 종료됩니다. 기존 게시 버전은
 
 ## 대응 방식
 
-박스 디스크에서 추출한 패키지 DB를 Trivy로 검사하고, 패키지 전체 업그레이드 후 재빌드·교차 리뷰·부팅 검증을 거쳐 패치된 박스를 게시합니다. 업스트림 수정판이 없는 항목은 배포판 수정판으로 재빌드할 수 있을 때까지 열린 상태로 둡니다. 수정판이 나오는 시점을 놓치지 않도록 [Box CVE scan](../.github/workflows/box-cve-scan.yml) 워크플로가 매주 월요일 실행됩니다(`tools/box-cve-scan.sh`). 배포 중인 박스를 Pages 카탈로그 그대로 내려받아 체크섬을 확인하고, dpkg/rpm DB를 읽기 전용으로 꺼내 Trivy로 수정 가능한 CVE를 셉니다. CRITICAL 또는 HIGH가 있으면 실패하며, 이것이 재빌드 신호입니다. NixOS는 dpkg/rpm DB가 없어 PASS가 아닌 UNKNOWN으로 보고합니다. 로컬 재빌드 기록은 [2026-11.jsonl](../research/evidence/2026-11.jsonl)에 기록합니다.
+박스 디스크에서 추출한 패키지 DB를 Trivy로 검사하고, 패키지 전체 업그레이드 후 재빌드·교차 리뷰·부팅 검증을 거쳐 패치된 박스를 게시합니다. 업스트림 수정판이 없는 항목은 배포판 수정판으로 재빌드할 수 있을 때까지 열린 상태로 둡니다. 수정판이 나오는 시점을 놓치지 않도록 [Box CVE scan](../.github/workflows/box-cve-scan.yml) 워크플로가 매일 실행됩니다(`tools/box-cve-scan.sh`). 배포 중인 박스를 Pages 카탈로그 그대로 내려받아 체크섬을 확인하고, dpkg/rpm DB를 읽기 전용으로 꺼내 Trivy로 수정 가능한 CVE를 셉니다. CRITICAL 또는 HIGH가 있으면 실패하며, 이것이 재빌드 신호입니다. NixOS는 dpkg/rpm DB가 없어 PASS가 아닌 UNKNOWN으로 보고합니다. 로컬 재빌드 기록은 [2026-11.jsonl](../research/evidence/2026-11.jsonl)에 기록합니다.
 
 ## 취약점 보고
 

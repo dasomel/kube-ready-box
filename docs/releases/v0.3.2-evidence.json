@@ -1,0 +1,393 @@
+{
+  "schema_version": 1,
+  "release": "v0.3.2",
+  "observed_at": "2026-11-08T12:03:58.194246+00:00",
+  "scope": "Ten immutable box archives; package-database Trivy scans do not cover standalone binaries or upstream-unfixed vulnerabilities.",
+  "tracking": {
+    "CVE-2026-98432": "Ubuntu package versions match Canonical fix builds; distro JSON still pending at observation time."
+  },
+  "prior_failed_attempts": [
+    {
+      "scope": "Ubuntu 26.04 ARM64 XFS installation",
+      "result": "installer kernel 7.0.0-14 OverlayFS Oops; cancelled after diagnostic capture"
+    },
+    {
+      "scope": "Ubuntu 26.04 ARM64 ext4 verification",
+      "result": "metadata SSH authorization failure, then host port collision; retained separately from final direct-IP verification"
+    }
+  ],
+  "images": [
+    {
+      "file": "rocky-9-ext4-vmware_desktop-arm64-0.1.2.box",
+      "bytes": 1896982842,
+      "sha256": "40f69516d43236a7705fc60be699a1283aa209da4f49684570a0bc2b90313018",
+      "catalog": "rocky-9-ext4.json",
+      "version": "0.1.2",
+      "provider": "vmware_desktop",
+      "architecture": "arm64",
+      "source_revision": "d0fa04bdbb420151e9b74c5cc0cfc64402b119f2",
+      "embedded_provenance": {
+        "commit_sha": "d0fa04bdbb420151e9b74c5cc0cfc64402b119f2",
+        "build_id": "local-20261108-194057",
+        "workflow_run": "local"
+      },
+      "kernel": "5.14.0-687.66.1.el9_8.aarch64",
+      "integrity": "PASS",
+      "selected_package_versions": {
+        "kernel-core": "5.14.0-687.66.1.el9_8"
+      },
+      "scan": {
+        "box": "dasomel/rocky-9-ext4[vmware_desktop/arm64]",
+        "version": "0.1.2",
+        "status": "PASS",
+        "os": "rocky 9.8",
+        "packages": 516,
+        "fixable": {},
+        "fail_on": "CRITICAL,HIGH",
+        "blocking": []
+      },
+      "boot": {
+        "status": "PASS",
+        "log": "boot-rocky-9-ext4-vmware_desktop.log",
+        "unknowns": 2,
+        "unknown_scope": "container runtime absent; Rocky 10 check not applicable"
+      }
+    },
+    {
+      "file": "rocky-9-xfs-vmware_desktop-arm64-0.1.2.box",
+      "bytes": 2066210616,
+      "sha256": "d56c7a01fdcd3724b6977e6ecc71eebb252a11daaf6d39c4ffded0cbc2287d8e",
+      "catalog": "rocky-9-xfs.json",
+      "version": "0.1.2",
+      "provider": "vmware_desktop",
+      "architecture": "arm64",
+      "source_revision": "d0fa04bdbb420151e9b74c5cc0cfc64402b119f2",
+      "embedded_provenance": {
+        "commit_sha": "d0fa04bdbb420151e9b74c5cc0cfc64402b119f2",
+        "build_id": "local-20261108-195815",
+        "workflow_run": "local"
+      },
+      "kernel": "5.14.0-687.66.1.el9_8.aarch64",
+      "integrity": "PASS",
+      "selected_package_versions": {
+        "kernel-core": "5.14.0-687.66.1.el9_8"
+      },
+      "scan": {
+        "box": "dasomel/rocky-9-xfs[vmware_desktop/arm64]",
+        "version": "0.1.2",
+        "status": "PASS",
+        "os": "rocky 9.8",
+        "packages": 516,
+        "fixable": {},
+        "fail_on": "CRITICAL,HIGH",
+        "blocking": []
+      },
+      "boot": {
+        "status": "PASS",
+        "log": "boot-rocky-9-xfs-vmware_desktop.log",
+        "unknowns": 2,
+        "unknown_scope": "container runtime absent; Rocky 10 check not applicable"
+      }
+    },
+    {
+      "file": "ubuntu-24.04-ext4-vmware_desktop-arm64-0.3.2.box",
+      "bytes": 1693141388,
+      "sha256": "007c5cce22e62f4096671d0967d2f2a103af1318dab7ff80c92fb99140fd99ac",
+      "catalog": "ubuntu-24.04-ext4.json",
+      "version": "0.3.2",
+      "provider": "vmware_desktop",
+      "architecture": "arm64",
+      "source_revision": "ddfa7259f5324ff29c2c9e5c50333ae2eaf0a7c8",
+      "embedded_provenance": {
+        "commit_sha": "ddfa7259f5324ff29c2c9e5c50333ae2eaf0a7c8",
+        "build_id": "local-20261108-164906",
+        "workflow_run": "local"
+      },
+      "kernel": "6.8.0-149-generic",
+      "integrity": "PASS",
+      "selected_package_versions": {
+        "apt": "2.8.4ubuntu0.1",
+        "linux-image-6.8.0-149-generic": "6.8.0-149.149",
+        "linux-image-generic": "6.8.0-149.149"
+      },
+      "scan": {
+        "box": "dasomel/ubuntu-24.04-ext4[vmware_desktop/arm64]",
+        "version": "0.3.2",
+        "status": "PASS",
+        "os": "ubuntu 24.04",
+        "packages": 703,
+        "fixable": {},
+        "fail_on": "CRITICAL,HIGH",
+        "blocking": []
+      },
+      "boot": {
+        "status": "PASS",
+        "log": "boot-2404-ext4.log",
+        "unknowns": 1,
+        "unknown_scope": "container runtime absent"
+      }
+    },
+    {
+      "file": "ubuntu-24.04-ext4-virtualbox-amd64-0.3.2.box",
+      "bytes": 1686400003,
+      "sha256": "0ec604901c412d5d1340501914c45875d44831cb6b1e4f2b9977fc04a1d02596",
+      "catalog": "ubuntu-24.04-ext4.json",
+      "version": "0.3.2",
+      "provider": "virtualbox",
+      "architecture": "amd64",
+      "source_revision": "ddfa7259f5324ff29c2c9e5c50333ae2eaf0a7c8",
+      "embedded_provenance": {
+        "commit_sha": "unknown",
+        "build_id": "local",
+        "workflow_run": "local"
+      },
+      "kernel": "6.8.0-149-generic",
+      "integrity": "PASS",
+      "selected_package_versions": {
+        "apt": "2.8.4ubuntu0.1",
+        "linux-image-6.8.0-149-generic": "6.8.0-149.149",
+        "linux-image-generic": "6.8.0-149.149"
+      },
+      "scan": {
+        "box": "dasomel/ubuntu-24.04-ext4[virtualbox/amd64]",
+        "version": "0.3.2",
+        "status": "PASS",
+        "os": "ubuntu 24.04",
+        "packages": 722,
+        "fixable": {},
+        "fail_on": "CRITICAL,HIGH",
+        "blocking": []
+      },
+      "boot": {
+        "status": "PASS",
+        "source": "https://github.com/dasomel/kube-ready-box/actions/runs/42460299908",
+        "job": "Build VirtualBox AMD64 (ext4)"
+      }
+    },
+    {
+      "file": "ubuntu-24.04-xfs-vmware_desktop-arm64-0.3.2.box",
+      "bytes": 1675816093,
+      "sha256": "dd96d034c7e9663de7eb259ac1ed133c794b3ddfca59d79aea01549746ceaee1",
+      "catalog": "ubuntu-24.04-xfs.json",
+      "version": "0.3.2",
+      "provider": "vmware_desktop",
+      "architecture": "arm64",
+      "source_revision": "ddfa7259f5324ff29c2c9e5c50333ae2eaf0a7c8",
+      "embedded_provenance": {
+        "commit_sha": "ddfa7259f5324ff29c2c9e5c50333ae2eaf0a7c8",
+        "build_id": "local-20261108-171004",
+        "workflow_run": "local"
+      },
+      "kernel": "6.8.0-149-generic",
+      "integrity": "PASS",
+      "selected_package_versions": {
+        "apt": "2.8.4ubuntu0.1",
+        "linux-image-6.8.0-149-generic": "6.8.0-149.149",
+        "linux-image-generic": "6.8.0-149.149"
+      },
+      "scan": {
+        "box": "dasomel/ubuntu-24.04-xfs[vmware_desktop/arm64]",
+        "version": "0.3.2",
+        "status": "PASS",
+        "os": "ubuntu 24.04",
+        "packages": 703,
+        "fixable": {},
+        "fail_on": "CRITICAL,HIGH",
+        "blocking": []
+      },
+      "boot": {
+        "status": "PASS",
+        "log": "boot-2404-xfs.log",
+        "unknowns": 1,
+        "unknown_scope": "container runtime absent"
+      }
+    },
+    {
+      "file": "ubuntu-24.04-xfs-virtualbox-amd64-0.3.2.box",
+      "bytes": 1787451081,
+      "sha256": "4c1d6b9ece57e6d28bef494306b03af91a74d18f20c2bcf2c16cec84e316339f",
+      "catalog": "ubuntu-24.04-xfs.json",
+      "version": "0.3.2",
+      "provider": "virtualbox",
+      "architecture": "amd64",
+      "source_revision": "ddfa7259f5324ff29c2c9e5c50333ae2eaf0a7c8",
+      "embedded_provenance": {
+        "commit_sha": "unknown",
+        "build_id": "local",
+        "workflow_run": "local"
+      },
+      "kernel": "6.8.0-149-generic",
+      "integrity": "PASS",
+      "selected_package_versions": {
+        "apt": "2.8.4ubuntu0.1",
+        "linux-image-6.8.0-149-generic": "6.8.0-149.149",
+        "linux-image-generic": "6.8.0-149.149"
+      },
+      "scan": {
+        "box": "dasomel/ubuntu-24.04-xfs[virtualbox/amd64]",
+        "version": "0.3.2",
+        "status": "PASS",
+        "os": "ubuntu 24.04",
+        "packages": 722,
+        "fixable": {},
+        "fail_on": "CRITICAL,HIGH",
+        "blocking": []
+      },
+      "boot": {
+        "status": "PASS",
+        "source": "https://github.com/dasomel/kube-ready-box/actions/runs/42460299908",
+        "job": "Build VirtualBox AMD64 (xfs)"
+      }
+    },
+    {
+      "file": "ubuntu-26.04-ext4-virtualbox-amd64-0.3.2.box",
+      "bytes": 1833827050,
+      "sha256": "e4cc4fe80bb96b215097e584fbabbb378811c49e1433845b10e80e9ee8418058",
+      "catalog": "ubuntu-26.04-ext4.json",
+      "version": "0.3.2",
+      "provider": "virtualbox",
+      "architecture": "amd64",
+      "source_revision": "ddfa7259f5324ff29c2c9e5c50333ae2eaf0a7c8",
+      "embedded_provenance": {
+        "commit_sha": "unknown",
+        "build_id": "local",
+        "workflow_run": "local"
+      },
+      "kernel": "7.0.0-43-generic",
+      "integrity": "PASS",
+      "selected_package_versions": {
+        "apt": "3.2.1ubuntu0.1",
+        "linux-image-7.0.0-43-generic": "7.0.0-43.43",
+        "linux-image-generic": "7.0.0-43.43"
+      },
+      "scan": {
+        "box": "dasomel/ubuntu-26.04-ext4[virtualbox/amd64]",
+        "version": "0.3.2",
+        "status": "PASS",
+        "os": "ubuntu 26.04",
+        "packages": 741,
+        "fixable": {},
+        "fail_on": "CRITICAL,HIGH",
+        "blocking": []
+      },
+      "boot": {
+        "status": "PASS",
+        "source": "https://github.com/dasomel/kube-ready-box/actions/runs/42460305207",
+        "job": "Build VirtualBox AMD64 (ext4)"
+      }
+    },
+    {
+      "file": "ubuntu-26.04-ext4-vmware_desktop-arm64-0.3.2.box",
+      "bytes": 1884096585,
+      "sha256": "fd66177417ff628eadd8cc61a2827d8b46cffb059641f56bb9b73b470966607f",
+      "catalog": "ubuntu-26.04-ext4.json",
+      "version": "0.3.2",
+      "provider": "vmware_desktop",
+      "architecture": "arm64",
+      "source_revision": "a5533f032ced909a02f7ecaec30918e7d9356a7c",
+      "embedded_provenance": {
+        "commit_sha": "a5533f032ced909a02f7ecaec30918e7d9356a7c",
+        "build_id": "local-20261108-193604",
+        "workflow_run": "local"
+      },
+      "kernel": "7.0.0-43-generic",
+      "integrity": "PASS",
+      "selected_package_versions": {
+        "apt": "3.2.1ubuntu0.1",
+        "linux-image-7.0.0-43-generic": "7.0.0-43.43",
+        "linux-image-generic": "7.0.0-43.43"
+      },
+      "scan": {
+        "box": "dasomel/ubuntu-26.04-ext4[vmware_desktop/arm64]",
+        "version": "0.3.2",
+        "status": "PASS",
+        "os": "ubuntu 26.04",
+        "packages": 728,
+        "fixable": {},
+        "fail_on": "CRITICAL,HIGH",
+        "blocking": []
+      },
+      "boot": {
+        "status": "PASS",
+        "log": "boot-2604-ext4-direct.log",
+        "unknowns": 1,
+        "unknown_scope": "container runtime absent"
+      }
+    },
+    {
+      "file": "ubuntu-26.04-xfs-virtualbox-amd64-0.3.2.box",
+      "bytes": 2050352458,
+      "sha256": "825e78a52f914d957570a2e60ec650f63062579d73956410e9b44855928e6876",
+      "catalog": "ubuntu-26.04-xfs.json",
+      "version": "0.3.2",
+      "provider": "virtualbox",
+      "architecture": "amd64",
+      "source_revision": "a5533f032ced909a02f7ecaec30918e7d9356a7c",
+      "embedded_provenance": {
+        "commit_sha": "unknown",
+        "build_id": "local",
+        "workflow_run": "local"
+      },
+      "kernel": "7.0.0-43-generic",
+      "integrity": "PASS",
+      "selected_package_versions": {
+        "apt": "3.2.1ubuntu0.1",
+        "linux-image-7.0.0-43-generic": "7.0.0-43.43",
+        "linux-image-generic": "7.0.0-43.43"
+      },
+      "scan": {
+        "box": "dasomel/ubuntu-26.04-xfs[virtualbox/amd64]",
+        "version": "0.3.2",
+        "status": "PASS",
+        "os": "ubuntu 26.04",
+        "packages": 741,
+        "fixable": {},
+        "fail_on": "CRITICAL,HIGH",
+        "blocking": []
+      },
+      "boot": {
+        "status": "PASS",
+        "source": "https://github.com/dasomel/kube-ready-box/actions/runs/42472172928",
+        "job": "Build VirtualBox AMD64 (xfs)"
+      }
+    },
+    {
+      "file": "ubuntu-26.04-xfs-vmware_desktop-arm64-0.3.2.box",
+      "bytes": 2106821250,
+      "sha256": "18f1eeb7164ec09ae320aa93e5d7c9aad697fd3e0bf20bf6a57d617814d12a6b",
+      "catalog": "ubuntu-26.04-xfs.json",
+      "version": "0.3.2",
+      "provider": "vmware_desktop",
+      "architecture": "arm64",
+      "source_revision": "a5533f032ced909a02f7ecaec30918e7d9356a7c",
+      "embedded_provenance": {
+        "commit_sha": "a5533f032ced909a02f7ecaec30918e7d9356a7c",
+        "build_id": "local-20261108-204027",
+        "workflow_run": "local"
+      },
+      "kernel": "7.0.0-43-generic",
+      "integrity": "PASS",
+      "selected_package_versions": {
+        "apt": "3.2.1ubuntu0.1",
+        "linux-image-7.0.0-43-generic": "7.0.0-43.43",
+        "linux-image-generic": "7.0.0-43.43"
+      },
+      "scan": {
+        "box": "dasomel/ubuntu-26.04-xfs[vmware_desktop/arm64]",
+        "version": "0.3.2",
+        "status": "PASS",
+        "os": "ubuntu 26.04",
+        "packages": 728,
+        "fixable": {},
+        "fail_on": "CRITICAL,HIGH",
+        "blocking": []
+      },
+      "boot": {
+        "status": "PASS",
+        "log": "boot-2604-xfs-direct.log",
+        "unknowns": 1,
+        "unknown_scope": "container runtime absent"
+      }
+    }
+  ]
+}

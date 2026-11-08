@@ -3,6 +3,19 @@
   "description": "Kubernetes-ready rocky-9-ext4 box (arm64, vmware_desktop). MIT License. https://github.com/dasomel/kube-ready-box",
   "versions": [
     {
+      "version": "0.1.2",
+      "providers": [
+        {
+          "name": "vmware_desktop",
+          "url": "https://github.com/dasomel/kube-ready-box/releases/download/v0.3.2/rocky-9-ext4-vmware_desktop-arm64-0.1.2.box",
+          "checksum_type": "sha256",
+          "checksum": "40f69516d43236a7705fc60be699a1283aa209da4f49684570a0bc2b90313018",
+          "architecture": "arm64",
+          "default_architecture": true
+        }
+      ]
+    },
+    {
       "version": "0.1.1",
       "providers": [
         {
