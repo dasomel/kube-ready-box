@@ -27,6 +27,48 @@ esac
 
 echo "[INFO] 감지된 아키텍처: $target_arch"
 
+# D-fetch: github.com/<repo>/releases/download/... 가 2026-11-08 에 504 를 반환했다
+# (api.github.com 의 release asset 엔드포인트는 정상). 먼저 일반 URL 을 -f + 재시도로
+# 받고, 실패하면 API asset 경로로 폴백한다. 비용: 실패 시 API 호출 2회 추가(비인증
+# 60회/시간 한도 내). 되돌리기: 폴백 분기를 지우면 이전 동작. 어느 경로든 호출부의
+# 고정 SHA-256 검증(sha256sum -c)이 그대로 적용되므로 무결성 검증은 약해지지 않는다.
+# (스크립트가 게스트에 개별 업로드되어 공용 파일을 쓸 수 없어 함수를 3개 스크립트에 동일하게 둔다.)
+fetch_release_asset() {
+  local repo="$1" tag="$2" asset="$3" out="$4" py id
+  if curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 20 -o "$out" \
+      "https://github.com/${repo}/releases/download/${tag}/${asset}"; then
+    return 0
+  fi
+  rm -f "$out"
+  echo "  releases/download failed for ${repo} ${tag} ${asset}; falling back to api.github.com asset API" >&2
+  for py in python3 /usr/libexec/platform-python; do
+    command -v "$py" >/dev/null 2>&1 && break
+    py=""
+  done
+  if [ -z "$py" ]; then
+    echo "  no python3/platform-python available to parse the release JSON" >&2
+    return 1
+  fi
+  id=$(curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 20 \
+      "https://api.github.com/repos/${repo}/releases/tags/${tag}" \
+    | "$py" -c 'import json,sys
+for a in json.load(sys.stdin).get("assets", []):
+    if a.get("name") == sys.argv[1]:
+        print(a["id"])
+        break' "$asset") || id=""
+  if [ -z "$id" ]; then
+    echo "  asset '${asset}' not found in ${repo} release ${tag}" >&2
+    return 1
+  fi
+  if ! curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 20 \
+      -H 'Accept: application/octet-stream' -o "$out" \
+      "https://api.github.com/repos/${repo}/releases/assets/${id}"; then
+    rm -f "$out"
+    return 1
+  fi
+  echo "  fetched ${asset} via api.github.com asset ${id}" >&2
+}
+
 # 3. 임시 디렉터리 생성 및 trap 설정
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -50,7 +92,7 @@ archive="gvisor-${target_arch}.tar.bz2"
 base_url="https://github.com/google/gvisor/releases/download/release-${gvisor_release}"
 
 echo "[INFO] gVisor 릴리스 tarball 다운로드 중 (${base_url}/${archive})..."
-curl -sSL -f -o "$archive" "${base_url}/${archive}"
+fetch_release_asset google/gvisor "release-${gvisor_release}" "$archive" "$archive"
 
 # 4. 체크섬 검증 및 필요한 바이너리만 추출
 echo "[INFO] 다운로드한 tarball 체크섬(SHA-256) 검증 중..."
