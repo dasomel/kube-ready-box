@@ -61,6 +61,7 @@ in each image. Exact archives, source revisions and validation scope: [release e
 
 ### Fixed
 
+- The verifier release job selects its GitHub repository explicitly, so publishing assembled binaries works without a Git checkout.
 - Release downloads now reject HTTP errors and retry the pinned dool download. Packer/CI downloads can recover through the official GitHub API while retaining checksum verification (#101).
 - The box info shown at login (`/etc/vagrant-box/info.txt`, NixOS motd) pointed at the retired
   Vagrant Cloud page (`app.vagrantup.com/dasomel/boxes/...`). It now points at the GitHub Pages

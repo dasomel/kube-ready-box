@@ -165,3 +165,7 @@
     - 2026-11-08 VMware XFS 설치에서 ISO 커널 `7.0.0-14-generic`이 `ovl_iterate_merged`에서 Oops를 냈다. `ubuntu-drivers`와 `rsync`가 D 상태로 `ovl_dir_release`에 대기했고 `/target` 사용량은 224 MiB에 멈췄다. 게스트 도구로 수집한 dmesg와 `/proc/<pid>/stack`으로 확인했다.
     - 이는 설치할 보안 패치 커널 `7.0.0-43-generic`의 실행 결과가 아니다. XFS 자체의 결함이나 SSH 설정 오류로 단정하지 않는다. 설치기 커널 버전, dmesg, 대기 스택과 대상 디스크 진행량을 확보한 뒤 중단하고, 입력을 바꾸지 않은 재시도와 비교한다.
     - 같은 호스트의 병렬 Vagrant 작업 때문에 SSH 포트 검사/적용이 충돌하면 이미지 검증 실패와 구분한다. VMware 검증 VM은 기본 SSH 포워딩을 끄고 `ssh_info_public = true`로 NAT 게스트 IP를 사용해 격리할 수 있다. 다른 프로젝트의 VM이나 포워딩은 지우지 않는다.
+
+29. **checkout 없는 릴리스 게시 job은 `gh` 저장소를 명시해야 한다**
+    - 태그 실행 `42478715558`에서 두 Linux 검증기 빌드·테스트와 자산 조립은 성공했지만 `gh release view/create`가 `fatal: not a git repository`로 실패했다. artifact 다운로드는 Git 작업 디렉터리를 만들지 않는다.
+    - 게시 step에 `GH_REPO: ${{ github.repository }}`를 설정한다. 저장소 밖에서 실제 `gh release view`로 확인하고, 복구할 때는 성공한 CI의 조립 자산과 SHA256SUMS를 그대로 사용한다. 이미 공개한 태그나 박스 바이트는 바꾸지 않는다.
