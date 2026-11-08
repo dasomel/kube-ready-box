@@ -1,0 +1,46 @@
+{
+  "release": "v0.3.2",
+  "tag_unchanged": "17cdd5a8fd7b9014050fd211bcafdaab22171cbd",
+  "ci_run": "https://github.com/dasomel/kube-ready-box/actions/runs/42478715558",
+  "ci_builds": {
+    "aarch64": "SUCCESS",
+    "x86_64": "SUCCESS"
+  },
+  "original_ci_publish": "FAIL: no Git checkout/repository context",
+  "recovery": "Published exact assembled CI artifacts from a non-repository directory with GH_REPO=dasomel/kube-ready-box; no clobber or tag/image change",
+  "regression": {
+    "without_repository": {
+      "exit": 1,
+      "stderr": "failed to run git: fatal: not a git repository (or any of the parent directories): .git"
+    },
+    "with_GH_REPO": {
+      "exit": 0,
+      "result": {
+        "isDraft": false,
+        "url": "https://github.com/dasomel/kube-ready-box/releases/tag/v0.3.2"
+      }
+    }
+  },
+  "linux_arm64_artifact_test": {
+    "command": "BIN=/tmp/kube-ready-verifier-release bash rust/kube-ready-verifier/tests/cli_contract.sh",
+    "result": "Rust CLI contract: PASS"
+  },
+  "files": [
+    {
+      "file": "SHA256SUMS",
+      "sha256": "9252f7ca83844382b0663e469cc944e5397d285c0461885f6d193a3d50b84f67",
+      "remote_digest_matches": true
+    },
+    {
+      "file": "kube-ready-verifier-aarch64-unknown-linux-gnu",
+      "sha256": "6827d6f3965a77ea1daa68e8d70a876a558f7340d64158247127ae7637a0f143",
+      "remote_digest_matches": true
+    },
+    {
+      "file": "kube-ready-verifier-x86_64-unknown-linux-gnu",
+      "sha256": "c4f358e8ade961b342c00915d54f0c492fa782af24bbfcaf3b9f1f20df6d94f4",
+      "remote_digest_matches": true
+    }
+  ],
+  "observed_at": "2026-11-08T12:10:03.196549+00:00"
+}

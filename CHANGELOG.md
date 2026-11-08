@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The verifier release job selects its GitHub repository explicitly, so publishing assembled binaries works without a Git checkout.
+  The v0.3.2 tag publication failure was recovered from checksum-verified CI artifacts; see [recovery evidence](docs/releases/v0.3.2-verifier-recovery.json).
+
 ## [0.3.2] - 2026-11-08
 
 Security rebuild of the Ubuntu (0.3.2) and Rocky 9 (0.1.2) boxes using the recorded source revisions with unchanged pinned executable inputs, triggered by the daily Box CVE scan ([PR #98](https://github.com/dasomel/kube-ready-box/pull/98)),
@@ -61,7 +66,6 @@ in each image. Exact archives, source revisions and validation scope: [release e
 
 ### Fixed
 
-- The verifier release job selects its GitHub repository explicitly, so publishing assembled binaries works without a Git checkout.
 - Release downloads now reject HTTP errors and retry the pinned dool download. Packer/CI downloads can recover through the official GitHub API while retaining checksum verification (#101).
 - The box info shown at login (`/etc/vagrant-box/info.txt`, NixOS motd) pointed at the retired
   Vagrant Cloud page (`app.vagrantup.com/dasomel/boxes/...`). It now points at the GitHub Pages
