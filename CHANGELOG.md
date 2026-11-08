@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The verifier release job selects its GitHub repository explicitly, so publishing assembled binaries works without a Git checkout.
+  The v0.3.2 tag publication failure was recovered from checksum-verified CI artifacts; see [recovery evidence](docs/releases/v0.3.2-verifier-recovery.json).
+
+## [0.3.2] - 2026-11-08
+
+Security rebuild of the Ubuntu (0.3.2) and Rocky 9 (0.1.2) boxes using the recorded source revisions with unchanged pinned executable inputs, triggered by the daily Box CVE scan ([PR #98](https://github.com/dasomel/kube-ready-box/pull/98)),
+which opened [issue #100](https://github.com/dasomel/kube-ready-box/issues/100) on 2026-11-08. Also
+ships the `license-info.sh` catalog-URL fix from [PR #94](https://github.com/dasomel/kube-ready-box/pull/94)
+below. NixOS (0.2.2) is unchanged and stays an asset of the `v0.3.0` release. Security response
+history: `docs/security-response.md`.
+
+| Box | Version | Provider | Arch | Kernel | Size |
+|---|---|---|---|---|---|
+| `dasomel/ubuntu-24.04-ext4` | 0.3.2 | vmware_desktop | arm64 | 6.8.0-149-generic | 1.58 GiB |
+| `dasomel/ubuntu-24.04-xfs` | 0.3.2 | vmware_desktop | arm64 | 6.8.0-149-generic | 1.56 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 0.3.2 | vmware_desktop | arm64 | 7.0.0-43-generic | 1.75 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 0.3.2 | vmware_desktop | arm64 | 7.0.0-43-generic | 1.96 GiB |
+| `dasomel/rocky-9-ext4` | 0.1.2 | vmware_desktop | arm64 | 5.14.0-687.66.1.el9_8.aarch64 | 1.77 GiB |
+| `dasomel/rocky-9-xfs` | 0.1.2 | vmware_desktop | arm64 | 5.14.0-687.66.1.el9_8.aarch64 | 1.92 GiB |
+| `dasomel/ubuntu-24.04-ext4` | 0.3.2 | virtualbox | amd64 | 6.8.0-149-generic | 1.57 GiB |
+| `dasomel/ubuntu-24.04-xfs` | 0.3.2 | virtualbox | amd64 | 6.8.0-149-generic | 1.66 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 0.3.2 | virtualbox | amd64 | 7.0.0-43-generic | 1.71 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 0.3.2 | virtualbox | amd64 | 7.0.0-43-generic | 1.91 GiB |
+
+Same build and boot-verification sources as 0.3.1: the `vmware_desktop` arm64 boxes were built
+locally and boot-verified on VMware Fusion (Apple Silicon), and the `virtualbox` amd64 boxes were
+built and boot-tested by `.github/workflows/build-amd64.yml` on GitHub's x86 runners with
+VirtualBox. Every candidate box was scanned locally with Trivy before release: **0 fixable CVEs**
+in each image. Exact archives, source revisions and validation scope: [release evidence](docs/releases/v0.3.2-evidence.json).
+
+### Security
+
+- **Ubuntu 0.3.1 -> 0.3.2 (`apt` CVE-2026-109518 and distro errata, #100)**: all eight shipped
+  Ubuntu 0.3.1 boxes (24.04 and 26.04 × ext4/xfs × `vmware_desktop` arm64 + `virtualbox` amd64)
+  carried HIGH CVE-2026-109518 in the `apt` package family (fixed in `2.8.4ubuntu0.1` on 24.04 and `3.2.1ubuntu0.1` on
+  26.04) plus 21 MEDIUM (24.04) / 22 MEDIUM (26.04) fixable findings. Rebuilt with 0 fixable CVEs
+  (24.04 kernel `6.8.0-149-generic`, 26.04 kernel `7.0.0-43-generic`). The fixable-only scan does not establish the status of upstream-unfixed CVEs, including CVE-2026-98432.
+- **Rocky 9 0.1.1 -> 0.1.2 (kernel errata including CVE-2026-98432, #100)**: the shipped Rocky 0.1.1
+  boxes (`ext4` and `xfs`, `vmware_desktop` arm64) carried 198 HIGH fixable package/CVE findings from kernel
+  errata (fixed in `5.14.0-687.64.1` / `5.14.0-687.66.1`), including CVE-2026-98432, which was
+  previously open-upstream for Rocky. Rebuilt with kernel `5.14.0-687.66.1.el9_8.aarch64` and 0 fixable CVEs.
+
+### Added
+
+- Daily Box CVE scan and automatic security issue sync (`.github/workflows/box-cve-scan.yml`,
+  `tools/box-cve-report.py`, `tools/tests/box-cve-report-test.sh`, #98): the scan now runs daily
+  and keeps one `security` issue in sync, opening or updating it on FAIL, UNKNOWN or a missing
+  summary and closing it only when every box scans PASS.
+
 ### Removed
 
 - The `Publish to Vagrant Cloud` jobs and their `publish`/`version` dispatch inputs in
@@ -15,11 +66,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Release downloads now reject HTTP errors and retry the pinned dool download. Packer/CI downloads can recover through the official GitHub API while retaining checksum verification (#101).
 - The box info shown at login (`/etc/vagrant-box/info.txt`, NixOS motd) pointed at the retired
   Vagrant Cloud page (`app.vagrantup.com/dasomel/boxes/...`). It now points at the GitHub Pages
   catalog (`https://dasomel.github.io/kube-ready-box/boxes/<name>.json`). `license-info.sh` also
   names the box after its catalog: root filesystem suffix (`ubuntu-24.04-ext4`) and Rocky major
-  version only (`rocky-9-xfs`). Takes effect from the next build; shipped boxes keep the old URL.
+  version only (`rocky-9-xfs`) (#94, c630456). Shipped in Ubuntu 0.3.2 and Rocky 0.1.2; NixOS 0.2.2
+  keeps the old URL until its next build.
 
 ## [0.3.1] - 2026-11-02
 
@@ -725,7 +778,8 @@ vagrant up
 
 ---
 
-[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/dasomel/kube-ready-box/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/dasomel/kube-ready-box/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/dasomel/kube-ready-box/releases/tag/v0.3.0
 [0.2.3]: https://github.com/dasomel/kube-ready-box/compare/v0.2.2...v0.2.3
