@@ -95,10 +95,11 @@ jobs:
 
       - name: Packer Init
         working-directory: packer
-        run: packer init .
+        run: bash ../tools/packer-init.sh
         # 비인증 GitHub API 는 러너 IP 단위로 한도가 걸려 plugin 조회가 403 으로 실패한다.
         env:
           PACKER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Packer Validate
         working-directory: packer
@@ -110,6 +111,18 @@ jobs:
       - name: Packer Build
         working-directory: packer
         run: |
+          # SSH timeouts used to delete the only installer evidence. Keep console
+          # snapshots without changing the guest or Packer's failure status.
+          mkdir -p "$RUNNER_TEMP/build-console"
+          (
+            while true; do
+              VBoxManage controlvm "ubuntu-${{ env.UBUNTU_VERSION }}-virtualbox-amd64" \
+                screenshotpng "$RUNNER_TEMP/build-console/console-$(date +%s).png" 2>/dev/null || true
+              sleep 60
+            done
+          ) &
+          capture_pid=$!
+          trap 'kill "$capture_pid" 2>/dev/null || true' EXIT
           packer build -only='virtualbox-iso.ubuntu-vbox-amd64' \
             -var 'headless=true' \
             -var 'filesystem=${{ matrix.filesystem }}' \
@@ -196,6 +209,15 @@ jobs:
           path: packer/output-vagrant/ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-virtualbox-amd64.box
           retention-days: 7
           compression-level: 0
+
+      - name: Upload build console diagnostics
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v7
+        with:
+          name: console-ubuntu-${{ env.UBUNTU_VERSION }}-${{ matrix.filesystem }}-amd64
+          path: ${{ runner.temp }}/build-console/*.png
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Cleanup
         if: always()
