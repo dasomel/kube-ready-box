@@ -97,6 +97,53 @@ else
   add ptp UNKNOWN unavailable
 fi
 
+# 인증서 clock sanity: 노드 시계가 인증서 유효기간(NotBefore~NotAfter) 밖이면 TLS가
+# 깨진다. 경로는 TIME_READINESS_CERT_PATHS(공백 구분 glob)로 덮어쓰고 기준 시각은
+# TIME_READINESS_NOW(epoch)로 고정할 수 있다(fixture용). 검사할 인증서가 없거나
+# openssl이 없으면 "아무것도 검사하지 않음"이므로 PASS가 아니라 UNKNOWN이다.
+cert_now="${TIME_READINESS_NOW:-$(date -u +%s)}"
+cert_files=()
+# shellcheck disable=SC2086
+for f in ${TIME_READINESS_CERT_PATHS:-/etc/kubernetes/pki/*.crt /var/lib/kubelet/pki/*.crt}; do
+  [ -f "$f" ] && cert_files+=("$f")
+done
+if ! command -v openssl >/dev/null 2>&1; then
+  add cert_clock_sanity UNKNOWN openssl-missing
+elif [ "${#cert_files[@]}" -eq 0 ]; then
+  add cert_clock_sanity UNKNOWN no-certificates
+else
+  cert_dates=""
+  for f in "${cert_files[@]}"; do
+    d=$(openssl x509 -in "$f" -noout -startdate -enddate 2>/dev/null | tr '\n' ' ') || d=""
+    cert_dates+="$f|$d"$'\n'
+  done
+  cert_result=$(printf '%s' "$cert_dates" | python3 -c '
+import sys, re, calendar, time
+now = int(sys.argv[1])
+bad, unread, ok = [], 0, 0
+for line in sys.stdin:
+    path, _, d = line.rstrip("\n").partition("|")
+    m = re.search(r"notBefore=(.+?GMT)\s+notAfter=(.+?GMT)", d)
+    try:
+        nb = calendar.timegm(time.strptime(" ".join(m.group(1).split()), "%b %d %H:%M:%S %Y GMT"))
+        na = calendar.timegm(time.strptime(" ".join(m.group(2).split()), "%b %d %H:%M:%S %Y GMT"))
+    except Exception:
+        unread += 1
+        continue
+    if now < nb:
+        bad.append(path + ":not-yet-valid")
+    elif now > na:
+        bad.append(path + ":expired")
+    else:
+        ok += 1
+print("FAIL " + ",".join(bad) if bad else ("UNKNOWN unparseable=%d;valid=%d" % (unread, ok) if unread or not ok else "PASS valid=%d" % ok))
+' "$cert_now" 2>/dev/null || true)
+  case "$cert_result" in
+    FAIL\ *|PASS\ *|UNKNOWN\ *) add cert_clock_sanity "${cert_result%% *}" "${cert_result#* }" ;;
+    *) add cert_clock_sanity UNKNOWN check-failed ;;
+  esac
+fi
+
 if [ -r /etc/os-release ]; then
   os_id=$(awk -F= '/^ID=/{gsub(/"/,"",$2); print $2; exit}' /etc/os-release) || true
   if [ -n "$os_id" ]; then add os_id PASS "$os_id"; else add os_id UNKNOWN unavailable; fi
