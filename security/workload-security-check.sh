@@ -79,6 +79,55 @@ case "$lsm_family" in
     ;;
 esac
 
+# selinux_relabel (#16): SELinux volume relabeling (:Z/:z, seLinuxOptions,
+# SELinuxMount) only works when the filesystems backing kubelet/container
+# storage are mounted with `seclabel`, visible in the mount or super options in
+# mountinfo. Read-only. Not applicable off SELinux hosts (SKIP, never PASS);
+# an SELinux host whose state is unreadable or mountinfo is unreadable is UNKNOWN.
+relabel_state=""
+case "$lsm_family" in
+  selinux) relabel_state=$state ;;
+  apparmor) add selinux_relabel SKIP "not-selinux-host" ;;
+  *) add selinux_relabel UNKNOWN unknown-os-family ;;
+esac
+if [ "$lsm_family" = selinux ]; then
+  case "$relabel_state" in
+    Enforcing|Permissive)
+      if [ -r /proc/self/mountinfo ]; then
+        relabel_out=$(python3 - /proc/self/mountinfo /var/lib/kubelet /var/lib/containerd <<'PY' || echo "ERROR"
+import sys
+path, targets = sys.argv[1], sys.argv[2:]
+mounts = []
+for line in open(path, encoding="utf-8", errors="replace"):
+    head, sep, tail = line.rstrip("\n").partition(" - ")
+    f = head.split(" ")
+    if not sep or len(f) < 6:
+        continue
+    sup = tail.split(" ")
+    opts = set(f[5].split(",")) | set((sup[2] if len(sup) > 2 else "").split(","))
+    mounts.append((f[4].replace("\\040", " "), "seclabel" in opts))
+if not mounts:
+    print("ERROR"); raise SystemExit
+res = []
+for t in targets:
+    best = max((m for m in mounts if t == m[0] or t.startswith(m[0].rstrip("/") + "/")), key=lambda m: len(m[0]), default=None)
+    res.append((t, best[0], best[1]) if best else (t, "none", False))
+bad = [r for r in res if not r[2]]
+print(("FAIL " if bad else "PASS ") + " ".join(f"{t}={'seclabel' if ok else 'no-seclabel'}@{m}" for t, m, ok in res))
+PY
+)
+        case "$relabel_out" in
+          "PASS "*) add selinux_relabel PASS "${relabel_out#PASS }" ;;
+          "FAIL "*) add selinux_relabel FAIL "${relabel_out#FAIL }" ;;
+          *) add selinux_relabel UNKNOWN mountinfo-unparseable ;;
+        esac
+      else add selinux_relabel UNKNOWN mountinfo-unreadable; fi
+      ;;
+    Disabled) add selinux_relabel SKIP "selinux-inactive" ;;
+    *) add selinux_relabel UNKNOWN "selinux-state-$relabel_state" ;;
+  esac
+fi
+
 # Deeper AppArmor view: how many profiles are loaded and their enforce/complain split.
 if command -v aa-status >/dev/null 2>&1; then
   aa_detail=""

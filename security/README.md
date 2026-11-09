@@ -18,6 +18,14 @@ field in `/proc/self/status` or the `errno` and `kill_process` actions in
 `/proc/sys/kernel/seccomp/actions_avail`. A known Linux kernel without either signal
 reports `FAIL`; effective pod-level `RuntimeDefault` remains a separate check.
 
+`selinux_relabel` (#16) reports whether SELinux volume relabeling (`:Z`/`:z`, `seLinuxOptions`,
+`SELinuxMount`) can work: the mounts backing `/var/lib/kubelet` and `/var/lib/containerd` (longest
+mountpoint prefix in `/proc/self/mountinfo`) must carry `seclabel` in their mount or super options.
+SELinux host (Enforcing/Permissive) with `seclabel` on both -> `PASS`; missing on either -> `FAIL`;
+AppArmor host or SELinux `Disabled` -> `SKIP` (not applicable, never `PASS`); unreadable or
+unparseable mountinfo, unreadable SELinux state or unknown OS family -> `UNKNOWN`. Read-only; the
+mountinfo path is not overridable by env var (D7), tests repoint it in a temporary script copy.
+
 `lsm_stack` (#44 T-012) additionally reports the kernel's active LSM stack from
 `/sys/kernel/security/lsm` (e.g. `apparmor`, or `lockdown,capability,landlock,yama,apparmor,integrity`).
 It is additive-only and never `FAIL`s: readable/non-empty -> `PASS <raw list>`; securityfs not

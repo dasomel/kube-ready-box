@@ -19,6 +19,7 @@ sed \
   -e "s|/proc/version|$WORKDIR/proc-version|g" \
   -e "s|/sys/module/apparmor/parameters/enabled|$WORKDIR/apparmor-enabled|g" \
   -e "s|/etc/selinux/config|$WORKDIR/selinux-config|g" \
+  -e "s|/proc/self/mountinfo|$WORKDIR/mountinfo|g" \
   "$ROOT/security/workload-security-check.sh" > "$WORKDIR/workload-security-check.sh"
 chmod +x "$WORKDIR/workload-security-check.sh"
 
@@ -226,5 +227,47 @@ assert_check "$output" seccomp_filter FAIL filter-mode-unavailable FAIL 1
 result=$(run_case filter-unobservable unknown '' '' '' no Enforcing)
 read -r output _ <<< "$result"
 assert_check "$output" seccomp_filter UNKNOWN kernel-unavailable PASS 0
+
+# selinux_relabel (#16): seclabel on the mounts backing kubelet/containerd.
+mi_root_sec='25 1 253:0 / / rw,relatime shared:1 - xfs /dev/vda1 rw,seclabel,attr2'
+mi_root_nosec='25 1 253:0 / / rw,relatime shared:1 - xfs /dev/vda1 rw,attr2'
+mi_ctr_nosec='30 25 253:1 / /var/lib/containerd rw,relatime shared:2 - ext4 /dev/vdb rw'
+mi_kubelet_mntopt='31 25 253:2 / /var/lib/kubelet rw,seclabel,relatime shared:3 - ext4 /dev/vdc rw'
+
+printf '%s\n' "$mi_root_sec" > "$WORKDIR/mountinfo"
+result=$(run_case relabel-pass rocky '' "$status_field" "$actions" yes Enforcing)
+read -r output _ <<< "$result"
+assert_check "$output" selinux_relabel PASS "/var/lib/kubelet=seclabel@/ /var/lib/containerd=seclabel@/" PASS 0
+
+printf '%s\n%s\n' "$mi_root_sec" "$mi_ctr_nosec" > "$WORKDIR/mountinfo"
+result=$(run_case relabel-fail rocky '' "$status_field" "$actions" yes Enforcing)
+read -r output _ <<< "$result"
+assert_check "$output" selinux_relabel FAIL "/var/lib/kubelet=seclabel@/ /var/lib/containerd=no-seclabel@/var/lib/containerd" FAIL 1
+
+printf '%s\n%s\n' "$mi_root_nosec" "$mi_kubelet_mntopt" > "$WORKDIR/mountinfo"
+result=$(run_case relabel-mount-option rocky '' "$status_field" "$actions" yes Permissive)
+read -r output _ <<< "$result"
+assert_check "$output" selinux_relabel FAIL "/var/lib/kubelet=seclabel@/var/lib/kubelet /var/lib/containerd=no-seclabel@/" FAIL 1
+
+rm -f "$WORKDIR/mountinfo"
+result=$(run_case relabel-unreadable rocky '' "$status_field" "$actions" yes Enforcing)
+read -r output _ <<< "$result"
+assert_check "$output" selinux_relabel UNKNOWN mountinfo-unreadable PASS 0
+
+: > "$WORKDIR/mountinfo"
+result=$(run_case relabel-empty rocky '' "$status_field" "$actions" yes Enforcing)
+read -r output _ <<< "$result"
+assert_check "$output" selinux_relabel UNKNOWN mountinfo-unparseable PASS 0
+
+printf '%s\n' "$mi_root_nosec" > "$WORKDIR/mountinfo"
+result=$(run_case relabel-apparmor ubuntu debian "$status_field" "$actions" yes Enforcing)
+read -r output _ <<< "$result"
+assert_check "$output" selinux_relabel SKIP not-selinux-host PASS 0
+result=$(run_case relabel-selinux-disabled rocky '' "$status_field" "$actions" yes Disabled)
+read -r output _ <<< "$result"
+assert_check "$output" selinux_relabel SKIP selinux-inactive FAIL 1
+result=$(run_case relabel-state-unknown rocky '' "$status_field" "$actions" yes Enforcing yes '' SELINUX=enforcing 1)
+read -r output _ <<< "$result"
+assert_check "$output" selinux_relabel UNKNOWN selinux-state-unavailable PASS 0
 
 echo "workload-security-classification-test.sh: all scenarios passed"
