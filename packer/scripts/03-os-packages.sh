@@ -98,11 +98,11 @@ apt-get install -y \
 # releases/<tag>/checksums 파일에서 직접 뽑아 미리 고정한 값이다(재확인:
 # extract-checksum.sh SHA-256 yq_linux_<arch> 로 동일 값 산출 확인됨).
 echo "Installing yq..."
-YQ_VERSION="${YQ_VERSION:-v4.54.1}"
+YQ_VERSION="${YQ_VERSION:-v4.54.3}"
 ARCH=$(dpkg --print-architecture)
 case "$ARCH" in
-  amd64) YQ_SHA256="${YQ_SHA256:-8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702ea5f}" ;;
-  arm64) YQ_SHA256="${YQ_SHA256:-189088da0c6429ec5178dfaab1a114805f6cab0b61b165ab236efedf1d57a71b}" ;;
+  amd64) YQ_SHA256="${YQ_SHA256:-129534601871538efe0ba4c5e62a34fb1d5f469bcb975c4fddeb467d82974973}" ;;
+  arm64) YQ_SHA256="${YQ_SHA256:-89f69310b61b68d1245065a1241d1fc843f7a36cd6103ffd77ad987613bd1b67}" ;;
   *) echo "No pinned yq checksum for architecture '$ARCH'; refusing to install unverified binary" >&2; exit 1 ;;
 esac
 fetch_release_asset mikefarah/yq "${YQ_VERSION}" "yq_linux_${ARCH}" /tmp/yq

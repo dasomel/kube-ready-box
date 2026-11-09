@@ -87,11 +87,11 @@ for a in json.load(sys.stdin).get("assets", []):
 # 그대로 재사용한다 - yq 바이너리는 배포판 무관 정적 Go 바이너리라 같은
 # YQ_VERSION이면 동일 아티팩트/체크섬이다.
 echo "Installing yq..."
-YQ_VERSION="${YQ_VERSION:-v4.54.1}"
+YQ_VERSION="${YQ_VERSION:-v4.54.3}"
 ARCH=$(uname -m)
 case "$ARCH" in
-  x86_64) YQ_ARCH=amd64; YQ_SHA256="${YQ_SHA256:-8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702ea5f}" ;;
-  aarch64) YQ_ARCH=arm64; YQ_SHA256="${YQ_SHA256:-189088da0c6429ec5178dfaab1a114805f6cab0b61b165ab236efedf1d57a71b}" ;;
+  x86_64) YQ_ARCH=amd64; YQ_SHA256="${YQ_SHA256:-129534601871538efe0ba4c5e62a34fb1d5f469bcb975c4fddeb467d82974973}" ;;
+  aarch64) YQ_ARCH=arm64; YQ_SHA256="${YQ_SHA256:-89f69310b61b68d1245065a1241d1fc843f7a36cd6103ffd77ad987613bd1b67}" ;;
   *) echo "No pinned yq checksum for architecture '$ARCH'; refusing to install unverified binary" >&2; exit 1 ;;
 esac
 fetch_release_asset mikefarah/yq "${YQ_VERSION}" "yq_linux_${YQ_ARCH}" /tmp/yq

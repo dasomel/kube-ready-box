@@ -27,6 +27,7 @@
 | gVisor 20260817.0: CVE-2026-95702 및 Go 표준 라이브러리 CVE-2026-78660, CVE-2026-97031, CVE-2026-111943. | **수정됨(재빌드):** gVisor 20261026.0. 리뷰 중 `runsc`에 `gvisor-bin/gvisor_sentry`가 필요한 sidecar 회귀를 발견해 조치. | [갱신 4d579ce](https://github.com/dasomel/kube-ready-box/commit/4d579ce), [빌드 입력](build-inputs.md) |
 | `yq` v4.44.3(Go 1.22.5). | **완화·예외 수용(accepted-exception):** v4.54.1(Go 1.27.1)로 갱신. 남은 Go CVE는 Go >= 1.27.3 필요. `yq`에서 도달 가능한지는 확인되지 않음. | [갱신 4d579ce](https://github.com/dasomel/kube-ready-box/commit/4d579ce), [빌드 입력 예외](build-inputs.md) |
 | `dool` 1.3.8: CVE-2026-56651, CVE-2026-56652. | **예외 수용(accepted-exception):** 수정된 업스트림 릴리스 없음. 릴리스가 나오면 갱신. | [빌드 입력 예외](build-inputs.md) |
+| `yq` v4.54.1(go1.27.1, x/net v0.59.0): HIGH CVE-2026-78661, CVE-2026-78667, CVE-2026-78669(수용된 CVE-2026-78660/97031/111943 외), 바이너리 스캔으로 발견([PR #109](https://github.com/dasomel/kube-ready-box/pull/109)). | **소스에서 수정됨(2026-11-10):** `yq` v4.54.3(go1.27.3, x/net v0.62.0). 배포된 v0.3.2 박스는 다음 재빌드 전까지 v4.54.1을 포함합니다. | [빌드 입력](build-inputs.md), [PR #109](https://github.com/dasomel/kube-ready-box/pull/109) |
 
 재빌드 후 박스 크기 작업은 [1d3abd3](https://github.com/dasomel/kube-ready-box/commit/1d3abd3)에서 진행했습니다. Rocky 첫 부팅의 `sshd-keygen` 순서 경합은 [549239d](https://github.com/dasomel/kube-ready-box/commit/549239d)에서 수정했습니다. VMware 빌드의 간헐적인 SSH 연결 종료([실수 기록 #26](mistakes-log.md))는 박스 취약점이 아닌 빌드 안정성 문제입니다.
 
