@@ -188,6 +188,64 @@ if command -v ip >/dev/null 2>&1; then add routing PASS "$(ip route show | wc -l
 
 if command -v ethtool >/dev/null 2>&1; then add ethtool PASS available; else add ethtool UNKNOWN unavailable; fi
 
+# cni_overlay_mtu (#17): operator-declared inputs, never guessed. CNI_OVERLAY_MTU is
+# the pod/overlay MTU the CNI is configured with; CNI_OVERLAY_OVERHEAD is the
+# encapsulation overhead in bytes (default 50 = VXLAN over IPv4; Geneve is 50 without
+# options, IPIP 20, WireGuard 60 -- assumption, set it for the chosen CNI). The overlay
+# MTU plus that overhead must fit the default-route interface MTU. Unset input ->
+# UNKNOWN not-requested; unreadable host MTU -> UNKNOWN; never PASS without evidence.
+cni_mtu=${CNI_OVERLAY_MTU:-}; cni_overhead=${CNI_OVERLAY_OVERHEAD:-50}
+if [ -z "$cni_mtu" ]; then
+  add cni_overlay_mtu UNKNOWN not-requested
+elif ! [[ "$cni_mtu" =~ ^[0-9]+$ && "$cni_overhead" =~ ^[0-9]+$ ]] || [ "$cni_mtu" -le 0 ]; then
+  add cni_overlay_mtu UNKNOWN invalid-input
+else
+  def_iface=""; def_family=""
+  if command -v ip >/dev/null 2>&1; then
+    # IPv4 default first; fall back to the IPv6 default (IPv6-only hosts).
+    for fam in 4 6; do
+      read -r -a route_words <<< "$(ip -"$fam" -o route show default 2>/dev/null | head -n1 || true)"
+      for i in "${!route_words[@]}"; do
+        [ "${route_words[$i]}" = dev ] && { def_iface=${route_words[$((i+1))]:-}; break; }
+      done
+      [ -n "$def_iface" ] && { def_family=ipv$fam; break; }
+    done
+  fi
+  if [ -z "$def_iface" ]; then
+    add cni_overlay_mtu UNKNOWN default-route-interface-unavailable
+  else
+    host_mtu=$(cat "/sys/class/net/$def_iface/mtu" 2>/dev/null || true)
+    if ! [[ "$host_mtu" =~ ^[0-9]+$ ]]; then
+      add cni_overlay_mtu UNKNOWN host-mtu-unreadable
+    elif [ $((cni_mtu + cni_overhead)) -le "$host_mtu" ]; then
+      add cni_overlay_mtu PASS "overlay=$cni_mtu overhead=$cni_overhead host=$host_mtu iface=$def_iface family=$def_family"
+    else
+      add cni_overlay_mtu FAIL "overlay=$cni_mtu overhead=$cni_overhead host=$host_mtu iface=$def_iface family=$def_family"
+    fi
+  fi
+fi
+
+# kube_proxy_nftables / kube_proxy_ipvs (#17): backend *capability* only -- these
+# never FAIL (a node need not support every backend) and "not detected" is UNKNOWN,
+# never PASS. Which backend is configured is cluster-specific and not checked here.
+if ! command -v nft >/dev/null 2>&1; then
+  add kube_proxy_nftables UNKNOWN nft-absent
+elif [ -d "/sys/module/nf_tables" ] || { [ -r "/proc/modules" ] && grep -q '^nf_tables ' "/proc/modules"; }; then
+  add kube_proxy_nftables PASS "nft-present nf_tables-loaded"
+elif [ -r "/proc/modules" ]; then
+  add kube_proxy_nftables UNKNOWN nf_tables-not-detected
+else
+  add kube_proxy_nftables UNKNOWN kernel-modules-unreadable
+fi
+ipvsadm_state=ipvsadm-absent; command -v ipvsadm >/dev/null 2>&1 && ipvsadm_state=ipvsadm-present
+if [ -e "/proc/net/ip_vs" ] || { [ -r "/proc/modules" ] && grep -q '^ip_vs ' "/proc/modules"; }; then
+  add kube_proxy_ipvs PASS "ip_vs-loaded $ipvsadm_state"
+elif [ -r "/proc/modules" ]; then
+  add kube_proxy_ipvs UNKNOWN "ip_vs-not-loaded $ipvsadm_state"
+else
+  add kube_proxy_ipvs UNKNOWN kernel-modules-unreadable
+fi
+
 status=PASS; [ "$failures" -gt 0 ] && status=FAIL
 printf '{"schema":"kube-ready-network/v1","kind":"node-network-readiness","status":"%s","architecture":"%s","checks":[%s],"failures":%d,"unknowns":%d}\n' "$status" "$(uname -m)" "$(IFS=,; echo "${checks[*]}")" "$failures" "$unknowns"
 [ "$status" = PASS ]
