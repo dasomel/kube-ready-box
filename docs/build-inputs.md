@@ -159,6 +159,14 @@ running `sha256sum`, then compared with the upstream checksum file where one exi
 
 ### Known unfixed upstream issues (accepted exceptions)
 
+The daily Box CVE scan also extracts the standalone binaries (`yq`, gVisor
+`runsc`, `containerd-shim-runsc-v1`, `gvisor-bin/*`; allowlist in
+`tools/box-pkgdb-extract.sh`) so Trivy reports their Go stdlib/module CVEs.
+Every Trivy-detectable exception below is mirrored in
+`tools/box-cve-scan.trivyignore.yaml` (scoped to the binary, with an
+`expired_at` after which the scan fails again); remove the entry when the exit
+condition is met.
+
 | Input | Issue | Why it stays | Exit condition |
 |---|---|---|---|
 | `dool` 1.3.8 | CVE-2026-56651 (`--devel` log follows symlinks), CVE-2026-56652 (CSV formula injection), per [CERT Polska](https://cert.pl/en/posts/2026/08/CVE-2026-56651/) | Fixes are merged upstream (PRs #116, #117) but no release contains them; 1.3.8 is the latest release. Both need the operator to run `dool` with `--devel` or open its CSV output in a spreadsheet; the box never runs it automatically. | Bump to the first release that contains both fixes. |
