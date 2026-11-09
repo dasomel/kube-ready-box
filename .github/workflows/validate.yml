@@ -203,6 +203,7 @@ jobs:
           bash tools/tests/box-catalog-test.sh
           bash tools/tests/box-cve-scan-test.sh
           bash tools/tests/box-cve-report-test.sh
+          bash tools/tests/fetch-release-asset-test.sh
           bash tools/tests/sbom-license-gate-root-test.sh
       - name: Benchmark Rust verifier vs shell (informational, non-blocking)
         continue-on-error: true
