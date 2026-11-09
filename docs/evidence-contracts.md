@@ -75,6 +75,10 @@ permission-denied`; any other query failure -> `UNKNOWN status-unavailable`; nei
 mask an absent chain or misclassify an unrelated failure. Covered by the same
 `tools/tests/network-firewall-detection-test.sh` fixture suite.
 
+## Network MTU and kube-proxy capability evidence (`kube-ready-network/v1`, #17)
+
+`cni_overlay_mtu` (`FAIL` only when the operator-declared `CNI_OVERLAY_MTU` + `CNI_OVERLAY_OVERHEAD` exceeds the default-route interface MTU; unset/invalid/unreadable inputs are `UNKNOWN`) and `kube_proxy_nftables` / `kube_proxy_ipvs` (capability, never `FAIL`; not-detected is `UNKNOWN`, never `PASS`). Details and vocabulary: `network/README.md`; fixtures in `tools/tests/network-firewall-detection-test.sh`.
+
 ## Kernel LSM stack evidence (`kube-ready-security/v1`, #44 T-012)
 
 `security/workload-security-check.sh` reports `lsm_stack`, an additive-only check that reads the

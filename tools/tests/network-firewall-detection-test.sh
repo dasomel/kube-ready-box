@@ -274,4 +274,85 @@ exit 1'
 out=$(run_scenario egress-chain-nft-permission-denied writer_egress_chain_nft_permission_denied)
 assert_check "$out" egress_chain_removed UNKNOWN permission-denied
 
+# --- #17: CNI overlay MTU + kube-proxy backend capability (fixture /sys and /proc) ---
+# The script's literal /sys and /proc paths are rewritten (per-scenario temp copy) to a fake
+# tree -- no production-settable bypass (D7); `ip` is mocked for the default route.
+mk_fixture() { # mk_fixture <dir> <iface> <mtu> [modules-content]
+  mkdir -p "$1/sys/class/net/$2" "$1/proc/net"
+  [ -n "$3" ] && echo "$3" > "$1/sys/class/net/$2/mtu"
+  [ -n "${4:-}" ] && printf '%s\n' "$4" > "$1/proc/modules"
+  return 0
+}
+run_env() { # run_env <name> <writer> <fixture-dir> [VAR=val ...]
+  local name=$1 writer=$2 fx=$3; shift 3
+  local bindir="$WORKDIR/$name"; mkdir -p "$bindir"
+  for f in "$essentials_dir"/*; do ln -sf "$f" "$bindir/$(basename "$f")"; done
+  "$writer" "$bindir"
+  local copy="$WORKDIR/$name.sh" out="$WORKDIR/$name.json"
+  sed -e "s|/sys/class/net/|$fx/sys/class/net/|" -e "s|/sys/module/nf_tables|$fx/sys/module/nf_tables|" \
+      -e "s|/proc/modules|$fx/proc/modules|g" -e "s|/proc/net/ip_vs|$fx/proc/net/ip_vs|" "$SCRIPT" > "$copy"
+  set +e; env "$@" PATH="$bindir" bash "$copy" >"$out" 2>"$WORKDIR/$name.stderr"; set -e
+  python3 -m json.tool "$out" >/dev/null || { echo "::error::$name bad JSON" >&2; exit 1; }
+  echo "$out"
+}
+w_ip() { mock "$1/ip" '#!/usr/bin/env bash
+case "$*" in *"route show default"*) echo "default via 10.0.0.1 dev eth0 proto dhcp";; esac
+exit 0'; }
+w_ip6() { mock "$1/ip" '#!/usr/bin/env bash
+case "$*" in *"-6"*"route show default"*) echo "default via fe80::1 dev eth0 proto ra metric 1024";; esac
+exit 0'; }
+w_none() { :; }
+
+mk_fixture "$WORKDIR/f1" eth0 1500 "nf_tables 1 0 - Live
+ip_vs 1 0 - Live"
+out=$(run_env mtu-fit w_ip "$WORKDIR/f1" CNI_OVERLAY_MTU=1450)
+assert_check "$out" cni_overlay_mtu PASS "overlay=1450 overhead=50 host=1500 iface=eth0 family=ipv4"
+out=$(run_env mtu-too-big w_ip "$WORKDIR/f1" CNI_OVERLAY_MTU=1500)
+assert_check "$out" cni_overlay_mtu FAIL "overlay=1500 overhead=50 host=1500 iface=eth0 family=ipv4"
+out=$(run_env mtu-overhead w_ip "$WORKDIR/f1" CNI_OVERLAY_MTU=1440 CNI_OVERLAY_OVERHEAD=60)
+assert_check "$out" cni_overlay_mtu PASS "overlay=1440 overhead=60 host=1500 iface=eth0 family=ipv4"
+out=$(run_env mtu-unset w_ip "$WORKDIR/f1")
+assert_check "$out" cni_overlay_mtu UNKNOWN not-requested
+out=$(run_env mtu-invalid w_ip "$WORKDIR/f1" CNI_OVERLAY_MTU=abc)
+assert_check "$out" cni_overlay_mtu UNKNOWN invalid-input
+out=$(run_env mtu-no-ip w_none "$WORKDIR/f1" CNI_OVERLAY_MTU=1450)
+assert_check "$out" cni_overlay_mtu UNKNOWN default-route-interface-unavailable
+mk_fixture "$WORKDIR/f2" eth0 ""
+out=$(run_env mtu-unreadable w_ip "$WORKDIR/f2" CNI_OVERLAY_MTU=1450)
+assert_check "$out" cni_overlay_mtu UNKNOWN host-mtu-unreadable
+# IPv6-only default route -> checked against that interface's MTU, family recorded
+out=$(run_env mtu-ipv6 w_ip6 "$WORKDIR/f1" CNI_OVERLAY_MTU=1450)
+assert_check "$out" cni_overlay_mtu PASS "overlay=1450 overhead=50 host=1500 iface=eth0 family=ipv6"
+# MTU file exists but is unreadable -> UNKNOWN (skipped as root: chmod 000 does not apply)
+if [ "$(id -u)" -eq 0 ]; then
+  echo "skip: unreadable-MTU-file scenario (running as root)"
+else
+  mk_fixture "$WORKDIR/f5" eth0 1500
+  chmod 000 "$WORKDIR/f5/sys/class/net/eth0/mtu"
+  out=$(run_env mtu-chmod000 w_ip "$WORKDIR/f5" CNI_OVERLAY_MTU=1450)
+  assert_check "$out" cni_overlay_mtu UNKNOWN host-mtu-unreadable
+  chmod 600 "$WORKDIR/f5/sys/class/net/eth0/mtu"
+fi
+
+# kube-proxy backend capability: nft + nf_tables loaded -> PASS; ip_vs loaded -> PASS
+w_nft() { mock "$1/nft" '#!/usr/bin/env bash
+exit 1'; mock "$1/ipvsadm" '#!/usr/bin/env bash
+exit 0'; }
+out=$(run_env kp-both w_nft "$WORKDIR/f1")
+assert_check "$out" kube_proxy_nftables PASS "nft-present nf_tables-loaded"
+assert_check "$out" kube_proxy_ipvs PASS "ip_vs-loaded ipvsadm-present"
+# modules readable but neither loaded -> UNKNOWN (never PASS, never FAIL)
+mk_fixture "$WORKDIR/f3" eth0 1500 "ext4 1 0 - Live"
+out=$(run_env kp-none w_nft "$WORKDIR/f3")
+assert_check "$out" kube_proxy_nftables UNKNOWN nf_tables-not-detected
+assert_check "$out" kube_proxy_ipvs UNKNOWN "ip_vs-not-loaded ipvsadm-present"
+# nft absent, /proc/modules unreadable -> UNKNOWN
+out=$(run_env kp-absent w_none "$WORKDIR/f2")
+assert_check "$out" kube_proxy_nftables UNKNOWN nft-absent
+assert_check "$out" kube_proxy_ipvs UNKNOWN kernel-modules-unreadable
+# ip_vs via /proc/net/ip_vs with no modules file
+mkdir -p "$WORKDIR/f4/proc/net"; : > "$WORKDIR/f4/proc/net/ip_vs"
+out=$(run_env kp-ipvs-proc w_none "$WORKDIR/f4")
+assert_check "$out" kube_proxy_ipvs PASS "ip_vs-loaded ipvsadm-absent"
+
 echo "network-firewall-detection-test.sh: all scenarios passed"
