@@ -181,6 +181,40 @@ expect "unreachable freshness" "$(jget source_freshness status)" UNKNOWN
 expect "unreachable overall" "$(jget - status)" FAIL
 expect "unreachable rc" "$RC" 1
 
+# 11. 인증서 clock sanity (#19): openssl로 테스트 시점에 fixture 인증서를 만든다.
+#     chronyc stub은 정상 동기화 상태로 두어 cert_clock_sanity만 바뀌게 한다.
+if command -v openssl >/dev/null 2>&1; then
+  CERTS="$WORKDIR/certs"; mkdir -p "$CERTS/valid" "$CERTS/future" "$CERTS/expired" "$CERTS/none"
+  openssl req -x509 -newkey rsa:2048 -nodes -keyout "$CERTS/k.pem" -subj /CN=t \
+    -days 365 -out "$CERTS/valid/a.crt" 2>/dev/null
+  NOW=$(date -u +%s)
+  write_tracking "0.000100000 seconds fast of NTP time" "Normal"; write_sources "34"
+  # valid: 지금 기준 유효
+  run_script env TIME_READINESS_CERT_PATHS="$CERTS/valid/*.crt"
+  expect "cert valid" "$(jget cert_clock_sanity status)" PASS
+  expect "cert valid overall" "$(jget - status)" PASS
+  # not-yet-valid: 같은 인증서, 기준 시각을 NotBefore 이전(1년 전)으로
+  run_script env TIME_READINESS_CERT_PATHS="$CERTS/valid/*.crt" TIME_READINESS_NOW=$((NOW - 31536000))
+  expect "cert future status" "$(jget cert_clock_sanity status)" FAIL
+  expect "cert future detail" "$(jget cert_clock_sanity detail)" "$CERTS/valid/a.crt:not-yet-valid"
+  expect "cert future overall" "$(jget - status)" FAIL
+  # expired: 기준 시각을 NotAfter 이후(2년 뒤)로
+  run_script env TIME_READINESS_CERT_PATHS="$CERTS/valid/*.crt" TIME_READINESS_NOW=$((NOW + 63072000))
+  expect "cert expired status" "$(jget cert_clock_sanity status)" FAIL
+  expect "cert expired detail" "$(jget cert_clock_sanity detail)" "$CERTS/valid/a.crt:expired"
+  # none: 일치하는 인증서 없음 -> UNKNOWN (PASS 아님), 전체 status는 FAIL 아님
+  run_script env TIME_READINESS_CERT_PATHS="$CERTS/none/*.crt"
+  expect "cert none status" "$(jget cert_clock_sanity status)" UNKNOWN
+  expect "cert none detail" "$(jget cert_clock_sanity detail)" no-certificates
+  expect "cert none overall" "$(jget - status)" PASS
+  # 파싱 불가 파일만 있으면 UNKNOWN
+  echo garbage >"$CERTS/expired/bad.crt"
+  run_script env TIME_READINESS_CERT_PATHS="$CERTS/expired/*.crt"
+  expect "cert unparseable status" "$(jget cert_clock_sanity status)" UNKNOWN
+else
+  echo "SKIP: openssl not found, cert_clock_sanity scenarios not run" >&2
+fi
+
 if [ "$FAILED" -ne 0 ]; then
   exit 1
 fi
