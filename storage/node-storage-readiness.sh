@@ -15,7 +15,13 @@ if command -v df >/dev/null 2>&1; then
   add capacity PASS "$cap_avail $cap_pct%"
   inode_line=$(df -Pi / | tail -1); inode_avail=$(printf '%s' "$inode_line" | awk '{print $4}') || true; inode_pct=$(printf '%s' "$inode_line" | awk '{print $5}' | tr -d '%') || true
   add inode_capacity PASS "$inode_avail $inode_pct%"
-  if [ "${cap_pct:-0}" -gt 90 ] || [ "${inode_pct:-0}" -gt 90 ]; then add capacity_threshold FAIL "disk=${cap_pct}% inode=${inode_pct}%"; else add capacity_threshold PASS "disk=${cap_pct}% inode=${inode_pct}%"; fi
+  # A non-numeric percentage (e.g. "-" for inode-less filesystems, or empty) is UNKNOWN, never PASS.
+  case "${cap_pct:-}:${inode_pct:-}" in
+    *[!0-9:]*|:*|*:) add capacity_threshold UNKNOWN "disk=${cap_pct:-}% inode=${inode_pct:-}% (non-numeric)" ;;
+    *)
+      if [ "$cap_pct" -gt 90 ] || [ "$inode_pct" -gt 90 ]; then add capacity_threshold FAIL "disk=${cap_pct}% inode=${inode_pct}%"; else add capacity_threshold PASS "disk=${cap_pct}% inode=${inode_pct}%"; fi
+      ;;
+  esac
 else
   add capacity UNKNOWN unavailable
   add capacity_threshold UNKNOWN unavailable
@@ -99,6 +105,26 @@ case "$qopts" in
     fi
     ;;
 esac
+
+# Build-time first-boot growroot evidence (packer/scripts/05-disk-tuning*.sh, kube-ready-growroot/v1).
+# Missing/unparseable/wrong-schema/UNKNOWN is UNKNOWN, never PASS; only an explicit PASS or FAIL is relayed.
+growroot_file=/etc/vagrant-box/growroot.json
+if [ -r "$growroot_file" ]; then
+  gr=$(python3 -c 'import json,sys
+try:
+    d=json.load(open(sys.argv[1]))
+    print(d["status"] if d.get("schema")=="kube-ready-growroot/v1" else "BADSCHEMA")
+except Exception:
+    print("UNPARSEABLE")' "$growroot_file") || gr=UNPARSEABLE
+  case "$gr" in
+    PASS) add growroot_evidence PASS "$growroot_file status=PASS" ;;
+    FAIL) add growroot_evidence FAIL "$growroot_file status=FAIL" ;;
+    UNKNOWN) add growroot_evidence UNKNOWN "$growroot_file status=UNKNOWN (growth not completed)" ;;
+    *) add growroot_evidence UNKNOWN "$growroot_file invalid ($gr)" ;;
+  esac
+else
+  add growroot_evidence UNKNOWN "$growroot_file missing"
+fi
 
 # Expansion is verified only when an actual block/LV test device is supplied.
 if [ -n "${STORAGE_TEST_DEVICE:-}" ]; then [ -b "$STORAGE_TEST_DEVICE" ] && add expansion_test UNKNOWN "device supplied; live expansion test required" || add expansion_test FAIL "not a block device"; else add expansion_test UNKNOWN no-test-device; fi

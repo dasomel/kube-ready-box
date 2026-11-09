@@ -67,6 +67,7 @@ test:
 	bash tools/tests/workload-lsm-stack-test.sh
 	bash tools/tests/workload-security-classification-test.sh
 	bash tools/tests/node-storage-mac-backend-test.sh
+	bash tools/tests/node-storage-capacity-growroot-test.sh
 	bash tools/tests/nixos-preflight-apparmor-test.sh
 	bash tools/tests/node-readiness-attest-apparmor-test.sh
 	bash tools/tests/packer-embedded-apparmor-test.sh
