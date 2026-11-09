@@ -2,7 +2,7 @@
 
 English | [한국어](security-response-ko.md)
 
-This is a dated record of findings and responses, newest first. Trivy scans the package databases extracted from box disks and counts findings for which distro fixes are available. Zero fixable findings does not mean zero vulnerabilities; upstream-unfixed findings and standalone binaries are outside that measure. The 2026-11-08 section reports package/CVE pairs and links evidence for every released provider image. Earlier sections retain their original measurement scope and [November rebuild records](../research/evidence/2026-11.jsonl).
+This is a dated record of findings and responses, newest first. Trivy scans the package databases extracted from box disks and counts findings for which distro fixes are available. Zero fixable findings does not mean zero vulnerabilities; upstream-unfixed findings are outside that measure, and standalone binaries were outside it until the daily scan began extracting them. The 2026-11-08 section reports package/CVE pairs and links evidence for every released provider image. Earlier sections retain their original measurement scope and [November rebuild records](../research/evidence/2026-11.jsonl).
 
 ## 2026-11-08 — Daily Box CVE scan (#100) and v0.3.2 rebuild
 
@@ -52,7 +52,7 @@ Vagrant Cloud (HCP Vagrant) is ending service. Older published versions remain t
 
 ## How we respond
 
-We scan package databases extracted from box disks with Trivy, rebuild with a full package upgrade, cross-review changes, boot-verify rebuilt images, and publish patched boxes. Findings without an upstream fix stay open until a fixed distro package can be rebuilt. To catch those fixes, the [Box CVE scan](../.github/workflows/box-cve-scan.yml) workflow runs daily (`tools/box-cve-scan.sh`): it downloads each shipped box through its Pages catalog, verifies the checksum, extracts the dpkg/rpm database read-only and counts fixable CVEs with Trivy. A CRITICAL or HIGH finding fails the run, which is the rebuild trigger. NixOS has no dpkg/rpm database and is reported UNKNOWN, not PASS. Local rebuild records are in [2026-11.jsonl](../research/evidence/2026-11.jsonl).
+We scan package databases extracted from box disks with Trivy, rebuild with a full package upgrade, cross-review changes, boot-verify rebuilt images, and publish patched boxes. Findings without an upstream fix stay open until a fixed distro package can be rebuilt. To catch those fixes, the [Box CVE scan](../.github/workflows/box-cve-scan.yml) workflow runs daily (`tools/box-cve-scan.sh`): it downloads each shipped box through its Pages catalog, verifies the checksum, extracts the dpkg/rpm database read-only, together with an allowlist of standalone binaries installed outside the package manager (`yq`, gVisor `runsc`/shim/`gvisor-bin`), and counts fixable CVEs with Trivy, including Go stdlib/module CVEs in those binaries. `summary.json` lists the binaries scanned. Findings already documented as accepted exceptions in [build-inputs.md](build-inputs.md) are suppressed through `tools/box-cve-scan.trivyignore.yaml` (scoped per binary, with an expiry date after which the scan fails again) and are still listed under `accepted` in the summary. A CRITICAL or HIGH finding fails the run, which is the rebuild trigger. NixOS has no dpkg/rpm database and is reported UNKNOWN, not PASS. Local rebuild records are in [2026-11.jsonl](../research/evidence/2026-11.jsonl).
 
 ## Reporting
 

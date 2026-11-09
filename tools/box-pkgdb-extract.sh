@@ -3,7 +3,9 @@
 # SPDX-FileCopyrightText: 2026 dasomel
 #
 # 박스 디스크 이미지(vmdk/qcow2/raw)에서 취약점 스캐너가 읽는 파일만 꺼낸다:
-# os-release, 배포판 release 파일, dpkg status, rpmdb, 박스 manifest.
+# os-release, 배포판 release 파일, dpkg status, rpmdb, 박스 manifest, 그리고
+# 패키지 관리자 밖에서 설치한 독립 실행 파일(아래 allowlist; Trivy 가 Go 바이너리의
+# 모듈/stdlib 버전을 읽는다). <out-dir>/.scanned-binaries 에 복사한 경로를 한 줄씩 남긴다.
 # 루트는 LVM 위의 ext4/xfs 다(16 GiB LV, D5). 읽기 전용으로만 마운트한다.
 #
 # usage: sudo tools/box-pkgdb-extract.sh <disk-image> <out-dir>
@@ -96,6 +98,27 @@ for p in etc/os-release usr/lib/os-release etc/lsb-release etc/redhat-release et
     copied=$((copied + 1))
   fi
 done
+# 독립 실행 파일 allowlist (/usr/local 재귀 복사 금지). 출처:
+#   usr/local/bin/yq                         packer/scripts/03-os-packages.sh:110, 03-os-packages-rocky.sh:99
+#   usr/local/bin/runsc                      packer/scripts/10-sandbox-runtime.sh:146
+#   usr/local/bin/containerd-shim-runsc-v1   packer/scripts/10-sandbox-runtime.sh:147
+#   usr/local/bin/gvisor-bin/*               packer/scripts/10-sandbox-runtime.sh:148-150 (helper 이름은 릴리스마다 달라 glob)
+# dool 은 .deb(03-os-packages.sh:70 dpkg -i)라 dpkg status 로 이미 보인다. 나머지 /usr/local/{bin,sbin}
+# 파일(k8s-node-preflight, kube-ready-*)은 셸 스크립트라 대상이 아니다.
+# 없는 파일은 건너뛴다(gVisor 는 SANDBOX_PROFILE=1 박스에만 있다). 심볼릭 링크는 호스트 경로로
+# 풀릴 수 있으므로 일반 파일만 복사한다.
+: > "$out/.scanned-binaries"
+bins=0
+for p in usr/local/bin/yq usr/local/bin/runsc usr/local/bin/containerd-shim-runsc-v1 \
+         "$mnt"/usr/local/bin/gvisor-bin/*; do
+  p=${p#"$mnt"/}
+  if [ -f "$mnt/$p" ] && [ ! -L "$mnt/$p" ]; then
+    mkdir -p "$out/$(dirname "$p")"
+    cp --preserve=mode "$mnt/$p" "$out/$p"
+    echo "$p" >> "$out/.scanned-binaries"
+    bins=$((bins + 1))
+  fi
+done
 if [ ! -e "$out/var/lib/dpkg/status" ] && [ ! -e "$out/var/lib/rpm/rpmdb.sqlite" ]; then
   echo "no dpkg/rpm database in $disk" >&2
   exit 2
@@ -103,4 +126,4 @@ fi
 kernels=$(for k in "$mnt"/lib/modules/* "$mnt"/usr/lib/modules/*; do
   [ -d "$k" ] && basename "$k"
 done | sort -u | tr '\n' ' ')
-echo "root=$root files=$copied kernels=${kernels% }"
+echo "root=$root files=$copied binaries=$bins kernels=${kernels% }"

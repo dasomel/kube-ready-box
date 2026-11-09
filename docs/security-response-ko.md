@@ -2,7 +2,7 @@
 
 [English](security-response.md) | 한국어
 
-최신순으로 정리한 발견·대응 기록입니다. Trivy는 박스 디스크에서 추출한 패키지 DB에서 배포판 수정 버전이 존재하는 항목을 집계합니다. 수정 가능 항목이 0이어도 모든 취약점이 없다는 뜻은 아니며, 업스트림 미수정 취약점과 독립 실행 파일은 이 측정 범위에 포함되지 않습니다. 2026-11-08 기록은 패키지/CVE 쌍을 집계하며 배포한 각 provider 이미지의 검증 근거를 연결합니다. 이전 기록은 당시 측정 범위와 [11월 재빌드 기록](../research/evidence/2026-11.jsonl)을 유지합니다.
+최신순으로 정리한 발견·대응 기록입니다. Trivy는 박스 디스크에서 추출한 패키지 DB에서 배포판 수정 버전이 존재하는 항목을 집계합니다. 수정 가능 항목이 0이어도 모든 취약점이 없다는 뜻은 아니며, 업스트림 미수정 취약점은 이 측정 범위에 포함되지 않으며, 독립 실행 파일은 일일 스캔이 추출하기 전까지 범위 밖이었습니다. 2026-11-08 기록은 패키지/CVE 쌍을 집계하며 배포한 각 provider 이미지의 검증 근거를 연결합니다. 이전 기록은 당시 측정 범위와 [11월 재빌드 기록](../research/evidence/2026-11.jsonl)을 유지합니다.
 
 ## 2026-11-08 — 일일 Box CVE 스캔(#100) 및 v0.3.2 재빌드
 
@@ -52,7 +52,7 @@ Vagrant Cloud(HCP Vagrant) 서비스가 종료됩니다. 기존 게시 버전은
 
 ## 대응 방식
 
-박스 디스크에서 추출한 패키지 DB를 Trivy로 검사하고, 패키지 전체 업그레이드 후 재빌드·교차 리뷰·부팅 검증을 거쳐 패치된 박스를 게시합니다. 업스트림 수정판이 없는 항목은 배포판 수정판으로 재빌드할 수 있을 때까지 열린 상태로 둡니다. 수정판이 나오는 시점을 놓치지 않도록 [Box CVE scan](../.github/workflows/box-cve-scan.yml) 워크플로가 매일 실행됩니다(`tools/box-cve-scan.sh`). 배포 중인 박스를 Pages 카탈로그 그대로 내려받아 체크섬을 확인하고, dpkg/rpm DB를 읽기 전용으로 꺼내 Trivy로 수정 가능한 CVE를 셉니다. CRITICAL 또는 HIGH가 있으면 실패하며, 이것이 재빌드 신호입니다. NixOS는 dpkg/rpm DB가 없어 PASS가 아닌 UNKNOWN으로 보고합니다. 로컬 재빌드 기록은 [2026-11.jsonl](../research/evidence/2026-11.jsonl)에 기록합니다.
+박스 디스크에서 추출한 패키지 DB를 Trivy로 검사하고, 패키지 전체 업그레이드 후 재빌드·교차 리뷰·부팅 검증을 거쳐 패치된 박스를 게시합니다. 업스트림 수정판이 없는 항목은 배포판 수정판으로 재빌드할 수 있을 때까지 열린 상태로 둡니다. 수정판이 나오는 시점을 놓치지 않도록 [Box CVE scan](../.github/workflows/box-cve-scan.yml) 워크플로가 매일 실행됩니다(`tools/box-cve-scan.sh`). 배포 중인 박스를 Pages 카탈로그 그대로 내려받아 체크섬을 확인하고, dpkg/rpm DB와 패키지 관리자 밖에서 설치한 독립 실행 파일(allowlist: `yq`, gVisor `runsc`/shim/`gvisor-bin`)을 읽기 전용으로 꺼내 Go stdlib/모듈 CVE를 포함해 Trivy로 수정 가능한 CVE를 셉니다. 검사한 바이너리는 `summary.json`에 기록됩니다. [build-inputs.md](build-inputs.md)에 수용된 예외로 문서화된 항목은 `tools/box-cve-scan.trivyignore.yaml`(바이너리 단위 범위, 만료일이 지나면 다시 실패)로 억제하며 요약의 `accepted`에는 남습니다. CRITICAL 또는 HIGH가 있으면 실패하며, 이것이 재빌드 신호입니다. NixOS는 dpkg/rpm DB가 없어 PASS가 아닌 UNKNOWN으로 보고합니다. 로컬 재빌드 기록은 [2026-11.jsonl](../research/evidence/2026-11.jsonl)에 기록합니다.
 
 ## 취약점 보고
 
