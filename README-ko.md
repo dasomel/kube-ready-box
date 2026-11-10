@@ -13,9 +13,9 @@ OS 수준 최적화가 적용된 Kubernetes-ready Ubuntu Vagrant Box. **24.04 LT
 >
 > | Box | 버전 | Provider (아키텍처) |
 > |---|---|---|
-> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.2 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
-> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.2 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
-> | `dasomel/rocky-9-ext4`, `dasomel/rocky-9-xfs` | 0.1.2 | `vmware_desktop` (arm64) |
+> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.3 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.3 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+> | `dasomel/rocky-9-ext4`, `dasomel/rocky-9-xfs` | 0.1.3 | `vmware_desktop` (arm64) |
 > | `dasomel/nixos-kube-ready` | 0.2.2 | `libvirt` (arm64, `vagrant-qemu` 가능) |
 >
 > Ubuntu amd64 박스는 VirtualBox용만 있습니다. GitHub의 x86 러너에서 빌드하고 부팅까지 검증하는데, 그 러너에서는 VirtualBox는 돌지만 VMware는 돌릴 수 없습니다. VirtualBox arm64 박스(arm64 빌드 호스트에서 VirtualBox SSH를 검증할 수 없음)와 Rocky/NixOS amd64 박스는 없습니다.
@@ -79,7 +79,7 @@ vagrant box add https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-xfs.
 | **적합한 용도** | 범용 | K8s 워크로드, 대용량 파일 |
 | **K8s Quota** | 미지원 | `--local-storage-capacity-isolation` |
 | **온라인 축소** | 지원 | 미지원 |
-| **Box 크기 (`.box`, arm64; Ubuntu 0.3.2, Rocky 0.1.2)** | 24.04: 1.58 GiB, 26.04: 1.75 GiB, Rocky 9: 1.77 GiB | 24.04: 1.56 GiB, 26.04: 1.96 GiB, Rocky 9: 1.92 GiB |
+| **Box 크기 (`.box`, arm64; Ubuntu 0.3.3, Rocky 0.1.3)** | 24.04: 1.45 GiB, 26.04: 1.76 GiB, Rocky 9: 1.77 GiB | 24.04: 1.55 GiB, 26.04: 1.97 GiB, Rocky 9: 1.92 GiB |
 
 ### Vagrantfile 예제
 

@@ -3,6 +3,19 @@
   "description": "Kubernetes-ready rocky-9-xfs box (arm64, vmware_desktop). MIT License. https://github.com/dasomel/kube-ready-box",
   "versions": [
     {
+      "version": "0.1.3",
+      "providers": [
+        {
+          "name": "vmware_desktop",
+          "url": "https://github.com/dasomel/kube-ready-box/releases/download/v0.3.3/rocky-9-xfs-vmware_desktop-arm64-0.1.3.box",
+          "checksum_type": "sha256",
+          "checksum": "80e757ae0aec7254b7ef54fd3093a1fbdd60bf348fcdc4c112719fbf36c8be4d",
+          "architecture": "arm64",
+          "default_architecture": true
+        }
+      ]
+    },
+    {
       "version": "0.1.2",
       "providers": [
         {
