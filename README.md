@@ -13,9 +13,9 @@ Kubernetes-ready Ubuntu Vagrant Box with OS-level optimizations. Supports **24.0
 >
 > | Box | Version | Provider (arch) |
 > |---|---|---|
-> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.2 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
-> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.2 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
-> | `dasomel/rocky-9-ext4`, `dasomel/rocky-9-xfs` | 0.1.2 | `vmware_desktop` (arm64) |
+> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.3 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.3 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+> | `dasomel/rocky-9-ext4`, `dasomel/rocky-9-xfs` | 0.1.3 | `vmware_desktop` (arm64) |
 > | `dasomel/nixos-kube-ready` | 0.2.2 | `libvirt` (arm64; also `vagrant-qemu`) |
 >
 > Ubuntu amd64 boxes are VirtualBox only: they are built and boot-tested on GitHub's x86 runners, which run VirtualBox but not VMware. There are no VirtualBox arm64 boxes (VirtualBox SSH cannot be verified on the arm64 build host) and no Rocky/NixOS amd64 boxes.
@@ -79,7 +79,7 @@ Catalog URL pattern: `https://dasomel.github.io/kube-ready-box/boxes/<box-name>.
 | **Best for** | General purpose | K8s workloads, large files |
 | **K8s Quota** | No native support | `--local-storage-capacity-isolation` |
 | **Online Shrink** | Supported | Not supported |
-| **Box Size (`.box`, arm64; Ubuntu 0.3.2, Rocky 0.1.2)** | 24.04: 1.58 GiB, 26.04: 1.75 GiB, Rocky 9: 1.77 GiB | 24.04: 1.56 GiB, 26.04: 1.96 GiB, Rocky 9: 1.92 GiB |
+| **Box Size (`.box`, arm64; Ubuntu 0.3.3, Rocky 0.1.3)** | 24.04: 1.45 GiB, 26.04: 1.76 GiB, Rocky 9: 1.77 GiB | 24.04: 1.55 GiB, 26.04: 1.97 GiB, Rocky 9: 1.92 GiB |
 
 ### Vagrantfile Example
 

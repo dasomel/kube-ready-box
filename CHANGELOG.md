@@ -12,6 +12,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The verifier release job selects its GitHub repository explicitly, so publishing assembled binaries works without a Git checkout.
   The v0.3.2 tag publication failure was recovered from checksum-verified CI artifacts; see [recovery evidence](docs/releases/v0.3.2-verifier-recovery.json).
 
+## [0.3.3] - 2026-11-10
+
+Security rebuild of the Ubuntu (0.3.3) and Rocky 9 (0.1.3) boxes with `yq` v4.54.3, triggered by the
+daily Box CVE scan, which opened [issue #112](https://github.com/dasomel/kube-ready-box/issues/112) on 2026-11-10 after
+[PR #109](https://github.com/dasomel/kube-ready-box/pull/109) added standalone-binary scanning. All ten shipped v0.3.2 boxes carried `yq`
+v4.54.1 (Go 1.27.1, golang.org/x/net v0.59.0). Source revision: `8425109` (main). NixOS (0.2.2) is
+unchanged and stays an asset of the `v0.3.0` release. Security response history:
+`docs/security-response.md`.
+
+| Box | Version | Provider | Arch | Kernel | Size |
+|---|---|---|---|---|---|
+| `dasomel/ubuntu-24.04-ext4` | 0.3.3 | vmware_desktop | arm64 | 6.8.0-149-generic | 1.45 GiB |
+| `dasomel/ubuntu-24.04-xfs` | 0.3.3 | vmware_desktop | arm64 | 6.8.0-149-generic | 1.55 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 0.3.3 | vmware_desktop | arm64 | 7.0.0-43-generic | 1.76 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 0.3.3 | vmware_desktop | arm64 | 7.0.0-43-generic | 1.97 GiB |
+| `dasomel/rocky-9-ext4` | 0.1.3 | vmware_desktop | arm64 | 5.14.0-687.66.1.el9_8.aarch64 | 1.77 GiB |
+| `dasomel/rocky-9-xfs` | 0.1.3 | vmware_desktop | arm64 | 5.14.0-687.66.1.el9_8.aarch64 | 1.92 GiB |
+| `dasomel/ubuntu-24.04-ext4` | 0.3.3 | virtualbox | amd64 | 6.8.0-149-generic | 1.61 GiB |
+| `dasomel/ubuntu-24.04-xfs` | 0.3.3 | virtualbox | amd64 | 6.8.0-149-generic | 1.65 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 0.3.3 | virtualbox | amd64 | 7.0.0-43-generic | 1.71 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 0.3.3 | virtualbox | amd64 | 7.0.0-43-generic | 1.93 GiB |
+
+Kernels are unchanged from 0.3.2 / 0.1.2; only `yq` changed in the image. Every candidate box was
+scanned before release with `tools/box-cve-scan.sh` (Trivy 0.76.0, OS packages and standalone
+binaries, `yq` present in the binaries scanned): **0 fixable CVEs** in each image. The `vmware_desktop`
+arm64 boxes were built locally and boot-verified on VMware Fusion (guest checks, `vagrant reload`,
+`verify_box.sh` with failures=0; Rocky preflight). The `virtualbox` amd64 boxes were built and
+boot-tested by `.github/workflows/build-amd64.yml` (runs
+[42712177335](https://github.com/dasomel/kube-ready-box/actions/runs/42712177335) for 24.04 and
+[42712188486](https://github.com/dasomel/kube-ready-box/actions/runs/42712188486) for 26.04). The two Ubuntu XFS arm64 boxes needed
+retries because of a host-side Vagrant net-ssh EPIPE during the SSH version exchange under host load
+(guest diagnostics: boot 4.4 s, sshd listening at 4.3 s, 0 failed units), and the 26.04 ext4 arm64
+box needed one build retry. Exact archives, source revisions and validation scope:
+[release evidence](docs/releases/v0.3.3-evidence.json).
+
+### Security
+
+- **`yq` v4.54.1 -> v4.54.3 (Go 1.27.3, golang.org/x/net v0.62.0, #112)**: all ten shipped v0.3.2
+  boxes carried HIGH CVE-2026-78661, CVE-2026-78667 and CVE-2026-78669, plus the previously accepted
+  CVE-2026-78660, CVE-2026-97031 and CVE-2026-111943, in the standalone `yq` binary
+  ([PR #111](https://github.com/dasomel/kube-ready-box/pull/111) bumped it and dropped the exceptions). Rebuilt with 0 fixable CVEs.
+
+### Changed
+
+- Guest release downloads fall back to the GitHub API when the direct download fails, and the build egress allowlist includes `api.github.com` and `release-assets.githubusercontent.com` (#102).
+- Readiness checks report storage growroot evidence (#104), SELinux seclabel (#106), certificate clock sanity (#107) and CNI MTU / kube-proxy state (#110); tests added in #108.
+
 ## [0.3.2] - 2026-11-08
 
 Security rebuild of the Ubuntu (0.3.2) and Rocky 9 (0.1.2) boxes using the recorded source revisions with unchanged pinned executable inputs, triggered by the daily Box CVE scan ([PR #98](https://github.com/dasomel/kube-ready-box/pull/98)),
@@ -778,7 +825,8 @@ vagrant up
 
 ---
 
-[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/dasomel/kube-ready-box/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/dasomel/kube-ready-box/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/dasomel/kube-ready-box/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/dasomel/kube-ready-box/releases/tag/v0.3.0
