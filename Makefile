@@ -85,6 +85,7 @@ test:
 	bash tools/tests/box-cve-scan-test.sh
 	bash tools/tests/box-cve-report-test.sh
 	bash tools/tests/fetch-release-asset-test.sh
+	bash tools/tests/rocky-preflight-test.sh
 	# dpkg-query 가 있어야 하는 테스트라 Linux 에서만 돈다 (macOS 는 CI 에 맡긴다).
 	if command -v dpkg-query >/dev/null 2>&1; then bash tools/tests/sbom-license-gate-root-test.sh; else echo 'SKIP sbom-license-gate-root-test.sh: dpkg-query 없음 (CI 에서 실행)'; fi
 
