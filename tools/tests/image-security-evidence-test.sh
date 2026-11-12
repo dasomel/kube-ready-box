@@ -24,20 +24,28 @@ pass_tools="$tmpdir/pass-tools"
 pass_evidence="$tmpdir/pass-evidence"
 mkdir -p "$pass_root/etc/ssh"
 : > "$pass_root/etc/machine-id"
+mkdir -p "$pass_root/etc/cloud/cloud.cfg.d" "$pass_root/var/lib/cloud/instances/installer-id"
+touch "$pass_root/etc/cloud/cloud-init.disabled"
+printf 'autoinstall:\n  identity:\n    password: $6$secret-hash\n' > "$pass_root/etc/cloud/cloud.cfg.d/99-installer.cfg"
 make_inputs "$pass_tools"
 KUBE_READY_BUILD_TOOLS_DIR="$pass_tools" EVIDENCE_DIR="$pass_evidence" IMAGE_ROOT="$pass_root" \
   bash "$EVIDENCE_SCRIPT" > "$tmpdir/pass.stdout" 2> "$tmpdir/pass.stderr"
 grep -Fq '"status":"PASS"' "$pass_evidence/identity-security-report.json"
+grep -Fq '"installer_credentials":"WARN credential-material-present"' "$pass_evidence/identity-security-report.json"
+grep -Fq '"cloud_init_instance_state":"WARN instance-state-present"' "$pass_evidence/identity-security-report.json"
+grep -Fq '"cloud_init_disabled":"disabled"' "$pass_evidence/identity-security-report.json"
+if grep -Fq 'secret-hash' "$pass_evidence/identity-security-report.json"; then echo 'credential value leaked' >&2; exit 1; fi
 if command -v dpkg-query >/dev/null 2>&1; then
   grep -Fq '"status":"PASS"' "$pass_evidence/license-report.json"
 else
   grep -Fq '"detail":"no-dpkg"' "$pass_evidence/license-report.json"
 fi
 
-# A populated machine-id must abort and preserve the identity checker reason.
+# A populated machine-id must abort and preserve identity and cloud-init evidence.
 fail_root="$tmpdir/fail-root"
 fail_tools="$tmpdir/fail-tools"
-mkdir -p "$fail_root/etc/ssh"
+mkdir -p "$fail_root/etc/ssh" "$fail_root/etc/cloud" "$fail_root/var/lib/cloud/instances/installer-id"
+touch "$fail_root/etc/cloud/cloud-init.disabled"
 printf 'not-an-image-reset\n' > "$fail_root/etc/machine-id"
 make_inputs "$fail_tools"
 if KUBE_READY_BUILD_TOOLS_DIR="$fail_tools" EVIDENCE_DIR="$tmpdir/fail-evidence" IMAGE_ROOT="$fail_root" \
@@ -46,6 +54,9 @@ if KUBE_READY_BUILD_TOOLS_DIR="$fail_tools" EVIDENCE_DIR="$tmpdir/fail-evidence"
   exit 1
 fi
 grep -Fq "FAIL private/identity artifact present: $fail_root/etc/machine-id" "$tmpdir/fail.stderr"
+grep -Fq '"status":"FAIL"' "$tmpdir/fail-evidence/identity-security-report.json"
+grep -Fq '"cloud_init_instance_state":"WARN instance-state-present"' "$tmpdir/fail-evidence/identity-security-report.json"
+grep -Fq '"cloud_init_disabled":"disabled"' "$tmpdir/fail-evidence/identity-security-report.json"
 
 # A checker that emits no report must be INVALID and abort rather than pass.
 empty_tools="$tmpdir/empty-tools"

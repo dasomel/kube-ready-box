@@ -28,6 +28,17 @@ This provisioner is wired into all four base templates
 
 The final cleanup removes SSH host private keys and source machine identity from the release image.
 
+The extracted-image audit also reports cloud-init residue: populated
+`var/lib/cloud/instances` is reported as `WARN instance-state-present`, while
+credential-bearing keys in `etc/cloud/cloud.cfg.d/*installer*` are reported as
+`WARN credential-material-present`, both without exposing values. Shipped
+Ubuntu images currently retain installer state and user-data, so these
+warnings are informational and do not fail the audit. Instance state becomes
+a `FAIL` only after a separate provisioning decision removes it from the image.
+`cloud_init_disabled` reports `disabled`, `enabled`, or `absent` as neutral
+state values; missing `/etc/cloud` is reported as `absent` for images such as
+Rocky that do not ship cloud-init.
+
 ## Secure Boot / TPM capability reporting
 
 Secure Boot and TPM/vTPM are capability evidence, not requirements of the base box: the
