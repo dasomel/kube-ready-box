@@ -44,7 +44,7 @@ done
 mountpoint -q /sys/fs/bpf 2>/dev/null && add bpffs PASS mounted || add bpffs UNKNOWN not-mounted
 
 if systemctl cat containerd >/dev/null 2>&1; then
-  grep -Rqs 'SystemdCgroup[[:space:]]*=[[:space:]]*true' /etc/containerd /etc 2>/dev/null && add containerd_systemdcgroup PASS enabled || add containerd_systemdcgroup FAIL not-enabled
+  grep -rqs 'SystemdCgroup[[:space:]]*=[[:space:]]*true' /etc/containerd 2>/dev/null && add containerd_systemdcgroup PASS enabled || add containerd_systemdcgroup FAIL not-enabled
 else
   add containerd_systemdcgroup UNKNOWN containerd-not-installed
 fi
