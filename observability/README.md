@@ -5,12 +5,15 @@
 Safety properties:
 
 - maximum collection duration: 300 seconds, enforced (`DIAGNOSTIC_DURATION_SECONDS`)
-- bounded evidence size, enforced (`DIAGNOSTIC_MAX_BYTES`, default 10MiB) — the script refuses to write evidence over the configured bound instead of silently truncating it
+- `DIAGNOSTIC_DURATION_SECONDS` and `DIAGNOSTIC_MAX_BYTES` must be non-negative integers (unset/empty uses the default: 10s / 10MiB); anything else exits 2 before any collection. A duration of 0..300 is accepted, 301+ is rejected (exit 2), never clamped
+- bounded evidence size, enforced (`DIAGNOSTIC_MAX_BYTES`, default 10MiB; evidence of exactly that many bytes is accepted, one byte more is refused) — the script refuses to write evidence over the configured bound instead of silently truncating it
 - raw command output excluded by default (`raw_output: "excluded-by-default"`) — `checks[]` only ever holds numeric metrics and dpkg package version strings, never captured command output, so there is nothing secret-bearing to redact
 - tool/backend versions are read from `dpkg-query`, not by invoking the diagnostic binary itself (some of these tools, e.g. `iftop`/`nethogs`, expect root and a live capture even for a `--version`-style flag; querying the installed package version avoids executing any of them)
 - tcpdump/bpftrace/audit capabilities are reported rather than automatically invoked
-- unsupported tools are `UNKNOWN`, not zero
+- unsupported tools and unreadable sources are `UNKNOWN`, not zero or an empty `PASS`; the top-level `status` is `UNKNOWN` (exit code still 0) when none of the core collectors (`cpu`, `memory`, `disk`, `inode`, `network_interfaces`, `network_io`) could measure anything
 - output schema: `kube-ready-observability/v1`
+
+Boundary behaviour is covered by `tools/tests/node-diagnostic-profile-test.sh`.
 
 The profile can be connected to #13 readiness and downstream Narwhal/KubeMetal evidence bundles without parsing distro-specific command output.
 

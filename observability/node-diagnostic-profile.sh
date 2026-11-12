@@ -24,6 +24,9 @@ tool_check(){
 
 case "$DURATION" in ''|*[!0-9]*) echo 'invalid DIAGNOSTIC_DURATION_SECONDS' >&2; exit 2;; esac
 [ "$DURATION" -le 300 ] || { echo 'diagnostic duration exceeds 300s safety bound' >&2; exit 2; }
+# MAX_BYTES 도 DURATION 처럼 수집 전에 검증한다. 예전에는 비숫자 값이 sleep 이
+# 끝난 뒤 python int() 에서 traceback 으로 죽었다(증거도 없이 DURATION 만큼 낭비).
+case "$MAX_BYTES" in ''|*[!0-9]*) echo 'invalid DIAGNOSTIC_MAX_BYTES' >&2; exit 2;; esac
 
 add profile PASS optional
 
@@ -35,12 +38,20 @@ else
 fi
 add architecture PASS "$(uname -m)"
 
-add cpu PASS "load=$(awk '{print $1}' /proc/loadavg)"
+# 읽을 수 없는 소스는 빈 값으로 PASS 하지 않고 UNKNOWN (UNKNOWN is never PASS).
+cpu_load=$(awk '{print $1}' /proc/loadavg 2>/dev/null || true)
+[ -n "$cpu_load" ] && add cpu PASS "load=$cpu_load" || add cpu UNKNOWN unavailable
 mem_detail=$(command -v free >/dev/null 2>&1 && free -b 2>/dev/null | awk '/Mem:/{print "used="$3",available="$7}' || true)
 [ -n "$mem_detail" ] && add memory PASS "$mem_detail" || add memory UNKNOWN unavailable
-add disk PASS "$(df -P / | tail -1 | awk '{print "used="$5}')"
-add inode PASS "$(df -Pi / | tail -1 | awk '{print "used="$5}')"
-add network_interfaces PASS "count=$(ls /sys/class/net | wc -w)"
+disk_used=$(df -P / 2>/dev/null | tail -1 | awk '{print $5}' || true)
+[ -n "$disk_used" ] && add disk PASS "used=$disk_used" || add disk UNKNOWN unavailable
+inode_used=$(df -Pi / 2>/dev/null | tail -1 | awk '{print $5}' || true)
+[ -n "$inode_used" ] && add inode PASS "used=$inode_used" || add inode UNKNOWN unavailable
+if [ -d /sys/class/net ]; then
+  add network_interfaces PASS "count=$(ls /sys/class/net 2>/dev/null | wc -w | tr -d ' ')"
+else
+  add network_interfaces UNKNOWN unavailable
+fi
 
 # 인터페이스별이 아니라 lo 를 제외한 합계 — 개별 인터페이스 상세는
 # network/node-network-readiness.sh(mtu_<iface>)가 이미 담당한다.
@@ -91,10 +102,15 @@ out, elapsed, max_bytes, checks_file = sys.argv[1], int(sys.argv[2]), int(sys.ar
 with open(checks_file) as f:
     raw_checks = f.read()
 checks = json.loads('[' + raw_checks + ']') if raw_checks else []
+# 핵심 수집기(cpu/memory/disk/inode/network_interfaces/network_io) 가 하나도
+# PASS 하지 못했으면 아무것도 측정하지 못한 것이므로 PASS 가 아니라 UNKNOWN.
+# profile/architecture/os_id 는 정적 사실이라 수집 성공의 근거가 되지 않는다.
+core = {'cpu', 'memory', 'disk', 'inode', 'network_interfaces', 'network_io'}
+status = 'PASS' if any(c['id'] in core and c['status'] == 'PASS' for c in checks) else 'UNKNOWN'
 obj = {
     'schema': 'kube-ready-observability/v1',
     'kind': 'node-diagnostic',
-    'status': 'PASS',
+    'status': status,
     'duration_seconds': elapsed,
     'checks': checks,
     'raw_output': 'excluded-by-default',
