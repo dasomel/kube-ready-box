@@ -92,7 +92,8 @@ cid, key = sys.argv[2], sys.argv[3]
 if cid == "-":
     print(d[key])
 else:
-    print(next(c[key] for c in d["checks"] if c["id"] == cid))
+    match = next((c for c in d["checks"] if c["id"] == cid), None)
+    print(match[key] if match else "")
 ' "$OUT" "$1" "$2"
 }
 
@@ -180,6 +181,158 @@ expect "unreachable sources" "$(jget sources status)" FAIL
 expect "unreachable freshness" "$(jget source_freshness status)" UNKNOWN
 expect "unreachable overall" "$(jget - status)" FAIL
 expect "unreachable rc" "$RC" 1
+
+# 10.1. offset 수치 임계치 경계(정확히 1.0s, 초과 1.000001s, 음수 절댓값 처리)
+# - 정확히 양수 임계치(+1.0s fast): PASS
+write_tracking "1.000000000 seconds fast of NTP time" "Normal"; write_sources "34"
+run_script env
+expect "exact-threshold-fast offset" "$(jget offset detail)" "1.0"
+expect "exact-threshold-fast offset_budget" "$(jget offset_budget status)" PASS
+expect "exact-threshold-fast offset_budget detail" "$(jget offset_budget detail)" "offset=1.0;budget=1.0"
+expect "exact-threshold-fast overall" "$(jget - status)" PASS
+expect "exact-threshold-fast rc" "$RC" 0
+
+# - 양수 임계치 직전 초과(+1.000001s fast): FAIL
+write_tracking "1.000001000 seconds fast of NTP time" "Normal"; write_sources "34"
+run_script env
+expect "just-over-fast offset" "$(jget offset detail)" "1.000001"
+expect "just-over-fast offset_budget" "$(jget offset_budget status)" FAIL
+expect "just-over-fast offset_budget detail" "$(jget offset_budget detail)" "offset=1.000001;budget=1.0"
+expect "just-over-fast overall" "$(jget - status)" FAIL
+expect "just-over-fast rc" "$RC" 1
+
+# - 정확히 음수 임계치(-1.0s slow): 절댓값 비교로 PASS
+write_tracking "1.000000000 seconds slow of NTP time" "Normal"; write_sources "34"
+run_script env
+expect "exact-threshold-slow offset" "$(jget offset detail)" "-1.0"
+expect "exact-threshold-slow offset_budget" "$(jget offset_budget status)" PASS
+expect "exact-threshold-slow offset_budget detail" "$(jget offset_budget detail)" "offset=-1.0;budget=1.0"
+expect "exact-threshold-slow overall" "$(jget - status)" PASS
+expect "exact-threshold-slow rc" "$RC" 0
+
+# - 음수 임계치 직전 초과(-1.000001s slow): FAIL
+write_tracking "1.000001000 seconds slow of NTP time" "Normal"; write_sources "34"
+run_script env
+expect "just-over-slow offset" "$(jget offset detail)" "-1.000001"
+expect "just-over-slow offset_budget" "$(jget offset_budget status)" FAIL
+expect "just-over-slow offset_budget detail" "$(jget offset_budget detail)" "offset=-1.000001;budget=1.0"
+expect "just-over-slow overall" "$(jget - status)" FAIL
+expect "just-over-slow rc" "$RC" 1
+
+# - 음수 예산 이내(-0.5s slow): 문자열 비교가 아닌 수치 비교 검증
+write_tracking "0.500000000 seconds slow of NTP time" "Normal"; write_sources "34"
+run_script env
+expect "within-budget-slow offset" "$(jget offset detail)" "-0.5"
+expect "within-budget-slow offset_budget" "$(jget offset_budget status)" PASS
+expect "within-budget-slow offset_budget detail" "$(jget offset_budget detail)" "offset=-0.5;budget=1.0"
+
+# 10.2. source_freshness 수치 임계치 경계(기본 한도 3600s: 3600s/60m/1h PASS, 3601s/61m FAIL)
+# - 정확히 한도(3600s, 60m, 1h): 모두 age=3600으로 PASS
+write_tracking "0.000100000 seconds fast of NTP time" "Normal"
+write_sources "3600s"
+run_script env
+expect "exact-age-sec freshness" "$(jget source_freshness status)" PASS
+expect "exact-age-sec detail" "$(jget source_freshness detail)" "age=3600;max=3600"
+
+write_sources "60m"
+run_script env
+expect "exact-age-min freshness" "$(jget source_freshness status)" PASS
+expect "exact-age-min detail" "$(jget source_freshness detail)" "age=3600;max=3600"
+
+write_sources "1h"
+run_script env
+expect "exact-age-hr freshness" "$(jget source_freshness status)" PASS
+expect "exact-age-hr detail" "$(jget source_freshness detail)" "age=3600;max=3600"
+
+# - 한도 직전 초과(3601s, 61m): FAIL
+write_sources "3601s"
+run_script env
+expect "just-over-age-sec freshness" "$(jget source_freshness status)" FAIL
+expect "just-over-age-sec detail" "$(jget source_freshness detail)" "age=3601;max=3600"
+expect "just-over-age-sec overall" "$(jget - status)" FAIL
+expect "just-over-age-sec rc" "$RC" 1
+
+write_sources "61m"
+run_script env
+expect "just-over-age-min freshness" "$(jget source_freshness status)" FAIL
+expect "just-over-age-min detail" "$(jget source_freshness detail)" "age=3660;max=3600"
+expect "just-over-age-min overall" "$(jget - status)" FAIL
+expect "just-over-age-min rc" "$RC" 1
+
+# 10.3. Leap status 변형 (Insert second, Delete second 등 비정상 leap status -> FAIL)
+write_tracking "0.000100000 seconds fast of NTP time" "Insert second"; write_sources "34"
+run_script env
+expect "leap-insert synchronized" "$(jget synchronized status)" FAIL
+expect "leap-insert synchronized detail" "$(jget synchronized detail)" unsynchronized
+expect "leap-insert overall" "$(jget - status)" FAIL
+expect "leap-insert rc" "$RC" 1
+
+write_tracking "0.000100000 seconds fast of NTP time" "Delete second"; write_sources "34"
+run_script env
+expect "leap-delete synchronized" "$(jget synchronized status)" FAIL
+expect "leap-delete synchronized detail" "$(jget synchronized detail)" unsynchronized
+
+# 10.4. 지수 표기법(scientific notation) 및 비정상/파싱 불가 chronyc 출력
+# - System time에 지수 표기(1.0e-04): chronyc 표준은 고정소수점이므로 정규식 불일치 -> UNKNOWN
+write_tracking "1.000000000e-04 seconds fast of NTP time" "Normal"; write_sources "34"
+run_script env
+expect "sci-notation offset" "$(jget offset status)" UNKNOWN
+expect "sci-notation offset detail" "$(jget offset detail)" not-reported
+expect "sci-notation offset_budget" "$(jget offset_budget status)" UNKNOWN
+expect "sci-notation offset_budget detail" "$(jget offset_budget detail)" offset-unknown
+
+# - System time 파싱 불가 문자열 -> UNKNOWN
+write_tracking "unexpected non-numeric output" "Normal"; write_sources "34"
+run_script env
+expect "unparseable-tracking offset" "$(jget offset status)" UNKNOWN
+expect "unparseable-tracking offset detail" "$(jget offset detail)" not-reported
+expect "unparseable-tracking offset_budget" "$(jget offset_budget status)" UNKNOWN
+expect "unparseable-tracking offset_budget detail" "$(jget offset_budget detail)" offset-unknown
+
+# - sources LastRx 파싱 불가('-' 미응답 또는 알 수 없는 접미사 '10x') -> source_freshness UNKNOWN
+write_tracking "0.000100000 seconds fast of NTP time" "Normal"; write_sources "-"
+run_script env
+expect "dash-lastrx freshness" "$(jget source_freshness status)" UNKNOWN
+expect "dash-lastrx freshness detail" "$(jget source_freshness detail)" unavailable
+
+write_sources "10x"
+run_script env
+expect "invalid-suffix-lastrx freshness" "$(jget source_freshness status)" UNKNOWN
+expect "invalid-suffix-lastrx freshness detail" "$(jget source_freshness detail)" unavailable
+
+# 10.5. chronyc 실행 실패(출력 없이 비정상 종료 STUB_RC=1) -> FAIL 또는 UNKNOWN, 절대 PASS 아님
+: >"$WORKDIR/tracking"; : >"$WORKDIR/sources"
+run_script env STUB_RC=1
+expect "nonzero-rc synchronized" "$(jget synchronized status)" FAIL
+expect "nonzero-rc offset" "$(jget offset status)" UNKNOWN
+expect "nonzero-rc offset_budget" "$(jget offset_budget status)" UNKNOWN
+expect "nonzero-rc sources" "$(jget sources status)" FAIL
+expect "nonzero-rc freshness" "$(jget source_freshness status)" UNKNOWN
+expect "nonzero-rc overall" "$(jget - status)" FAIL
+expect "nonzero-rc rc" "$RC" 1
+
+# 10.6. chronyc 부재: PATH에 chronyc가 없으면 FAIL missing 및 관련 체크 UNKNOWN, 전체 FAIL
+NOCHRONY="$WORKDIR/nochrony"; mkdir -p "$NOCHRONY"
+for t in bash env python3 date awk grep tr cat wc sed dirname head ls pgrep timedatectl openssl; do
+  p=$(command -v "$t" 2>/dev/null || true); [ -n "$p" ] && ln -sf "$p" "$NOCHRONY/$t"
+done
+set +e
+PATH="$NOCHRONY" STUB_TRACKING="$WORKDIR/tracking" STUB_SOURCES="$WORKDIR/sources" \
+  "$NOCHRONY/bash" "$SCRIPT" >"$OUT" 2>"$WORKDIR/err.log"
+RC=$?
+set -e
+expect "absent chrony_installed" "$(jget chrony_installed status)" FAIL
+expect "absent chrony_installed detail" "$(jget chrony_installed detail)" missing
+expect "absent offset" "$(jget offset status)" UNKNOWN
+expect "absent offset detail" "$(jget offset detail)" unavailable
+expect "absent sources" "$(jget sources status)" UNKNOWN
+expect "absent sources detail" "$(jget sources detail)" unavailable
+expect "absent freshness" "$(jget source_freshness status)" UNKNOWN
+expect "absent freshness detail" "$(jget source_freshness detail)" unavailable
+expect "absent offset_budget" "$(jget offset_budget status)" UNKNOWN
+expect "absent offset_budget detail" "$(jget offset_budget detail)" offset-unknown
+expect "absent overall" "$(jget - status)" FAIL
+expect "absent rc" "$RC" 1
 
 # 11. 인증서 clock sanity (#19): openssl로 테스트 시점에 fixture 인증서를 만든다.
 #     chronyc stub은 정상 동기화 상태로 두어 cert_clock_sanity만 바뀌게 한다.
