@@ -58,8 +58,10 @@ pub fn run(strict_runtime: bool) -> Vec<Check> {
 /// bash: gate on `systemctl cat containerd` succeeding (a containerd unit
 /// is actually installed) before judging SystemdCgroup at all -- no unit
 /// means UNKNOWN "containerd-not-installed", never a false FAIL. When a
-/// unit exists, `grep -Rqs 'SystemdCgroup[[:space:]]*=[[:space:]]*true'
-/// /etc/containerd /etc` decides PASS/FAIL. Shelled out to `grep` directly
+/// unit exists, `grep -rqs 'SystemdCgroup[[:space:]]*=[[:space:]]*true'
+/// /etc/containerd` decides PASS/FAIL. Lowercase `-r` does not follow
+/// symlinks, and limiting the root to containerd config avoids unrelated
+/// files under `/etc` becoming evidence. Shelled out to `grep` directly
 /// (same recursive-search semantics bash gets from the real tool) rather
 /// than reimplementing a config parser -- this crate stays zero-dependency
 /// by using system tools for the handful of checks that need one, same as
@@ -75,10 +77,9 @@ fn containerd_systemdcgroup_check() -> Check {
     let enabled = command_ok(
         "grep",
         &[
-            "-Rqs",
+            "-rqs",
             "SystemdCgroup[[:space:]]*=[[:space:]]*true",
             "/etc/containerd",
-            "/etc",
         ],
     );
     Check::new(

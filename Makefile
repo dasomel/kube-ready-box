@@ -70,6 +70,7 @@ test:
 	bash tools/tests/node-storage-capacity-growroot-test.sh
 	bash tools/tests/nixos-preflight-apparmor-test.sh
 	bash tools/tests/node-readiness-attest-apparmor-test.sh
+	bash tools/tests/node-readiness-attest-containerd-test.sh
 	bash tools/tests/packer-embedded-apparmor-test.sh
 	bash tools/tests/sandbox-seccomp-mode-test.sh
 	bash tools/tests/image-security-evidence-test.sh
