@@ -192,6 +192,7 @@ jobs:
           bash tools/tests/packer-embedded-apparmor-test.sh
           bash tools/tests/sandbox-seccomp-mode-test.sh
           bash tools/tests/image-security-evidence-test.sh
+          bash tools/tests/sbom-upgrade-diff-test.sh
           bash tools/test-identity-capability-detection.sh
           bash tools/tests/release-promote-test.sh
           bash tools/tests/node-readiness-drift-test.sh

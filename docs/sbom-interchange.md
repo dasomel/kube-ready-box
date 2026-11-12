@@ -48,6 +48,27 @@ one built with 0.74.0. Treat the two numbers above as illustrative, not a
 repo-wide guarantee; `manifest.json`'s `sbom_generator` field is the
 authoritative per-box source of the trivy version actually used.
 
+## Comparing release inventories
+
+Extract the same inventory format from each box, then compare older to newer:
+
+```bash
+tools/sbom-upgrade-diff.py v0.3.2/components.tsv v0.3.3/components.tsv
+tools/sbom-upgrade-diff.py --markdown v0.3.2/sbom-cyclonedx.json v0.3.3/sbom-cyclonedx.json
+```
+
+The tool reads generated `components.tsv` / `packages.txt`, the license
+gate's `license-packages.tsv`, or Trivy SPDX/CycloneDX JSON. TSV rows are
+`name`, `version`, `architecture`, followed in `packages.txt` by dpkg status
+or rpm install time; that fourth field is not a license. The license gate TSV
+contains `name`, `version`, `source`, and dpkg status and also has no license
+column. License changes therefore come only from SPDX/CycloneDX license
+metadata. Packages are keyed by name and architecture, and multiple versions
+for one key are compared as a sorted set. Non-installed dpkg rows are skipped
+and counted. Empty versions are retained. Inputs must use the same format;
+unreadable, malformed, or unsupported inventories exit 2 instead of producing
+an empty diff.
+
 ## Extracting SBOM from a built box
 
 Same `vagrant ssh -c` pattern already used elsewhere in this repo
