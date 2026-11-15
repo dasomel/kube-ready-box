@@ -6,6 +6,8 @@
 
 The baseline covers cgroup v2, swap, required kernel modules, Kubernetes sysctls, bpffs, containerd SystemdCgroup, runc/ctr, CSI prerequisites, chrony/time sync, AppArmor/seccomp/auditd, conntrack/network state, nofile, root filesystem, architecture and provider.
 
+The `containerd_systemdcgroup` check searches `/etc/containerd` only; it does not recursively search all of `/etc` (#120).
+
 `PASS`, `FAIL`, and `UNKNOWN` are deliberately distinct. An unavailable optional capability is never represented as healthy. Set `STRICT_READINESS=1` to fail on unknown checks as well as failures.
 
 ## Immutable evidence
