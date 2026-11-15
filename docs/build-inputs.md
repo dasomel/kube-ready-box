@@ -173,6 +173,13 @@ condition is met.
 
 `yq`: resolved by v4.54.3 (go1.27.3); its former exception was removed.
 
+`yq` v4.54.3 (go1.27.3) carries Go standard-library CVE-2026-97054 (`net/http` server
+`MaxBytesReader`; fixed in Go 1.27.4 / 1.26.11; severity not yet assigned, `UNKNOWN` in Trivy).
+Upstream has no release built with a fixed Go yet (v4.54.3 is the latest). This is deliberately
+**not** an accepted exception and has no `tools/box-cve-scan.trivyignore.yaml` entry: the scan
+reports it as one fixable `UNKNOWN` finding for `usr/local/bin/yq`. Exit condition: bump `yq` to
+the first release built with Go >= 1.27.4.
+
 ## OS package version reproducibility (apt)
 
 Installed via `apt-get install` against Ubuntu's own signed archive

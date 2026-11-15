@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-11-16
+
+Security rebuild of the Ubuntu boxes (0.3.4) and a NixOS kernel refresh (0.2.3), from a security
+patch check on 2026-11-15. The daily Box CVE scan (runs
+[43691689899](https://github.com/dasomel/kube-ready-box/actions/runs/43691689899) and
+[43730130227](https://github.com/dasomel/kube-ready-box/actions/runs/43730130227)) was PASS (no
+fixable HIGH/CRITICAL) but listed fixable MEDIUM CVEs in all eight shipped Ubuntu 0.3.3 boxes. No
+source change was needed for Ubuntu: the build's `apt-get full-upgrade` picked the fixes up. Source
+revision: `46418bd` (main). The NixOS box 0.2.3 is shipped as an asset of `v0.3.4`; NixOS 0.2.2 stays
+an asset of `v0.3.0`. Rocky 9 (0.1.3) is not part of this release. Security response history:
+`docs/security-response.md`.
+
+| Box | Version | Provider | Arch | Kernel | Size |
+|---|---|---|---|---|---|
+| `dasomel/ubuntu-24.04-ext4` | 0.3.4 | vmware_desktop | arm64 | 6.8.0-149-generic | 1.40 GiB |
+| `dasomel/ubuntu-24.04-xfs` | 0.3.4 | vmware_desktop | arm64 | 6.8.0-149-generic | 1.56 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 0.3.4 | vmware_desktop | arm64 | 7.0.0-43-generic | 1.76 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 0.3.4 | vmware_desktop | arm64 | 7.0.0-43-generic | 1.98 GiB |
+| `dasomel/ubuntu-24.04-ext4` | 0.3.4 | virtualbox | amd64 | 6.8.0-149-generic | 1.58 GiB |
+| `dasomel/ubuntu-24.04-xfs` | 0.3.4 | virtualbox | amd64 | 6.8.0-149-generic | 1.66 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 0.3.4 | virtualbox | amd64 | 7.0.0-43-generic | 1.71 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 0.3.4 | virtualbox | amd64 | 7.0.0-43-generic | 1.91 GiB |
+| `dasomel/nixos-kube-ready` | 0.2.3 | libvirt | arm64 | 6.18.63 | 0.97 GiB |
+
+Kernels are unchanged on Ubuntu (24.04 `6.8.0-149-generic`, 26.04 `7.0.0-43-generic`). Every Ubuntu
+candidate box was scanned before release with `tools/box-cve-scan.sh` (Trivy 0.76.0, OS packages and
+standalone binaries, `yq` present in the binaries scanned): status PASS, **0 fixable OS-package
+CVEs**, plus one fixable finding of unassigned severity (`UNKNOWN`) in `usr/local/bin/yq`: Go
+standard-library CVE-2026-97054 (see Security). The `vmware_desktop` arm64 boxes were built locally
+and boot-verified on VMware Fusion (guest checks, `vagrant reload`, `verify_box.sh --rfp-profile`
+with failures=0; `apt list --upgradable` showed 0 pending `-security` packages in the guest), and
+each passed on its first verification attempt. The 24.04 xfs arm64 build needed one retry (Packer
+"Script disconnected unexpectedly", [mistakes log #26](docs/mistakes-log.md)). The `virtualbox`
+amd64 boxes were built and boot-tested by `.github/workflows/build-amd64.yml`: 24.04 ext4 in run
+[43730381609](https://github.com/dasomel/kube-ready-box/actions/runs/43730381609), 24.04 xfs in run
+[43740011744](https://github.com/dasomel/kube-ready-box/actions/runs/43740011744) (the xfs job of
+43730381609 timed out waiting for SSH in the installer and was re-dispatched unchanged), and 26.04
+ext4 and xfs in run [43730384318](https://github.com/dasomel/kube-ready-box/actions/runs/43730384318).
+NixOS 0.2.3 was boot-verified with `vagrant-qemu` (0 failed units, `containerd` active); its
+`nixos/preflight.sh` result is unchanged from the 0.2.x baseline (`containerd_systemdcgroup` FAIL,
+`runtime_runc` UNKNOWN, `time_sync` UNKNOWN). NixOS is not scannable by Trivy, so its scan status is
+UNKNOWN, not PASS. Exact archives, checksums and validation scope:
+[release evidence](docs/releases/v0.3.4-evidence.json).
+
+### Security
+
+- **Ubuntu 0.3.3 -> 0.3.4 (glibc and perl, MEDIUM)**: all eight shipped 0.3.3 boxes carried fixable
+  glibc CVE-2026-18374, CVE-2026-84243, CVE-2026-8674, CVE-2026-86805, CVE-2026-95818 and
+  CVE-2026-97399 (24.04 `2.39-0ubuntu8.9` -> `2.39-0ubuntu8.12`, 26.04 `2.43-2ubuntu2.4` ->
+  `2.43-2ubuntu2.7`) and perl CVE-2026-82560 (24.04 `5.38.2-3.2ubuntu0.6` -> `5.38.2-3.2ubuntu0.7`,
+  26.04 `5.40.1-7ubuntu0.3` -> `5.40.1-7ubuntu0.4`).
+- **NixOS 0.2.2 -> 0.2.3 (kernel 6.18.60 -> 6.18.63, [PR #123](https://github.com/dasomel/kube-ready-box/pull/123))**:
+  the `nixpkgs` pin moved from `nixos-26.05` `fa13731` (2026-10-31) to `f1e5c356f35d` (2026-11-13).
+  Only the kernel changed (stable fixes 6.18.61 to 6.18.63, not mapped to CVE IDs); OpenSSH 10.6p1,
+  OpenSSL 3.6.5, glibc 2.42, containerd 2.3.3, runc 1.4.3 and systemd 260.5 are identical.
+  CVE-2026-98432 (fix e3f33b0a1d89) was already in 6.18.56, so it is not newly fixed here.
+- **Rocky 9 0.1.3 not rebuilt**: a candidate 0.1.4 was compared with the shipped 0.1.3 package set
+  (`rpm -qa`, 516 packages each). The only difference is `gcc-toolset-15` (4 packages)
+  `15.2.1-7.1` -> `15.2.1-7.2`, a compiler bug fix (RHEL-191953) with no security fix, and Trivy
+  shows 0 fixable OS-package CVEs on 0.1.3, so 0.1.4 was not published.
+- **Still open: `yq` v4.54.3 (Go 1.27.3) carries Go standard-library CVE-2026-97054** (`net/http`
+  server `MaxBytesReader` issue; fixed in Go 1.27.4 / 1.26.11; severity not yet assigned, `UNKNOWN`
+  in Trivy). Upstream `yq` has no release built with a fixed Go yet (v4.54.3 is the latest), so every
+  Ubuntu 0.3.4 candidate scan reports one fixable `UNKNOWN` finding for `usr/local/bin/yq`. The same
+  applies to Rocky 0.1.3. No scan exception was added; see `docs/build-inputs.md`.
+
 ### Fixed
 
 - The verifier release job selects its GitHub repository explicitly, so publishing assembled binaries works without a Git checkout.
@@ -836,7 +902,8 @@ vagrant up
 
 ---
 
-[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.3.4...HEAD
+[0.3.4]: https://github.com/dasomel/kube-ready-box/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/dasomel/kube-ready-box/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/dasomel/kube-ready-box/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/dasomel/kube-ready-box/compare/v0.3.0...v0.3.1
