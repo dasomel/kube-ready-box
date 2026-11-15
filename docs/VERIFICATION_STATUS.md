@@ -9,17 +9,19 @@ This document separates repository-side implementation from host-side validation
 | #7 Offline inputs | `tools/airgap-bundle.sh` | Zero-egress Packer build consuming only bundle inputs |
 | #8 Release | immutable promotion/rollback evidence helpers | Real publish/download (GitHub Release + Pages catalog; Vagrant Cloud is EOL) and staging matrix |
 | #9 NixOS | common preflight, hardened SSH profile, flake/offline entrypoint | Nix store/cache offline build and provider smoke matrix |
-| #10 SBOM/license | SPDX/CycloneDX/package inventory and license gate | Release artifact evidence and upgrade diff replay |
+| #10 SBOM/license | SPDX/CycloneDX/package inventory, license gate and `tools/sbom-upgrade-diff.py` with fixture tests (#119) | Release artifact evidence and upgrade diff replay |
 | #11 Sandbox | RuntimeClass, runsc handler contract, egress sample, effective/negative verifier | Real runsc/containerd E2E, resource/PID/network negative tests |
 | #12 Rust | offline verifier CLI, deterministic evidence, x86_64/aarch64 build contract | Real native/ARM64 binary execution benchmark |
 | #13 Conformance | node readiness attestation and aggregate evidence contracts | Real runtime/storage/time/security drift scenarios |
-| #14 Identity | first-boot identity attestation, SSH regeneration/hardened profile | Two-clone, snapshot/revert, Secure Boot/TPM provider tests |
-| #15 Rocky | Rocky 9/10 profile and common readiness contract; VMware ARM64 (ext4/xfs) and VirtualBox ARM64 (ext4) real `vagrant up` boot-verified | AMD64 (either provider, needs x86 host), VirtualBox ARM64 xfs, Rocky 10 |
-| #16 MAC security | AppArmor/SELinux common security evidence | Effective workload enforcement on Ubuntu/Rocky |
-| #17 Network | distro-neutral network readiness schema/checks | CNI/kube-proxy/MTU/dual-stack live scenarios |
-| #18 Storage | common storage readiness/evidence | NFS/iSCSI/expansion/full-disk/reboot scenarios |
-| #19 Time | time readiness/evidence | NTP loss, clock drift, suspend/resume, provider-specific tests |
-| #20 Observability | optional profile/evidence/limits/redaction | collection overhead and real fault-injection scenarios |
+| #14 Identity | first-boot identity attestation, SSH regeneration/hardened profile and cloud-init residue reporting as `WARN` (#114) | Two-clone, snapshot/revert, Secure Boot/TPM provider tests |
+| #15 Rocky | Rocky 9/10 profile, common readiness contract and preflight fixture tests (#116); VMware ARM64 (ext4/xfs) and VirtualBox ARM64 (ext4) real `vagrant up` boot-verified | AMD64 (either provider, needs x86 host), VirtualBox ARM64 xfs, Rocky 10 |
+| #16 MAC security | AppArmor/SELinux common security evidence, including mount `seclabel` reporting (#106) | Effective workload enforcement on Ubuntu/Rocky |
+| #17 Network | distro-neutral network readiness schema/checks, overlay MTU fit and kube-proxy backend capability (#110) | CNI/kube-proxy/MTU/dual-stack live scenarios |
+| #18 Storage | common storage readiness/evidence, growroot evidence relay and capacity threshold fixtures (#104) | NFS/iSCSI/expansion/full-disk/reboot scenarios |
+| #19 Time | time readiness/evidence, certificate clock sanity (#107) and chrony boundary tests (#117) | NTP loss, clock drift, suspend/resume, provider-specific tests |
+| #20 Observability | optional profile/evidence/limits/redaction, upfront limit validation and unreadable/empty measurement handling with boundary tests (#115) | collection overhead and real fault-injection scenarios |
+
+Repository additions above describe code and fixture coverage; they do not establish the remaining host validation or close the roadmap issues.
 
 ## Local validation contract
 

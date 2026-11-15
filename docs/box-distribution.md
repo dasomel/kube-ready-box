@@ -106,8 +106,9 @@ The catalog checksum must be the SHA-256 of the exact bytes attached to the Rele
 
 `.github/workflows/box-cve-scan.yml` scans the shipped boxes daily (and on demand). It reads
 each `site/boxes/*.json` catalog, downloads the box it points to, checks the SHA-256 and runs Trivy on
-the package database extracted from the disk. A CRITICAL or HIGH fixable CVE fails the run: rebuild and
-publish a new version. Run the same check locally on Linux with
+the package database extracted from the disk and the allowlisted standalone binaries (`yq`, gVisor
+`runsc`, shim and `gvisor-bin`). A missing `yq` scan input is `UNKNOWN`. A CRITICAL or HIGH fixable CVE
+fails the run: rebuild and publish a new version. Run the same check locally on Linux with
 `tools/box-cve-scan.sh site/boxes/<box>.json <work-dir>` (needs root for loop/LVM mounts).
 
 ## Deprecated paths

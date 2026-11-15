@@ -12,6 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The verifier release job selects its GitHub repository explicitly, so publishing assembled binaries works without a Git checkout.
   The v0.3.2 tag publication failure was recovered from checksum-verified CI artifacts; see [recovery evidence](docs/releases/v0.3.2-verifier-recovery.json).
 
+### Added
+
+- Image identity evidence reports cloud-init residue as `WARN` (#114).
+- Node diagnostic profile limits, unreadable collectors and empty measurements have explicit validation and `UNKNOWN` handling; boundary tests were added (#115).
+- Rocky preflight fixture tests, chrony threshold boundary tests and a release-to-release SBOM package/license diff tool were added (#116, #117, #119).
+- The Lima/qcow2 variant design decision is documented; the variant is not implemented (#118).
+
+### Changed
+
+- Containerd `SystemdCgroup` lookup in the shell attestor and Rust verifier is scoped to `/etc/containerd` (#120).
+
 ## [0.3.3] - 2026-11-10
 
 Security rebuild of the Ubuntu (0.3.3) and Rocky 9 (0.1.3) boxes with `yq` v4.54.3, triggered by the
