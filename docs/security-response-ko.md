@@ -4,6 +4,17 @@
 
 최신순으로 정리한 발견·대응 기록입니다. Trivy는 박스 디스크에서 추출한 패키지 DB에서 배포판 수정 버전이 존재하는 항목을 집계합니다. 수정 가능 항목이 0이어도 모든 취약점이 없다는 뜻은 아니며, 업스트림 미수정 취약점은 이 측정 범위에 포함되지 않으며, 독립 실행 파일은 일일 스캔이 추출하기 전까지 범위 밖이었습니다. 2026-11-08 기록은 패키지/CVE 쌍을 집계하며 배포한 각 provider 이미지의 검증 근거를 연결합니다. 이전 기록은 당시 측정 범위와 [11월 재빌드 기록](../research/evidence/2026-11.jsonl)을 유지합니다.
 
+## 2026-11-15 — 보안 패치 점검 및 v0.3.4 재빌드
+
+| 발견 사항·영향받는 박스 | 상태·수정 버전 | 근거 |
+| --- | --- | --- |
+| Ubuntu 24.04·26.04 게시 0.3.3(`ext4`·`xfs`, `vmware_desktop` arm64 및 `virtualbox` amd64): 수정 가능한 MEDIUM glibc CVE-2026-18374, CVE-2026-84243, CVE-2026-8674, CVE-2026-86805, CVE-2026-95818, CVE-2026-97399 및 perl CVE-2026-82560(일일 스캔은 PASS: 수정 가능한 HIGH/CRITICAL 없음). | **v0.3.4 / 박스 0.3.4에서 수정(2026-11-16):** glibc 24.04 2.39-0ubuntu8.12, 26.04 2.43-2ubuntu2.7; perl 24.04 5.38.2-3.2ubuntu0.7, 26.04 5.40.1-7ubuntu0.4. 소스 변경 없음: 빌드의 `apt-get full-upgrade`가 수정을 반영(소스 리비전 `46418bd`). 커널 변경 없음(6.8.0-149-generic, 7.0.0-43-generic). 후보 박스 8종 모두 Trivy 0.76.0(OS 패키지 및 독립 실행 파일) 상태 PASS, 수정 가능한 OS 패키지 CVE 0건. | [릴리스 v0.3.4](https://github.com/dasomel/kube-ready-box/releases/tag/v0.3.4), 스캔 실행 [43691689899](https://github.com/dasomel/kube-ready-box/actions/runs/43691689899), [43730130227](https://github.com/dasomel/kube-ready-box/actions/runs/43730130227), [재빌드 기록](releases/v0.3.4-evidence.json) |
+| NixOS 게시 0.2.2, 커널 6.18.60. | **0.2.3에서 커널 갱신(2026-11-16):** `nixpkgs` 핀 `nixos-26.05` fa13731(2026-10-31)에서 f1e5c356f35d(2026-11-13)로([PR #123](https://github.com/dasomel/kube-ready-box/pull/123)). 커널 6.18.63(stable 수정 6.18.61~6.18.63, CVE ID와 대응하지 않음). OpenSSH 10.6p1, OpenSSL 3.6.5, glibc 2.42, containerd 2.3.3, runc 1.4.3, systemd 260.5는 동일. CVE-2026-98432는 6.18.56에서 이미 수정되어 이번에 새로 수정된 것이 아님. `vagrant-qemu`로 부팅 검증. NixOS는 Trivy로 검사할 수 없어 스캔 상태는 PASS가 아니라 UNKNOWN. | [PR #123](https://github.com/dasomel/kube-ready-box/pull/123), [재빌드 기록](releases/v0.3.4-evidence.json) |
+| Rocky 9 게시 0.1.3. | **재빌드 안 함:** 후보 0.1.4는 0.1.3과 `gcc-toolset-15`(4개 패키지, 15.2.1-7.1에서 15.2.1-7.2, 컴파일러 버그 수정 RHEL-191953, 보안 수정 아님)만 다릅니다. Trivy 기준 0.1.3의 수정 가능한 OS 패키지 CVE는 0건. | [재빌드 기록](releases/v0.3.4-evidence.json) |
+| `yq` v4.54.3(Go 1.27.3): Go 표준 라이브러리 CVE-2026-97054(`net/http` 서버 `MaxBytesReader` 문제, 심각도 미지정, Trivy에서 `UNKNOWN`). Ubuntu 0.3.4 박스 전체와 Rocky 0.1.3에 해당. | **open-upstream:** Go 1.27.4 / 1.26.11에서 수정되었으나 업스트림 `yq`는 수정된 Go로 빌드한 릴리스가 아직 없습니다(v4.54.3이 최신). Ubuntu 0.3.4 후보 스캔마다 `usr/local/bin/yq`에 수정 가능한 `UNKNOWN` 항목 1건이 보고됩니다. 스캔 예외는 추가하지 않았습니다. 수정된 Go로 빌드된 릴리스가 나오면 `yq`를 갱신합니다. | [빌드 입력](build-inputs.md), [재빌드 기록](releases/v0.3.4-evidence.json) |
+
+2026-11-15 보안 패치 점검으로 시작된 재빌드입니다. Ubuntu 0.3.4는 소스 변경 없이 재빌드한 이미지입니다(`vmware_desktop` arm64는 로컬 VMware Fusion에서 빌드·부팅 검증, `virtualbox` amd64는 `.github/workflows/build-amd64.yml`에서 빌드·부팅 테스트). Rocky 9는 `v0.3.3`의 0.1.3에 머물고, NixOS 0.2.2는 `v0.3.0`에 남으며 0.2.3은 `v0.3.4`로 배포됩니다.
+
 ## 2026-11-08 — 일일 Box CVE 스캔(#100) 및 v0.3.2 재빌드
 
 | 발견 사항·영향받는 박스 | 상태·수정 버전 | 근거 |
