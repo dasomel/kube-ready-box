@@ -14,39 +14,17 @@ Use this skill when the user asks to run the migrated source command `add-mistak
 
 ## Command Template
 
-# /add-mistake - 실수 패턴 수동 추가
+# /add-mistake - 실수 패턴 추가
 
-반복되는 실수 패턴을 기록하여 향후 방지합니다.
+반복되는 실수 패턴을 `docs/mistakes-log.md`에 기록합니다. 이 문서가 단일 출처이며 `AGENTS.md`나 다른 문서에 복제하지 않습니다.
 
-## 사용법
+## 기록 방법
 
-이 명령어를 실행하면 실수 패턴을 `.Codex/cache/mistake-candidates.jsonl`에 기록합니다.
+해당 분류 절의 마지막 번호 다음에, 기존 항목과 같은 형식으로 추가합니다.
 
-## 기록 형식
-
-```json
-{
-  "timestamp": "2024-01-01T00:00:00Z",
-  "type": "manual",
-  "pattern": "실수 패턴 설명",
-  "file": "관련 파일 경로",
-  "solution": "해결 방법"
-}
-```
-
-## 일반적인 실수 패턴 예시
-
-1. **스크립트 추가 후 pkr.hcl 업데이트 누락**
-   - 새 스크립트 생성 후 모든 템플릿에 추가 필요
-
-2. **ARM64 빌드 시 VirtualBox 호환성**
-   - Apple Silicon에서 VirtualBox ARM64 boot_command 이슈
-
-3. **업로드 전 버전 번호 확인 누락**
-   - upload-boxes.sh 실행 전 버전 확인 필요
-
-## 기록 조회
-
-```bash
-cat .Codex/cache/mistake-candidates.jsonl | jq .
+```markdown
+N. **한 줄 제목**
+   - 증상: 관측한 현상(명령, 로그 한 줄)
+   - 원인: 확인한 원인. 확인하지 못했으면 "미확정"이라고 적습니다
+   - 해결: 적용한 조치와 재발 방지 방법
 ```
