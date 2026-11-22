@@ -80,7 +80,7 @@ VERSION=0.2.2 ./nixos/build.sh sbom
 
 ```bash
 # nixpkgs 리비전은 flake.lock 의 nixpkgs 와 같은 값으로 고정한다 (컨테이너 이미지의 채널에 의존하지 않기 위해).
-REV=f1e5c356f35d07e7b71a6b5e6c9338e0b029e0c0
+REV=94c3211b0ee8ba969a3f12eb4aff8ba0f72971dd
 docker run --rm -v nixcache:/nix -v "$(pwd)/nixos:/build" -w /build \
   -e NIX_PATH="nixpkgs=https://github.com/NixOS/nixpkgs/archive/$REV.tar.gz" nixos/nix sh -c "
   echo 'system-features = kvm benchmark big-parallel nixos-test uid-range' >> /etc/nix/nix.conf
