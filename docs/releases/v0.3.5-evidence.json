@@ -1,0 +1,303 @@
+{
+  "schema_version": 1,
+  "release": "v0.3.5",
+  "source_commit": "c4ee427",
+  "observed_at": "2026-11-23",
+  "trigger": "issue #125: daily Box CVE scan failing since 2026-11-17 (Ubuntu kernel updates 6.8.0-151 / 7.0.0-44, Rocky Linux 9.9)",
+  "images": [
+    {
+      "file": "rocky-9-ext4-vmware_desktop-arm64-0.1.4.box",
+      "sha256": "c3874159d85b47aa169738ced352e6e22a6a7fe22ea449b344161c02e1a26ef5",
+      "box": "dasomel/rocky-9-ext4",
+      "version": "0.1.4",
+      "provider": "vmware_desktop",
+      "architecture": "arm64",
+      "kernel": "5.14.0-741.24.1.el9_9.aarch64",
+      "scan": {
+        "status": "PASS",
+        "fixable": {
+          "MEDIUM": 1
+        },
+        "binaries_scanned": [
+          "usr/local/bin/yq"
+        ],
+        "tool": "trivy 0.76.0 via tools/box-cve-scan.sh (BOX_FILE, candidate catalog)"
+      },
+      "boot": {
+        "status": "PASS",
+        "log": "boot-rocky-9-ext4-try2.log",
+        "attempts": [
+          "boot-rocky-9-ext4-try1.log:rc=1",
+          "boot-rocky-9-ext4-try2.log:rc=0"
+        ],
+        "note": "try1: all guest checks and Rocky preflight passed; the run was recorded as failed by a cleanup-trap bug in tools/release/verify-candidate.sh (fixed in PR #127), then re-run"
+      }
+    },
+    {
+      "file": "rocky-9-xfs-vmware_desktop-arm64-0.1.4.box",
+      "sha256": "6ac3d212c551c481aeb2add60687ac121f22f858fa9f17e6b0e2c4b6f824bf7b",
+      "box": "dasomel/rocky-9-xfs",
+      "version": "0.1.4",
+      "provider": "vmware_desktop",
+      "architecture": "arm64",
+      "kernel": "5.14.0-741.24.1.el9_9.aarch64",
+      "scan": {
+        "status": "PASS",
+        "fixable": {
+          "MEDIUM": 1
+        },
+        "binaries_scanned": [
+          "usr/local/bin/yq"
+        ],
+        "tool": "trivy 0.76.0 via tools/box-cve-scan.sh (BOX_FILE, candidate catalog)"
+      },
+      "boot": {
+        "status": "PASS",
+        "log": "boot-rocky-9-xfs-try1.log",
+        "attempts": [
+          "boot-rocky-9-xfs-try1.log:rc=0"
+        ],
+        "note": null
+      }
+    },
+    {
+      "file": "ubuntu-24.04-ext4-virtualbox-amd64-0.3.5.box",
+      "sha256": "4df19ab7c2fe23b3b90982459aef583245996ddb34b533d1348b6930a6c60b06",
+      "box": "dasomel/ubuntu-24.04-ext4",
+      "version": "0.3.5",
+      "provider": "virtualbox",
+      "architecture": "amd64",
+      "kernel": "6.8.0-151-generic",
+      "scan": {
+        "status": "PASS",
+        "fixable": {
+          "MEDIUM": 1
+        },
+        "binaries_scanned": [
+          "usr/local/bin/yq"
+        ],
+        "tool": "trivy 0.76.0 via tools/box-cve-scan.sh (BOX_FILE, candidate catalog)"
+      },
+      "boot": {
+        "status": "PASS",
+        "log": "https://github.com/dasomel/kube-ready-box/actions/runs/45026321990",
+        "attempts": [
+          "build-amd64.yml run 45026321990 (ext4 job): success"
+        ],
+        "note": null
+      }
+    },
+    {
+      "file": "ubuntu-24.04-ext4-vmware_desktop-arm64-0.3.5.box",
+      "sha256": "eebb5eff4f51c857fb6308376690575006e5e8fb70719a3ddc10cb8eed5a9561",
+      "box": "dasomel/ubuntu-24.04-ext4",
+      "version": "0.3.5",
+      "provider": "vmware_desktop",
+      "architecture": "arm64",
+      "kernel": "6.8.0-151-generic",
+      "scan": {
+        "status": "PASS",
+        "fixable": {
+          "MEDIUM": 1
+        },
+        "binaries_scanned": [
+          "usr/local/bin/yq"
+        ],
+        "tool": "trivy 0.76.0 via tools/box-cve-scan.sh (BOX_FILE, candidate catalog)"
+      },
+      "boot": {
+        "status": "PASS",
+        "log": "boot-ubuntu-24.04-ext4-try1.log",
+        "attempts": [
+          "boot-ubuntu-24.04-ext4-try1.log:rc=0"
+        ],
+        "note": null
+      }
+    },
+    {
+      "file": "ubuntu-24.04-xfs-virtualbox-amd64-0.3.5.box",
+      "sha256": "b4999b94a486c0f9d49ba4f84f58fe5f891532a94c082bab41604212a9d34df6",
+      "box": "dasomel/ubuntu-24.04-xfs",
+      "version": "0.3.5",
+      "provider": "virtualbox",
+      "architecture": "amd64",
+      "kernel": "6.8.0-151-generic",
+      "scan": {
+        "status": "PASS",
+        "fixable": {
+          "MEDIUM": 1
+        },
+        "binaries_scanned": [
+          "usr/local/bin/yq"
+        ],
+        "tool": "trivy 0.76.0 via tools/box-cve-scan.sh (BOX_FILE, candidate catalog)"
+      },
+      "boot": {
+        "status": "PASS",
+        "log": "https://github.com/dasomel/kube-ready-box/actions/runs/45026321990",
+        "attempts": [
+          "build-amd64.yml run 45026321990 (xfs job): success"
+        ],
+        "note": null
+      }
+    },
+    {
+      "file": "ubuntu-24.04-xfs-vmware_desktop-arm64-0.3.5.box",
+      "sha256": "f5b14b8a0046f8966aff30d8926dadefbc2e80ff295b33f82fc4290bff8b232d",
+      "box": "dasomel/ubuntu-24.04-xfs",
+      "version": "0.3.5",
+      "provider": "vmware_desktop",
+      "architecture": "arm64",
+      "kernel": "6.8.0-151-generic",
+      "scan": {
+        "status": "PASS",
+        "fixable": {
+          "MEDIUM": 1
+        },
+        "binaries_scanned": [
+          "usr/local/bin/yq"
+        ],
+        "tool": "trivy 0.76.0 via tools/box-cve-scan.sh (BOX_FILE, candidate catalog)"
+      },
+      "boot": {
+        "status": "PASS",
+        "log": "boot-ubuntu-24.04-xfs-try1.log",
+        "attempts": [
+          "boot-ubuntu-24.04-xfs-try1.log:rc=0"
+        ],
+        "note": null
+      }
+    },
+    {
+      "file": "ubuntu-26.04-ext4-virtualbox-amd64-0.3.5.box",
+      "sha256": "9a2dca1f709900e448848d023600fb7e1ca5b23d549c99c3ffc9427a802a3d0e",
+      "box": "dasomel/ubuntu-26.04-ext4",
+      "version": "0.3.5",
+      "provider": "virtualbox",
+      "architecture": "amd64",
+      "kernel": "7.0.0-44-generic",
+      "scan": {
+        "status": "PASS",
+        "fixable": {
+          "MEDIUM": 1
+        },
+        "binaries_scanned": [
+          "usr/local/bin/yq"
+        ],
+        "tool": "trivy 0.76.0 via tools/box-cve-scan.sh (BOX_FILE, candidate catalog)"
+      },
+      "boot": {
+        "status": "PASS",
+        "log": "https://github.com/dasomel/kube-ready-box/actions/runs/45026324686",
+        "attempts": [
+          "build-amd64.yml run 45026324686 (ext4 job): success"
+        ],
+        "note": null
+      }
+    },
+    {
+      "file": "ubuntu-26.04-ext4-vmware_desktop-arm64-0.3.5.box",
+      "sha256": "b93fbcd3a99bcf39068fdb851b81278ad66e4e5ff3e05ae232ffffe859374487",
+      "box": "dasomel/ubuntu-26.04-ext4",
+      "version": "0.3.5",
+      "provider": "vmware_desktop",
+      "architecture": "arm64",
+      "kernel": "7.0.0-44-generic",
+      "scan": {
+        "status": "PASS",
+        "fixable": {
+          "MEDIUM": 1
+        },
+        "binaries_scanned": [
+          "usr/local/bin/yq"
+        ],
+        "tool": "trivy 0.76.0 via tools/box-cve-scan.sh (BOX_FILE, candidate catalog)"
+      },
+      "boot": {
+        "status": "PASS",
+        "log": "boot-ubuntu-26.04-ext4-try1.log",
+        "attempts": [
+          "boot-ubuntu-26.04-ext4-try1.log:rc=0"
+        ],
+        "note": null
+      }
+    },
+    {
+      "file": "ubuntu-26.04-xfs-virtualbox-amd64-0.3.5.box",
+      "sha256": "9f9fd989241a807411ef62a396a865a5a97c653cdffdfd9cd6a2c5bf1b17ca38",
+      "box": "dasomel/ubuntu-26.04-xfs",
+      "version": "0.3.5",
+      "provider": "virtualbox",
+      "architecture": "amd64",
+      "kernel": "7.0.0-44-generic",
+      "scan": {
+        "status": "PASS",
+        "fixable": {
+          "MEDIUM": 1
+        },
+        "binaries_scanned": [
+          "usr/local/bin/yq"
+        ],
+        "tool": "trivy 0.76.0 via tools/box-cve-scan.sh (BOX_FILE, candidate catalog)"
+      },
+      "boot": {
+        "status": "PASS",
+        "log": "https://github.com/dasomel/kube-ready-box/actions/runs/45026324686",
+        "attempts": [
+          "build-amd64.yml run 45026324686 (xfs job): success"
+        ],
+        "note": null
+      }
+    },
+    {
+      "file": "ubuntu-26.04-xfs-vmware_desktop-arm64-0.3.5.box",
+      "sha256": "8ac4c87a0af333ca84e4545c1fbe7645d815e8ac5d9621a6ccab6a4c6956a637",
+      "box": "dasomel/ubuntu-26.04-xfs",
+      "version": "0.3.5",
+      "provider": "vmware_desktop",
+      "architecture": "arm64",
+      "kernel": "7.0.0-44-generic",
+      "scan": {
+        "status": "PASS",
+        "fixable": {
+          "MEDIUM": 1
+        },
+        "binaries_scanned": [
+          "usr/local/bin/yq"
+        ],
+        "tool": "trivy 0.76.0 via tools/box-cve-scan.sh (BOX_FILE, candidate catalog)"
+      },
+      "boot": {
+        "status": "PASS",
+        "log": "boot-ubuntu-26.04-xfs-try1.log",
+        "attempts": [
+          "boot-ubuntu-26.04-xfs-try1.log:rc=0"
+        ],
+        "note": "build needed three attempts: guest DNS failure during apt, then an installer stall; the third build passed unchanged"
+      }
+    },
+    {
+      "file": "nixos-kube-ready-libvirt-arm64-0.2.4.box",
+      "sha256": "bf2c3eec5b85b16bdac984b36ba779ede76a0c1bb8030efc3b187f947298dce9",
+      "box": "dasomel/nixos-kube-ready",
+      "version": "0.2.4",
+      "provider": "libvirt",
+      "architecture": "arm64",
+      "kernel": "6.18.64",
+      "scan": {
+        "status": "UNKNOWN",
+        "fixable": null,
+        "binaries_scanned": [],
+        "tool": "not scannable: NixOS has no dpkg/rpm database for Trivy"
+      },
+      "boot": {
+        "status": "PASS",
+        "log": null,
+        "attempts": [
+          "vagrant-qemu boot: 0 failed units, containerd active"
+        ],
+        "note": "nixos/preflight.sh: status FAIL (containerd_systemdcgroup FAIL, runtime_runc UNKNOWN, time_sync UNKNOWN), unchanged from the 0.2.x baseline"
+      }
+    }
+  ]
+}

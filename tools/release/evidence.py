@@ -142,9 +142,11 @@ def build_image(box_path, fields, args, ev_dir, ci_runs, errors):
         status = summary.get("status")
         if status != "PASS":
             errors.append("%s: scan status is %r, not PASS" % (fname, status))
-        if summary.get("box") != "dasomel/%s" % short or summary.get("version") != version:
-            errors.append("%s: scan summary is for %s %s, not dasomel/%s %s" % (
-                fname, summary.get("box"), summary.get("version"), short, version))
+        # tools/box-cve-scan.sh 는 box 를 "<name>[<provider>/<arch>]" 로 적는다(v0.3.5 실측).
+        want_box = "dasomel/%s[%s/%s]" % (short, provider, arch)
+        if summary.get("box") != want_box or summary.get("version") != version:
+            errors.append("%s: scan summary is for %s %s, not %s %s" % (
+                fname, summary.get("box"), summary.get("version"), want_box, version))
         scan = {
             "status": status,
             "fixable": summary.get("fixable"),

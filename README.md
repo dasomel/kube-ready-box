@@ -13,10 +13,10 @@ Kubernetes-ready Ubuntu Vagrant Box with OS-level optimizations. Supports **24.0
 >
 > | Box | Version | Provider (arch) |
 > |---|---|---|
-> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.4 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
-> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.4 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
-> | `dasomel/rocky-9-ext4`, `dasomel/rocky-9-xfs` | 0.1.3 | `vmware_desktop` (arm64) |
-> | `dasomel/nixos-kube-ready` | 0.2.3 | `libvirt` (arm64; also `vagrant-qemu`) |
+> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.5 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.5 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+> | `dasomel/rocky-9-ext4`, `dasomel/rocky-9-xfs` | 0.1.4 | `vmware_desktop` (arm64) |
+> | `dasomel/nixos-kube-ready` | 0.2.4 | `libvirt` (arm64; also `vagrant-qemu`) |
 >
 > Ubuntu amd64 boxes are VirtualBox only: they are built and boot-tested on GitHub's x86 runners, which run VirtualBox but not VMware. There are no VirtualBox arm64 boxes (VirtualBox SSH cannot be verified on the arm64 build host) and no Rocky/NixOS amd64 boxes.
 >
@@ -42,10 +42,10 @@ Kubernetes-ready Ubuntu Vagrant Box with OS-level optimizations. Supports **24.0
 - **Multi-Provider**: VirtualBox, VMware Fusion
 - **Filesystem Selection**: ext4 (default) or xfs
 - **K8s Ready**: OS tuning for Kubernetes (K8s not included)
-- **1TB Disk**: Thin-provisioned virtual disk of 1,000,000 MB; the root grows to ~975 GiB on first boot. The `.box` download is 0.97-1.97 GiB (see below)
+- **1TB Disk**: Thin-provisioned virtual disk of 1,000,000 MB; the root grows to ~975 GiB on first boot. The `.box` download is 0.97-1.96 GiB (see below)
 - **Auto-Extension**: Root LV is 16 GiB in the image and grows to the whole disk on first boot (`kube-ready-growroot.service`, evidence in `/etc/vagrant-box/growroot.json`); `/swap.img` was removed
 
-> **NixOS variant**: a declarative NixOS box is published separately as `dasomel/nixos-kube-ready` (0.2.3, libvirt `.box` 0.97 GiB) (libvirt / arm64 — also usable on Apple Silicon via `vagrant-qemu`). See [`nixos/`](nixos/).
+> **NixOS variant**: a declarative NixOS box is published separately as `dasomel/nixos-kube-ready` (0.2.4, libvirt `.box` 0.97 GiB) (libvirt / arm64 — also usable on Apple Silicon via `vagrant-qemu`). See [`nixos/`](nixos/).
 
 ### Build Matrix
 
@@ -79,7 +79,7 @@ Catalog URL pattern: `https://dasomel.github.io/kube-ready-box/boxes/<box-name>.
 | **Best for** | General purpose | K8s workloads, large files |
 | **K8s Quota** | No native support | `--local-storage-capacity-isolation` |
 | **Online Shrink** | Supported | Not supported |
-| **Box Size (`.box`, arm64; Ubuntu 0.3.4, Rocky 0.1.3)** | 24.04: 1.40 GiB, 26.04: 1.76 GiB, Rocky 9: 1.77 GiB | 24.04: 1.56 GiB, 26.04: 1.98 GiB, Rocky 9: 1.92 GiB |
+| **Box Size (`.box`, arm64; Ubuntu 0.3.5, Rocky 0.1.4)** | 24.04: 1.40 GiB, 26.04: 1.74 GiB, Rocky 9: 1.82 GiB | 24.04: 1.55 GiB, 26.04: 1.96 GiB, Rocky 9: 1.96 GiB |
 
 ### Vagrantfile Example
 

@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-11-23
+
+Security rebuild of all boxes: Ubuntu (0.3.5), Rocky 9 (0.1.4, now Rocky Linux 9.9) and NixOS
+(0.2.4). The daily Box CVE scan failed every day from 2026-11-17 to 2026-11-22 (issue
+[#125](https://github.com/dasomel/kube-ready-box/issues/125), last run
+[45000613720](https://github.com/dasomel/kube-ready-box/actions/runs/45000613720)) because distro patches shipped after 0.3.4. All 11
+archives are assets of `v0.3.5`; NixOS 0.2.3 stays an asset of `v0.3.4` and Rocky 0.1.3 of
+`v0.3.3`. No source change was needed for Ubuntu or Rocky: the build's `apt-get full-upgrade` and
+`dnf -y update` picked the fixes up (the Rocky build still installs from the pinned 9.8 ISO and
+updates it to 9.9). Source revision: `c4ee427`. Security response history:
+`docs/security-response.md`.
+
+| Box | Version | Provider | Arch | Kernel | Size |
+|---|---|---|---|---|---|
+| `dasomel/ubuntu-24.04-ext4` | 0.3.5 | vmware_desktop | arm64 | 6.8.0-151-generic | 1.40 GiB |
+| `dasomel/ubuntu-24.04-xfs` | 0.3.5 | vmware_desktop | arm64 | 6.8.0-151-generic | 1.55 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 0.3.5 | vmware_desktop | arm64 | 7.0.0-44-generic | 1.74 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 0.3.5 | vmware_desktop | arm64 | 7.0.0-44-generic | 1.96 GiB |
+| `dasomel/rocky-9-ext4` | 0.1.4 | vmware_desktop | arm64 | 5.14.0-741.24.1.el9_9.aarch64 | 1.82 GiB |
+| `dasomel/rocky-9-xfs` | 0.1.4 | vmware_desktop | arm64 | 5.14.0-741.24.1.el9_9.aarch64 | 1.96 GiB |
+| `dasomel/ubuntu-24.04-ext4` | 0.3.5 | virtualbox | amd64 | 6.8.0-151-generic | 1.58 GiB |
+| `dasomel/ubuntu-24.04-xfs` | 0.3.5 | virtualbox | amd64 | 6.8.0-151-generic | 1.65 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 0.3.5 | virtualbox | amd64 | 7.0.0-44-generic | 1.69 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 0.3.5 | virtualbox | amd64 | 7.0.0-44-generic | 1.91 GiB |
+| `dasomel/nixos-kube-ready` | 0.2.4 | libvirt | arm64 | 6.18.64 | 0.97 GiB |
+
+Kernels moved on all three families (Ubuntu 24.04 `6.8.0-151-generic`, 26.04
+`7.0.0-44-generic`, Rocky `5.14.0-741.24.1.el9_9.aarch64`, NixOS `6.18.64`). Every Ubuntu and Rocky
+candidate box was gated with `tools/release/verify-candidate.sh` (#127): a Trivy 0.76.0 scan through
+`tools/box-cve-scan.sh` (OS packages and standalone binaries, `yq` present in the binaries scanned)
+with status PASS, **0 fixable OS-package CVEs**, plus one fixable MEDIUM finding in
+`usr/local/bin/yq`: Go standard-library CVE-2026-97054 (see Security). For the `vmware_desktop`
+arm64 boxes the gate also booted the box on VMware Fusion, ran `vagrant reload` and the shared guest
+check (`test-vm/guest-check.sh`), then `verify_box.sh --rfp-profile` with failures=0 (Ubuntu) or the
+Rocky preflight with status PASS (Rocky); the Ubuntu guests showed 0 pending `-security` packages.
+The 24.04 ext4 arm64 build needed one retry (Packer "Script disconnected unexpectedly", [mistakes
+log #26](docs/mistakes-log.md)) and the 26.04 xfs arm64 build needed retries
+(a guest DNS failure during `apt`, then an installer stall; the third build passed unchanged). The `virtualbox` amd64 boxes were built and boot-tested by
+`.github/workflows/build-amd64.yml`: 24.04 in run
+[45026321990](https://github.com/dasomel/kube-ready-box/actions/runs/45026321990) and 26.04 in run
+[45026324686](https://github.com/dasomel/kube-ready-box/actions/runs/45026324686), both on the first attempt. NixOS 0.2.4 was
+boot-verified with `vagrant-qemu` (0 failed units, `containerd` active); its `nixos/preflight.sh`
+result is unchanged from the 0.2.x baseline (`containerd_systemdcgroup` FAIL, `runtime_runc`
+UNKNOWN, `time_sync` UNKNOWN). NixOS is not scannable by Trivy, so its scan status is UNKNOWN, not
+PASS. NixOS sha256 `bf2c3eec5b85b16bdac984b36ba779ede76a0c1bb8030efc3b187f947298dce9`. Exact
+archives, checksums and validation scope: [release evidence](docs/releases/v0.3.5-evidence.json).
+
+### Added
+
+- Release rebuild tooling `tools/release/` (including `verify-candidate.sh`) and the shared
+  `test-vm/guest-check.sh` guest check (#127).
+
+### Security
+
+- **Ubuntu 0.3.4 -> 0.3.5 (kernels, up to CRITICAL/HIGH)**: 24.04 `linux` `6.8.0-149.149` ->
+  `6.8.0-151.151` (Trivy counted 592 fixable kernel CVEs, including CRITICAL and HIGH); 26.04
+  `linux` `7.0.0-43.43` -> `7.0.0-44.44` (139 fixable kernel CVEs, HIGH and below). Both also pick
+  up MEDIUM fixes in `gstreamer1.0` (`libgstreamer1.0-0`), `python3-jwt` and `sos`/`sosreport`.
+- **Rocky 9 0.1.3 -> 0.1.4 (Rocky Linux 9.9)**: Rocky Linux 9.9 went GA on 2026-11-16, after v0.3.4
+  had found no rebuild needed. The shipped 0.1.3 (9.8) had fixable CVEs in 73 source packages,
+  among them the kernel (`5.14.0-687.66.1.el9_8` -> `5.14.0-741.x.el9_9`, 39 HIGH and 29 MEDIUM
+  CVE ids), `krb5-libs` (19 HIGH), `libxml2` (8 HIGH), `expat` (4 HIGH), `jq` (HIGH), `openssl`
+  `3.5.8-2` -> `3.5.9-1`, `glibc` `2.34-284` -> `2.34-290` and `openssh` `9.9p1-13` ->
+  `9.9p1-16`. The 0.1.4 box read in the booted guest: kernel `5.14.0-741.24.1.el9_9.aarch64`, glibc
+  `2.34-290.el9_9`, openssl `3.5.9-1.el9_9`, openssh-server `9.9p1-16.el9_9.rocky.0.1`.
+- **NixOS 0.2.3 -> 0.2.4 (kernel 6.18.63 -> 6.18.64, [PR #126](https://github.com/dasomel/kube-ready-box/pull/126))**: the `nixpkgs`
+  pin moved from `nixos-26.05` `f1e5c35` (2026-11-13) to `94c3211b0ee8` (2026-11-21). Measured in
+  the booted 0.2.3 and 0.2.4 guests: kernel 6.18.63 -> 6.18.64 and OpenSSH 10.6p1 -> 10.6p2;
+  OpenSSL 3.6.5, glibc 2.42, containerd 2.3.3 and systemd 260.5 are unchanged.
+- **Still open: `yq` v4.54.3 (Go 1.27.3) carries Go standard-library CVE-2026-97054** (`net/http`
+  server `MaxBytesReader` issue; fixed in Go 1.27.4 / 1.26.11; Trivy now rates it MEDIUM, it was
+  `UNKNOWN` on 2026-11-16). Upstream `yq` has no release built with a fixed Go yet (v4.54.3 is
+  still the latest, checked 2026-11-22), so every Ubuntu 0.3.5 and Rocky 0.1.4 candidate scan
+  reports one fixable MEDIUM finding for `usr/local/bin/yq`. No scan exception was added; see
+  `docs/build-inputs.md`.
+
 ## [0.3.4] - 2026-11-16
 
 Security rebuild of the Ubuntu boxes (0.3.4) and a NixOS kernel refresh (0.2.3), from a security
@@ -902,7 +978,8 @@ vagrant up
 
 ---
 
-[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.3.4...HEAD
+[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.3.5...HEAD
+[0.3.5]: https://github.com/dasomel/kube-ready-box/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/dasomel/kube-ready-box/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/dasomel/kube-ready-box/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/dasomel/kube-ready-box/compare/v0.3.1...v0.3.2

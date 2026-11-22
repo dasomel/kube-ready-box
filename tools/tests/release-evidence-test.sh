@@ -21,8 +21,9 @@ ROC=rocky-9-xfs-vmware_desktop-arm64-0.1.4.box
 NIX=nixos-kube-ready-libvirt-arm64-0.2.3.box
 
 summary() { # $1=ev $2=short $3=arch $4=version $5=status
+  local prov=vmware_desktop; [ "$3" = arm64 ] || prov=virtualbox
   cat > "$1/scan-$2-$3.summary.json" <<EOF
-{"box": "dasomel/$2", "version": "$4", "status": "$5", "fixable": {"UNKNOWN": 1}, "binaries_scanned": ["usr/local/bin/yq"]}
+{"box": "dasomel/$2[$prov/$3]", "version": "$4", "status": "$5", "fixable": {"UNKNOWN": 1}, "binaries_scanned": ["usr/local/bin/yq"]}
 EOF
 }
 catalog() { # $1=ev $2=short $3=provider $4=arch $5=version $6=box file
