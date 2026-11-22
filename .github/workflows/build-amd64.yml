@@ -167,32 +167,8 @@ jobs:
           EOF
           vagrant box add --name kube-ready-test/amd64 --provider virtualbox "$BOX"
           vagrant up --provider virtualbox
-          cat > guest-check.sh <<'EOF'
-          set -u
-          rc=0
-          for i in $(seq 1 90); do
-            [ -e /etc/vagrant-box/growroot.json ] && [ "$(systemctl is-system-running)" != starting ] && break
-            sleep 2
-          done
-          echo "kernel=$(uname -r) state=$(systemctl is-system-running)"
-          echo "cmdline=$(cat /proc/cmdline)"
-          failed=$(systemctl --failed --no-legend | wc -l); echo "failed_units=$failed"
-          [ "$failed" -eq 0 ] || { systemctl --failed --no-legend; rc=1; }
-          if sudo grep -Eq 'ds=nocloud|[[:space:]]autoinstall([[:space:]]|$)' /proc/cmdline /etc/default/grub /boot/grub/grub.cfg; then
-            echo "installer kernel args present"; rc=1
-          fi
-          mods=$(ls /lib/modules); echo "modules=$(echo $mods)"
-          [ "$mods" = "$(uname -r)" ] || { echo "extra /lib/modules entries"; rc=1; }
-          rcpk=$(dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 'linux-*' | awk '$1=="rc"{print $2}')
-          [ -z "$rcpk" ] || { echo "rc kernel packages: $rcpk"; rc=1; }
-          cat /etc/vagrant-box/growroot.json; echo
-          grep -q '"status":"PASS"' /etc/vagrant-box/growroot.json || { echo "growroot not PASS"; rc=1; }
-          [ -z "$(swapon --show)" ] || { echo "swap active"; rc=1; }
-          test -f /etc/cloud/cloud-init.disabled || { echo "cloud-init not disabled"; rc=1; }
-          findmnt -no FSTYPE,OPTIONS /
-          exit $rc
-          EOF
-          vagrant upload guest-check.sh /tmp/guest-check.sh
+          # 점검 본문은 arm64 후보 검증(tools/release/verify-candidate.sh)과 같은 파일이다.
+          vagrant upload "$GITHUB_WORKSPACE/test-vm/guest-check.sh" /tmp/guest-check.sh
           vagrant ssh -c 'bash /tmp/guest-check.sh'
           vagrant reload
           # shellcheck disable=SC2016 # 게스트에서 확장할 식이다

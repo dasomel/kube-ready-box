@@ -1,18 +1,55 @@
 # 배포 체크리스트
 
-## 1. 로컬 빌드 및 테스트
+## 1. 릴리스 빌드와 후보 검증
+
+정기 Box CVE 스캔이 실패하면(배포판이 매주 패치를 낸다) 아래 순서로 새 버전을 만든다. 기존 버전은 덮어쓰지 않는다.
+각 단계는 한 명령이고 다시 실행해도 안전하다. 산출물은 `packer/dist/`(박스)와 `packer/dist/evidence/`(증거)에 쌓인다.
+`dist` 에 이전 릴리스 `.box` 가 남아 있으면 `evidence.py` 가 거부하니 치우거나 새 디렉터리를 쓴다.
 
 ```bash
-cd packer
-./build.sh init
-./build.sh validate
-./build.sh vmware-arm64
-# 또는 ./build.sh virtualbox-amd64
-cd ../test-vm/vmware
-vagrant up
-./verify_box.sh --rfp-profile
-vagrant destroy -f
+# 0) 최초 1회: 스캔용 Linux VM(Lima krbscan) + 고정 버전 Trivy
+tools/release/setup-scan-vm.sh
+
+# 1) amd64: build-amd64.yml 을 24.04 / 26.04 로 두 번 dispatch (filesystem=both)
+gh workflow run build-amd64.yml -f ubuntu_version=24.04 -f filesystem=both
+gh workflow run build-amd64.yml -f ubuntu_version=26.04 -f filesystem=both
+#    끝나면 run id 를 적어 두고 artifact 를 받아 릴리스 이름(<short>-virtualbox-amd64-<ver>.box)으로 packer/dist 에 둔다
+gh run download <run-id> -D /tmp/amd64 && cp /tmp/amd64/*/*.box packer/dist/   # 이름에서 -<ver> 맞추기
+
+# 2) arm64: 로컬 직렬 빌드(대상당 1회 재시도, dist 에 있으면 건너뜀). 실패한 대상 수가 종료 코드
+tools/release/build-arm64.sh --ubuntu-version 0.3.5 --rocky-version 0.1.4
+
+# 3) 박스마다 후보 게이트: scan(Trivy, PASS 만 통과) -> boot(vmware_desktop/arm64 만, 나머지는 SKIPPED)
+for b in packer/dist/*-0.3.5.box packer/dist/rocky-*-0.1.4.box; do tools/release/verify-candidate.sh "$b"; done
+
+# 4) 증거: BOX-SHA256SUMS 와 v0.3.5-evidence.json (스캔/부팅이 하나라도 PASS 가 아니면 거부)
+tools/release/evidence.py --release v0.3.5 --source-commit "$(git rev-parse --short HEAD)" \
+  --trigger "<무엇 때문에 재빌드했나>" --dist packer/dist --expect-version rocky=0.1.4 \
+  --ci-run ubuntu-24.04-ext4=<run-id> --ci-run ubuntu-24.04-xfs=<run-id> \
+  --ci-run ubuntu-26.04-ext4=<run-id> --ci-run ubuntu-26.04-xfs=<run-id> [--extra-image nixos.json]
+cp packer/dist/v0.3.5-evidence.json docs/releases/   # *-evidence.json 은 .gitignore 대상이라 커밋하려면 git add -f
+
+# 5) 카탈로그: 후보가 아니라 실제 Release URL 로 site/boxes/ 갱신 (docs/box-distribution.md)
+tools/box-catalog.py add --catalog site/boxes/<short>.json --name dasomel/<short> --version 0.3.5 \
+  --provider <p> --arch <a> --box packer/dist/<file>.box --url <release asset url>
+
+# 6) draft Release 에 .box + BOX-SHA256SUMS + evidence.json 업로드 -> 업로드된 asset digest 를 로컬 sha256 과 비교
+gh release create v0.3.5 --draft --title "v0.3.5 - <제목>" packer/dist/*-0.3.5.box packer/dist/rocky-*-0.1.4.box \
+  packer/dist/BOX-SHA256SUMS docs/releases/v0.3.5-evidence.json
+gh release view v0.3.5 --json assets --jq '.assets[]|"\(.digest) \(.name)"'   # BOX-SHA256SUMS 와 일치해야 한다
+
+# 7) 일치하면 publish, 카탈로그 PR 을 main 에 머지(pages.yml 이 배포)
+gh release edit v0.3.5 --draft=false
 ```
+
+- `verify-candidate.sh` 의 `boot=SKIPPED(...)` 는 PASS 가 아니다. amd64 부팅 증거는 1)의 `build-amd64.yml` run 이다(`--ci-run`).
+  Guest 점검은 `test-vm/guest-check.sh` 하나를 워크플로와 이 스크립트가 같이 쓴다.
+- 부팅 재시도는 같은 명령을 다시 실행하면 `boot-<short>-try<N>.log` 가 늘어나고 `attempts` 에 이력이 남는다.
+- **Rocky 교훈**: 재빌드를 publish 하기 전에 배포 중인 박스와 후보의 `rpm -qa` 를 비교한다(errata 날짜만으로는
+  배포 중인 박스에 그 패치가 없다는 증명이 안 된다). 차이가 없으면 새 버전을 만들지 않는다.
+- 스캔은 박스를 풀어 패키지 DB 만 읽는다(모든 Ubuntu 박스가 VG `ubuntu-vg` 라 한 번에 하나만; 잠금은 자동).
+
+수동 확인용 로컬 부팅은 `./packer/build.sh vmware-arm64` 후 `test-vm/vmware` 에서 `vagrant up` / `../verify_box.sh vmware_desktop --rfp-profile` / `vagrant destroy -f` 이다.
 
 ## 2. Immutable release evidence
 

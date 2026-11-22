@@ -92,6 +92,7 @@ packer/packer_cache/
 
 # Build logs
 packer/logs/
+packer/dist/evidence/
 packer/*.log
 
 # Screenshots (debugging)
