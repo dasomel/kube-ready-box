@@ -9,11 +9,10 @@
 #   SCAN_LIMA=krbscan   인스턴스 이름
 # 설치: qemu-utils lvm2 xfsprogs python3 rpm curl + Trivy(.github/workflows/box-cve-scan.yml 의 고정 버전)
 #
-# D1: Trivy 는 워크플로가 고정한 버전만 설치한다. 워크플로의 sha256 은 Linux-64bit 용 하나뿐이라
-#     arm64 tarball 은 릴리스의 trivy_<ver>_checksums.txt 로 검증하되, 그 checksums.txt 가 변조되지
-#     않았음을 "Linux-64bit 줄이 워크플로의 고정 sha256 과 같은가"로 확인한다(고정값에 묶는다).
-#     하나라도 어긋나면 설치하지 않는다(fail closed). escape hatch 없음: 버전을 올리려면 워크플로의
-#     TRIVY_VERSION/TRIVY_SHA256 을 먼저 고친다.
+# D1: Trivy 는 워크플로가 고정한 버전만 설치하고, 받은 tarball 은 워크플로에 고정한 sha256
+#     (Linux-64bit: TRIVY_SHA256, Linux-ARM64: TRIVY_SHA256_ARM64)과 직접 비교한다. 릴리스의
+#     checksums.txt 는 tarball 과 같은 곳에서 오므로 신뢰 근거로 쓰지 않는다. 어긋나면 설치하지
+#     않는다(fail closed). escape hatch 없음: 버전을 올리려면 워크플로의 세 값을 먼저 고친다.
 set -euo pipefail
 
 # shellcheck source=tools/release/lib.sh
@@ -28,6 +27,8 @@ case "${1:-}" in
 esac
 
 read -r TRIVY_VERSION TRIVY_SHA256 < <(trivy_pin)
+TRIVY_SHA256_ARM64=$(sed -n 's/^  TRIVY_SHA256_ARM64: *\([0-9a-f]\{64\}\) *$/\1/p' "$(release_repo_root)/.github/workflows/box-cve-scan.yml" | head -1)
+[ -n "$TRIVY_SHA256_ARM64" ] || { echo "TRIVY_SHA256_ARM64 not found in box-cve-scan.yml" >&2; exit 1; }
 START="limactl start --name=$SCAN_LIMA --tty=false --cpus=2 --memory=4 --disk=40 --vm-type=vz template://ubuntu-24.04"
 echo "scan VM: $SCAN_LIMA, trivy $TRIVY_VERSION (pinned in box-cve-scan.yml)"
 if [ "$DRY_RUN" -eq 1 ]; then
@@ -46,7 +47,7 @@ case "$status" in
 esac
 
 # 값은 printf %q 로 끼워 넣는다(limactl shell 은 인자를 다시 풀 수 있다).
-vm_script="TRIVY_VERSION=$(printf %q "$TRIVY_VERSION"); TRIVY_SHA256=$(printf %q "$TRIVY_SHA256")
+vm_script="TRIVY_VERSION=$(printf %q "$TRIVY_VERSION"); TRIVY_SHA256=$(printf %q "$TRIVY_SHA256"); TRIVY_SHA256_ARM64=$(printf %q "$TRIVY_SHA256_ARM64")
 $(cat <<'EOF'
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
@@ -61,12 +62,8 @@ case "$(uname -m)" in
 esac
 base="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}"
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-curl -fsSL --retry 3 -o "$tmp/sums" "${base}/trivy_${TRIVY_VERSION}_checksums.txt"
 curl -fsSL --retry 3 -o "$tmp/trivy.tgz" "${base}/trivy_${TRIVY_VERSION}_${asset}.tar.gz"
-anchor=$(awk -v f="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" '$2==f{print $1}' "$tmp/sums")
-[ "$anchor" = "$TRIVY_SHA256" ] || { echo "checksums.txt Linux-64bit entry '$anchor' != pinned $TRIVY_SHA256" >&2; exit 1; }
-want=$(awk -v f="trivy_${TRIVY_VERSION}_${asset}.tar.gz" '$2==f{print $1}' "$tmp/sums")
-[ -n "$want" ] || { echo "no checksum for ${asset} in checksums.txt" >&2; exit 1; }
+case "$asset" in Linux-ARM64) want=$TRIVY_SHA256_ARM64 ;; *) want=$TRIVY_SHA256 ;; esac
 echo "$want  $tmp/trivy.tgz" | sha256sum -c -
 sudo tar -xzf "$tmp/trivy.tgz" -C /usr/local/bin trivy
 trivy --version | head -1
