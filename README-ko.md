@@ -13,10 +13,10 @@ OS 수준 최적화가 적용된 Kubernetes-ready Ubuntu Vagrant Box. **24.04 LT
 >
 > | Box | 버전 | Provider (아키텍처) |
 > |---|---|---|
-> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.4 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
-> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.4 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
-> | `dasomel/rocky-9-ext4`, `dasomel/rocky-9-xfs` | 0.1.3 | `vmware_desktop` (arm64) |
-> | `dasomel/nixos-kube-ready` | 0.2.3 | `libvirt` (arm64, `vagrant-qemu` 가능) |
+> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.5 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.5 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+> | `dasomel/rocky-9-ext4`, `dasomel/rocky-9-xfs` | 0.1.4 | `vmware_desktop` (arm64) |
+> | `dasomel/nixos-kube-ready` | 0.2.4 | `libvirt` (arm64, `vagrant-qemu` 가능) |
 >
 > Ubuntu amd64 박스는 VirtualBox용만 있습니다. GitHub의 x86 러너에서 빌드하고 부팅까지 검증하는데, 그 러너에서는 VirtualBox는 돌지만 VMware는 돌릴 수 없습니다. VirtualBox arm64 박스(arm64 빌드 호스트에서 VirtualBox SSH를 검증할 수 없음)와 Rocky/NixOS amd64 박스는 없습니다.
 >
@@ -42,10 +42,10 @@ OS 수준 최적화가 적용된 Kubernetes-ready Ubuntu Vagrant Box. **24.04 LT
 - **멀티 프로바이더**: VirtualBox, VMware Fusion
 - **파일시스템 선택**: ext4 (기본) 또는 xfs
 - **K8s 준비 완료**: Kubernetes를 위한 OS 튜닝 (K8s는 미포함)
-- **1TB 디스크**: 가상 디스크는 1,000,000 MB로 thin provisioning, 루트는 첫 부팅 시 ~975 GiB까지 확장. `.box` 다운로드 크기는 0.97-1.97 GiB (아래 참고)
+- **1TB 디스크**: 가상 디스크는 1,000,000 MB로 thin provisioning, 루트는 첫 부팅 시 ~975 GiB까지 확장. `.box` 다운로드 크기는 0.97-1.96 GiB (아래 참고)
 - **자동 확장**: 이미지의 루트 LV는 16 GiB이며 첫 부팅 시 디스크 전체로 확장 (`kube-ready-growroot.service`, 증적은 `/etc/vagrant-box/growroot.json`). `/swap.img`는 제거됨
 
-> **NixOS 변형**: 선언적 NixOS 박스를 `dasomel/nixos-kube-ready`(0.2.3, libvirt `.box` 0.97 GiB)로 별도 배포합니다 (libvirt / arm64 — Apple Silicon에서는 `vagrant-qemu`로 동일 박스 사용). [`nixos/`](nixos/) 참고.
+> **NixOS 변형**: 선언적 NixOS 박스를 `dasomel/nixos-kube-ready`(0.2.4, libvirt `.box` 0.97 GiB)로 별도 배포합니다 (libvirt / arm64 — Apple Silicon에서는 `vagrant-qemu`로 동일 박스 사용). [`nixos/`](nixos/) 참고.
 
 ### 빌드 매트릭스
 
@@ -79,7 +79,7 @@ vagrant box add https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-xfs.
 | **적합한 용도** | 범용 | K8s 워크로드, 대용량 파일 |
 | **K8s Quota** | 미지원 | `--local-storage-capacity-isolation` |
 | **온라인 축소** | 지원 | 미지원 |
-| **Box 크기 (`.box`, arm64; Ubuntu 0.3.4, Rocky 0.1.3)** | 24.04: 1.40 GiB, 26.04: 1.76 GiB, Rocky 9: 1.77 GiB | 24.04: 1.56 GiB, 26.04: 1.98 GiB, Rocky 9: 1.92 GiB |
+| **Box 크기 (`.box`, arm64; Ubuntu 0.3.5, Rocky 0.1.4)** | 24.04: 1.40 GiB, 26.04: 1.74 GiB, Rocky 9: 1.82 GiB | 24.04: 1.55 GiB, 26.04: 1.96 GiB, Rocky 9: 1.96 GiB |
 
 ### Vagrantfile 예제
 
