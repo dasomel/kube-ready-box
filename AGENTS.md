@@ -21,3 +21,5 @@ Change workflow and agent standards: https://github.com/dasomel/openforge/blob/m
 ## Verification
 
 `./packer/build.sh validate` is the check that also runs the cross-template consistency check; `make lint` and `make test` are the other gates. `bash -n` alone is not evidence. Scripts that depend on Linux runtime (`/proc`, `/sys`, services, filesystem semantics) cannot be verified on macOS (BSD tools differ; mistakes-log #23): run them in a Linux container or VM, e.g. `docker run --rm --entrypoint bash -v "$PWD:/w" -w /w <image-with-python3> -c 'bash /w/<script>'`.
+
+Release, upload, Vagrant Cloud, and other shared or destructive actions need explicit authorization.
