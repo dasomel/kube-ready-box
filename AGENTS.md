@@ -20,12 +20,4 @@ Change workflow and agent standards: https://github.com/dasomel/openforge/blob/m
 
 ## Verification
 
-```bash
-./packer/build.sh validate   # Packer validate for all templates + consistency check
-make lint                    # shellcheck (warning+), bash -n, consistency and host-mutation guards, actionlint if installed
-make test                    # Rust verifier + contract/tool tests
-```
-
-`bash -n` alone is not evidence. Scripts that depend on Linux runtime (`/proc`, `/sys`, services, filesystem semantics) cannot be verified on macOS (BSD tools differ; mistakes-log #23): run them in a Linux container or VM, e.g. `docker run --rm --entrypoint bash -v "$PWD:/w" -w /w <image-with-python3> -c 'bash /w/<script>'`.
-
-Local/disposable edit-build-test work is fine; release, upload, Vagrant Cloud and other shared or destructive actions need explicit authorization.
+`./packer/build.sh validate` is the check that also runs the cross-template consistency check; `make lint` and `make test` are the other gates. `bash -n` alone is not evidence. Scripts that depend on Linux runtime (`/proc`, `/sys`, services, filesystem semantics) cannot be verified on macOS (BSD tools differ; mistakes-log #23): run them in a Linux container or VM, e.g. `docker run --rm --entrypoint bash -v "$PWD:/w" -w /w <image-with-python3> -c 'bash /w/<script>'`.
