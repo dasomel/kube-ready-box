@@ -47,8 +47,9 @@ case "$status" in
 esac
 
 # 값은 printf %q 로 끼워 넣는다(limactl shell 은 인자를 다시 풀 수 있다).
-vm_script="TRIVY_VERSION=$(printf %q "$TRIVY_VERSION"); TRIVY_SHA256=$(printf %q "$TRIVY_SHA256"); TRIVY_SHA256_ARM64=$(printf %q "$TRIVY_SHA256_ARM64")
-$(cat <<'EOF'
+# 본문은 $(...) 없이 read 로 읽는다: macOS 기본 bash 3.2 는 "$(cat <<'EOF' ...)" 안의 작은따옴표와
+# case 패턴의 ')' 를 잘못 해석한다(unbound variable $tmp, syntax error near ';;').
+read -r -d '' vm_body <<'EOF' || true
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get -qq update
@@ -68,6 +69,7 @@ echo "$want  $tmp/trivy.tgz" | sha256sum -c -
 sudo tar -xzf "$tmp/trivy.tgz" -C /usr/local/bin trivy
 trivy --version | head -1
 EOF
-)"
+vm_script="TRIVY_VERSION=$(printf %q "$TRIVY_VERSION"); TRIVY_SHA256=$(printf %q "$TRIVY_SHA256"); TRIVY_SHA256_ARM64=$(printf %q "$TRIVY_SHA256_ARM64")
+$vm_body"
 vm_run "$vm_script"
 echo "scan VM ready: SCAN_LIMA=$SCAN_LIMA"

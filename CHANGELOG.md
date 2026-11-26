@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-11-27
+
+Ubuntu-only rebuild (0.3.6) for an AppArmor setting that breaks signals inside containers on
+Ubuntu 26.04. Rocky 0.1.4 and NixOS 0.2.4 are unchanged and stay assets of `v0.3.5`. The eight
+Ubuntu archives are assets of `v0.3.6`. Source revision: `f10c688`. Kernels are the same as 0.3.5
+(24.04 `6.8.0-151-generic`, 26.04 `7.0.0-44-generic`).
+
+| Box | Version | Provider | Arch | Kernel | Size |
+|---|---|---|---|---|---|
+| `dasomel/ubuntu-24.04-ext4` | 0.3.6 | vmware_desktop | arm64 | 6.8.0-151-generic | 1.59 GiB |
+| `dasomel/ubuntu-24.04-xfs` | 0.3.6 | vmware_desktop | arm64 | 6.8.0-151-generic | 1.55 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 0.3.6 | vmware_desktop | arm64 | 7.0.0-44-generic | 1.75 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 0.3.6 | vmware_desktop | arm64 | 7.0.0-44-generic | 1.97 GiB |
+| `dasomel/ubuntu-24.04-ext4` | 0.3.6 | virtualbox | amd64 | 6.8.0-151-generic | 1.62 GiB |
+| `dasomel/ubuntu-24.04-xfs` | 0.3.6 | virtualbox | amd64 | 6.8.0-151-generic | 1.65 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 0.3.6 | virtualbox | amd64 | 7.0.0-44-generic | 1.69 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 0.3.6 | virtualbox | amd64 | 7.0.0-44-generic | 1.88 GiB |
+
+Every candidate was gated with `tools/release/verify-candidate.sh`: Trivy 0.76.0 scan status PASS,
+0 fixable OS-package CVEs, plus the same one fixable MEDIUM `yq` finding as 0.3.5 (CVE-2026-97054;
+`yq` v4.54.3 is still the latest upstream release, checked 2026-11-27). The `vmware_desktop` arm64
+boxes were boot-verified on VMware Fusion (guest checks, `vagrant reload`, `verify_box.sh
+--rfp-profile` failures=0, 0 pending `-security` packages). The 26.04 ext4 boot check was run twice:
+the first attempt passed but its guest `apt-get update` failed, so pending security updates were
+UNKNOWN; the second attempt read 0. The `virtualbox` amd64 boxes were built and boot-tested by
+`.github/workflows/build-amd64.yml` (24.04 run
+[45854492882](https://github.com/dasomel/kube-ready-box/actions/runs/45854492882), 26.04 run
+[45854497755](https://github.com/dasomel/kube-ready-box/actions/runs/45854497755)); both xfs jobs
+needed a rerun (24.04: ISO download HTTP/2 stream error; 26.04: installer kernel overlayfs Oops,
+mistakes-log #28). The 26.04 ext4 arm64 build needed one retry (SSH disconnect during
+`01-base.sh`). Exact archives and checksums: [release evidence](docs/releases/v0.3.6-evidence.json).
+
+The fix was checked end to end on the 26.04 ext4 arm64 candidate with k3s v1.37.2: at the box
+default (0) a pod's processes run as `cri-containerd.apparmor.d (enforce)` and can signal each other;
+after setting the value back to 1 on the same VM, the label becomes
+`cri-containerd.apparmor.d//&unconfined (enforce)` and the same `kill` fails with Permission denied.
+
 ### Fixed
 
 - Ubuntu boxes: `04-k8s-prereq.sh` sets `kernel.apparmor_restrict_unprivileged_unconfined = 0`
@@ -16,6 +53,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   checkpoint: Permission denied`). Reproduced on 0.3.1 and 0.3.5, so it is not a 0.3.5 regression.
   Existing 0.3.5 nodes need the same file and a reboot. `k8s-node-preflight` reports the value as
   `sysctl_kernel_apparmor_restrict_unprivileged_unconfined` (FAIL when not 0). mistakes-log #34.
+- `tools/release/setup-scan-vm.sh` now runs under macOS's default bash 3.2 (the guest script is
+  read with `read -d ''` instead of a heredoc inside `"$(...)"`).
+- Provisioning scripts under `packer/scripts/` are committed as executable.
+
+### Security
+
+- The fix turns off one Ubuntu hardening layer: unprivileged processes that are unconfined may
+  again change to any profile without it being turned into a stack. AppArmor itself stays enabled
+  (`apparmor` check PASS), container profiles are still enforced, and the related
+  `kernel.apparmor_restrict_unprivileged_userns` setting is unchanged.
 
 ## [0.3.5] - 2026-11-23
 

@@ -13,8 +13,8 @@ OS 수준 최적화가 적용된 Kubernetes-ready Ubuntu Vagrant Box. **24.04 LT
 >
 > | Box | 버전 | Provider (아키텍처) |
 > |---|---|---|
-> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.5 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
-> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.5 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+> | `dasomel/ubuntu-24.04-ext4`, `dasomel/ubuntu-24.04-xfs` | 0.3.6 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+> | `dasomel/ubuntu-26.04-ext4`, `dasomel/ubuntu-26.04-xfs` | 0.3.6 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
 > | `dasomel/rocky-9-ext4`, `dasomel/rocky-9-xfs` | 0.1.4 | `vmware_desktop` (arm64) |
 > | `dasomel/nixos-kube-ready` | 0.2.4 | `libvirt` (arm64, `vagrant-qemu` 가능) |
 >
@@ -42,7 +42,7 @@ OS 수준 최적화가 적용된 Kubernetes-ready Ubuntu Vagrant Box. **24.04 LT
 - **멀티 프로바이더**: VirtualBox, VMware Fusion
 - **파일시스템 선택**: ext4 (기본) 또는 xfs
 - **K8s 준비 완료**: Kubernetes를 위한 OS 튜닝 (K8s는 미포함)
-- **1TB 디스크**: 가상 디스크는 1,000,000 MB로 thin provisioning, 루트는 첫 부팅 시 ~975 GiB까지 확장. `.box` 다운로드 크기는 0.97-1.96 GiB (아래 참고)
+- **1TB 디스크**: 가상 디스크는 1,000,000 MB로 thin provisioning, 루트는 첫 부팅 시 ~975 GiB까지 확장. `.box` 다운로드 크기는 0.97-1.97 GiB (아래 참고)
 - **자동 확장**: 이미지의 루트 LV는 16 GiB이며 첫 부팅 시 디스크 전체로 확장 (`kube-ready-growroot.service`, 증적은 `/etc/vagrant-box/growroot.json`). `/swap.img`는 제거됨
 
 > **NixOS 변형**: 선언적 NixOS 박스를 `dasomel/nixos-kube-ready`(0.2.4, libvirt `.box` 0.97 GiB)로 별도 배포합니다 (libvirt / arm64 — Apple Silicon에서는 `vagrant-qemu`로 동일 박스 사용). [`nixos/`](nixos/) 참고.
@@ -79,7 +79,7 @@ vagrant box add https://dasomel.github.io/kube-ready-box/boxes/ubuntu-24.04-xfs.
 | **적합한 용도** | 범용 | K8s 워크로드, 대용량 파일 |
 | **K8s Quota** | 미지원 | `--local-storage-capacity-isolation` |
 | **온라인 축소** | 지원 | 미지원 |
-| **Box 크기 (`.box`, arm64; Ubuntu 0.3.5, Rocky 0.1.4)** | 24.04: 1.40 GiB, 26.04: 1.74 GiB, Rocky 9: 1.82 GiB | 24.04: 1.55 GiB, 26.04: 1.96 GiB, Rocky 9: 1.96 GiB |
+| **Box 크기 (`.box`, arm64; Ubuntu 0.3.6, Rocky 0.1.4)** | 24.04: 1.59 GiB, 26.04: 1.75 GiB, Rocky 9: 1.82 GiB | 24.04: 1.55 GiB, 26.04: 1.97 GiB, Rocky 9: 1.96 GiB |
 
 ### Vagrantfile 예제
 

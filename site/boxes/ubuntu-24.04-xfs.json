@@ -3,6 +3,27 @@
   "description": "Kubernetes-ready ubuntu-24.04-xfs box (vmware_desktop arm64, virtualbox amd64). MIT License. https://github.com/dasomel/kube-ready-box",
   "versions": [
     {
+      "version": "0.3.6",
+      "providers": [
+        {
+          "name": "vmware_desktop",
+          "url": "https://github.com/dasomel/kube-ready-box/releases/download/v0.3.6/ubuntu-24.04-xfs-vmware_desktop-arm64-0.3.6.box",
+          "checksum_type": "sha256",
+          "checksum": "12718419f4b73a258dc440ce169fa6384f650c134fb6ad49a687dba6a979db17",
+          "architecture": "arm64",
+          "default_architecture": true
+        },
+        {
+          "name": "virtualbox",
+          "url": "https://github.com/dasomel/kube-ready-box/releases/download/v0.3.6/ubuntu-24.04-xfs-virtualbox-amd64-0.3.6.box",
+          "checksum_type": "sha256",
+          "checksum": "fb78d0a856dbae009b2c4e303f3747027121af2a7fc78dda00dccffc4cc1ebd5",
+          "architecture": "amd64",
+          "default_architecture": true
+        }
+      ]
+    },
+    {
       "version": "0.3.5",
       "providers": [
         {
