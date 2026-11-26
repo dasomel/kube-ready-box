@@ -190,3 +190,9 @@
     - 증상: readiness stage가 5분 이상 걸려 무관한 PR job도 timeout에 가까워졌다.
     - 원인: containerd 설정을 찾는 검사가 심볼릭 링크를 따라 `/etc` 전체를 검색했다. 실제 설정과 무관한 파일을 읽어 지연됐고, 다른 파일의 일치 문자열로 잘못 통과할 수도 있었다.
     - 해결: shell attestor와 Rust verifier의 검색을 `/etc/containerd`로 제한했다(#120). CI log의 stage별 시간을 먼저 확인하고, readiness 등 느린 stage의 소요 시간을 PR 변경의 실패 원인과 구분한다.
+
+34. **Ubuntu 26.04 AppArmor 기본값이 컨테이너 내부 시그널을 막는다**
+    - 증상: 2026-11-27 박스 0.3.5(Ubuntu 26.04, 커널 7.0.0-44, apparmor 5.0.2) 위 k3s 클러스터에서 PostgreSQL이 `could not signal for checkpoint: Permission denied`로 종료했고, 의존 컴포넌트가 연쇄로 실패했다. 커널 로그에는 `profile="cri-containerd.apparmor.d"`가 `peer="cri-containerd.apparmor.d//&unconfined"`로 보내는 signal 거부가 쌓였다.
+    - 원인: apparmor 패키지의 `/usr/lib/sysctl.d/10-apparmor.conf`가 `kernel.apparmor_restrict_unprivileged_unconfined = 1`을 켠다. runc는 root일 때 `exec <profile>`을 요청한 뒤 컨테이너 권한으로 내려가며 CAP_MAC_OVERRIDE를 잃고, 커널은 exec 시점에 전환을 스택으로 바꾼다(감사 로그 `change_profile unprivileged unconfined converted to stacking`). 0.3.1 박스에 같은 k3s(v1.36.6, runc 1.4.2)를 올려도 재현됐으므로 0.3.1→0.3.5 회귀가 아니다. `box_version` 고정으로는 해결되지 않는다.
+    - 해결: `04-k8s-prereq.sh`가 키가 있는 커널에서 `/etc/sysctl.d/20-apparmor.conf`에 값 0을 쓴다. 이 값이 적용되기 전에 만들어진 컨테이너는 라벨을 유지하므로 재부팅이나 파드 재생성이 필요하다. `k8s-node-preflight`의 `sysctl_kernel_apparmor_restrict_unprivileged_unconfined`가 1이면 FAIL로 판정한다(`tools/tests/packer-embedded-apparmor-unconfined-test.sh`). Ubuntu 보안 강화 한 겹을 끄는 결정이며 AppArmor 자체(`apparmor` 검사)는 계속 enabled여야 한다.
+    - 진단: 노드에서 `cat /proc/<pid>/attr/current`가 `//&unconfined`로 끝나면 이 문제다. `aa-exec`나 셸에서 직접 `exec` 전환을 걸면 정상 라벨이 나오므로 그것만으로 커널 탓으로 판단하지 않는다.

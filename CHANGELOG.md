@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Ubuntu boxes: `04-k8s-prereq.sh` sets `kernel.apparmor_restrict_unprivileged_unconfined = 0`
+  in `/etc/sysctl.d/20-apparmor.conf` on kernels that have the knob. Ubuntu 26.04's apparmor
+  package turns it on, which makes runc container labels stack as `<profile>//&unconfined` and
+  denies signals between processes in the same container (PostgreSQL: `could not signal for
+  checkpoint: Permission denied`). Reproduced on 0.3.1 and 0.3.5, so it is not a 0.3.5 regression.
+  Existing 0.3.5 nodes need the same file and a reboot. `k8s-node-preflight` reports the value as
+  `sysctl_kernel_apparmor_restrict_unprivileged_unconfined` (FAIL when not 0). mistakes-log #34.
+
 ## [0.3.5] - 2026-11-23
 
 Security rebuild of all boxes: Ubuntu (0.3.5), Rocky 9 (0.1.4, now Rocky Linux 9.9) and NixOS

@@ -130,6 +130,13 @@ this stays structurally compatible per D6 and does not bump to `v2`.
   `/sys/module/apparmor` directory existence. `Y` -> `PASS enabled`; `N` -> `FAIL disabled`;
   unreadable (no such file, kernel lacks AppArmor, container without the module) -> `UNKNOWN
   <reason>`, never `FAIL` and never `PASS`.
+- **`sysctl_kernel_apparmor_restrict_unprivileged_unconfined`** (`09-k8s-node-preflight.sh`'s
+  embedded check, mistakes-log #34): reads `/proc/sys/kernel/apparmor_restrict_unprivileged_unconfined`.
+  `0` -> `PASS 0`; any other value -> `FAIL expected=0 actual=<v>` (runc container labels stack as
+  `//&unconfined`); present but unreadable/empty -> `UNKNOWN present but unreadable`; absent (kernel
+  without the Ubuntu knob, so no stacking conversion) -> `PASS not present on this kernel`. This is
+  separate from the `apparmor` enabled check, which must stay `PASS enabled`. Fixtures:
+  `tools/tests/packer-embedded-apparmor-unconfined-test.sh`.
 - **`mac_backend`** (`security/workload-security-check.sh`, `storage/node-storage-readiness.sh` --
   check ID stays `mac_backend` in both): now mirrors the same enabled/disabled state instead of
   unconditionally naming the backend as `PASS`. SELinux `Permissive`/`Disabled` -> `FAIL`; AppArmor

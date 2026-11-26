@@ -52,6 +52,22 @@ for pair in net.ipv4.ip_forward=1 net.bridge.bridge-nf-call-iptables=1 net.bridg
   if [ "$actual" = "$expected" ]; then check "sysctl_${key//./_}" PASS "$actual"; else check "sysctl_${key//./_}" FAIL "expected=$expected actual=${actual:-missing}"; fi
 done
 
+# AppArmor unconfined stacking restriction (mistakes-log #34): when 1, runc
+# containers get a `<profile>//&unconfined` stacked label and intra-container
+# signals are denied. A kernel without the knob has no such conversion.
+aa_unconfined=/proc/sys/kernel/apparmor_restrict_unprivileged_unconfined
+if actual=$(cat "$aa_unconfined" 2>/dev/null) && [ -n "$actual" ]; then
+  if [ "$actual" = 0 ]; then
+    check sysctl_kernel_apparmor_restrict_unprivileged_unconfined PASS "$actual"
+  else
+    check sysctl_kernel_apparmor_restrict_unprivileged_unconfined FAIL "expected=0 actual=$actual"
+  fi
+elif [ -e "$aa_unconfined" ]; then
+  check sysctl_kernel_apparmor_restrict_unprivileged_unconfined UNKNOWN 'present but unreadable'
+else
+  check sysctl_kernel_apparmor_restrict_unprivileged_unconfined PASS 'not present on this kernel'
+fi
+
 # filesystem
 root_fs=$(findmnt -n -o FSTYPE / 2>/dev/null || true)
 case "$root_fs" in ext4|xfs) check root_filesystem PASS "$root_fs";; '') check root_filesystem UNKNOWN 'root filesystem unavailable';; *) check root_filesystem UNKNOWN "unsupported root filesystem=$root_fs";; esac
