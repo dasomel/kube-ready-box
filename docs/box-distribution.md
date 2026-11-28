@@ -51,21 +51,23 @@ Vagrant verifies the catalog checksum. `vagrant box outdated` and `vagrant box u
 |---|---|---|
 | `ubuntu-24.04-ext4` | 0.3.6 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
 | `ubuntu-24.04-xfs` | 0.3.6 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
-| `ubuntu-26.04-ext4` | 0.3.6 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
-| `ubuntu-26.04-xfs` | 0.3.6 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
-| `rocky-9-ext4` | 0.1.4 | `vmware_desktop` (arm64) |
-| `rocky-9-xfs` | 0.1.4 | `vmware_desktop` (arm64) |
+| `ubuntu-26.04-ext4` | 0.3.7 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+| `ubuntu-26.04-xfs` | 0.3.7 | `vmware_desktop` (arm64), `virtualbox` (amd64) |
+| `rocky-9-ext4` | 0.1.5 | `vmware_desktop` (arm64) |
+| `rocky-9-xfs` | 0.1.5 | `vmware_desktop` (arm64) |
 | `nixos-kube-ready` | 0.2.4 | `libvirt` (arm64; vagrant-libvirt, or vagrant-qemu) |
 
 Asset names look like `ubuntu-24.04-ext4-vmware_desktop-arm64-0.3.6.box` and
-`ubuntu-24.04-ext4-virtualbox-amd64-0.3.6.box`. Vagrant picks the provider and architecture that
-match the host from the same catalog version. The Ubuntu 0.3.6 boxes are assets of the `v0.3.6`
-release; Rocky 0.1.4 and NixOS 0.2.4 stay assets of `v0.3.5`; the earlier versions stay assets of their own releases, and each catalog
-keeps pointing at the release that holds its files. The Ubuntu and Rocky catalogs still list the
-earlier 0.3.0 to 0.3.5 and 0.1.1 to 0.1.3 versions.
+`ubuntu-26.04-ext4-virtualbox-amd64-0.3.7.box`. Vagrant picks the provider and architecture that
+match the host from the same catalog version. Because `v0.3.7` rebuilds only Ubuntu 26.04 and Rocky
+9, the catalogs carry different latest versions per box: the Ubuntu 26.04 `0.3.7` and Rocky 9
+`0.1.5` boxes are assets of the `v0.3.7` release; Ubuntu 24.04 `0.3.6` stays an asset of `v0.3.6`;
+NixOS `0.2.4` stays an asset of `v0.3.5`; the earlier versions stay assets of their own releases,
+and each catalog keeps pointing at the release that holds its files. The Ubuntu and Rocky catalogs
+still list the earlier 0.3.0 to 0.3.6 and 0.1.1 to 0.1.4 versions.
 
 Ubuntu versions were reset from 1.1.0 (the last Vagrant Cloud upload, never a GitHub Release
-asset) to 0.3.0 (now 0.3.6). Vagrant compares versions numerically, so a machine that still has 1.1.0 keeps
+asset) to 0.3.0 (now 0.3.6 on 24.04 and 0.3.7 on 26.04). Vagrant compares versions numerically, so a machine that still has 1.1.0 keeps
 booting it and `vagrant box outdated` reports nothing. Remove it once:
 `vagrant box remove dasomel/<box> --box-version 1.1.0`. Rocky and NixOS keep their own version lines.
 
@@ -100,7 +102,7 @@ The root LV is 16 GiB in the image and grows to the whole disk on first boot (`k
 
 ### Checksum rule
 
-The catalog checksum must be the SHA-256 of the exact bytes attached to the Release. Release `v0.3.6` also provides `BOX-SHA256SUMS` and structured `v0.3.6-evidence.json`. The verifier binaries use their separate `SHA256SUMS` manifest. Compute it from the file you upload, after the final build. Never replace an asset, or rebuild a box, under a version that is already published. A new build gets a new version, and the old catalog entry stays. A mismatch makes `vagrant box add` fail for every user.
+The catalog checksum must be the SHA-256 of the exact bytes attached to the Release. Release `v0.3.7` also provides `BOX-SHA256SUMS` and structured `v0.3.7-evidence.json`. The verifier binaries use their separate `SHA256SUMS` manifest. Compute it from the file you upload, after the final build. Never replace an asset, or rebuild a box, under a version that is already published. A new build gets a new version, and the old catalog entry stays. A mismatch makes `vagrant box add` fail for every user.
 
 ## Ongoing CVE checks
 

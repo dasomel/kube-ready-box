@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-11-28
+
+Security rebuild of Rocky 9 (0.1.5) and Ubuntu 26.04 (0.3.7). The daily Box CVE scan failed on
+2026-11-27 (issue [#130](https://github.com/dasomel/kube-ready-box/issues/130), run
+[45975486380](https://github.com/dasomel/kube-ready-box/actions/runs/45975486380)) for the Rocky 9
+boxes; Ubuntu 26.04 passed the scan but had fixable MEDIUM `binutils` CVEs and was rebuilt in the
+same release. Ubuntu 24.04 (0.3.6) had only the open `yq` finding and was not rebuilt; it stays an
+asset of `v0.3.6`. NixOS (0.2.4) is unchanged and stays an asset of `v0.3.5`. The six rebuilt
+archives are assets of `v0.3.7`, so the catalogs now carry different latest versions per box
+(Ubuntu 24.04 `0.3.6`, Ubuntu 26.04 `0.3.7`, Rocky 9 `0.1.5`, NixOS `0.2.4`). No source change was
+needed: Rocky's `dnf -y update` and Ubuntu's `apt-get full-upgrade` picked the fixes up at build
+time. Source revision: `cdc7788`. Security response history: `docs/security-response.md`.
+
+| Box | Version | Provider | Arch | Kernel | Size |
+|---|---|---|---|---|---|
+| `dasomel/rocky-9-ext4` | 0.1.5 | vmware_desktop | arm64 | 5.14.0-741.27.1.el9_9.aarch64 | 1.82 GiB |
+| `dasomel/rocky-9-xfs` | 0.1.5 | vmware_desktop | arm64 | 5.14.0-741.27.1.el9_9.aarch64 | 1.97 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 0.3.7 | vmware_desktop | arm64 | 7.0.0-44-generic | 1.74 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 0.3.7 | vmware_desktop | arm64 | 7.0.0-44-generic | 1.97 GiB |
+| `dasomel/ubuntu-26.04-ext4` | 0.3.7 | virtualbox | amd64 | 7.0.0-44-generic | 1.69 GiB |
+| `dasomel/ubuntu-26.04-xfs` | 0.3.7 | virtualbox | amd64 | 7.0.0-44-generic | 1.90 GiB |
+
+The Rocky kernel moved to `5.14.0-741.27.1.el9_9.aarch64`; the Ubuntu 26.04 kernel is unchanged
+(`7.0.0-44-generic`). Every candidate was gated with `tools/release/verify-candidate.sh`: Trivy
+0.76.0 scan status PASS, **0 fixable OS-package CVEs**, plus the same one fixable MEDIUM `yq`
+finding as 0.3.5 and 0.3.6 (CVE-2026-97054; `yq` v4.54.3 is still the latest upstream release,
+checked 2026-11-28). The `binutils` and Rocky kernel/openssh findings are gone. The `vmware_desktop`
+arm64 boxes were built with `tools/release/build-arm64.sh` (first real use of that script), each on
+its first attempt, and boot-verified on VMware Fusion (guest checks, `vagrant reload`, Rocky
+preflight status PASS on Rocky 0.1.5; `verify_box.sh --rfp-profile` failures=0 and 0 pending
+`-security` packages on Ubuntu 26.04 0.3.7, with guest `libc6` `2.43-2ubuntu2.7`, `openssh-server`
+`1:10.2p1-2ubuntu3.8` and `openssl` `3.5.5-1ubuntu3.7`). The `virtualbox` amd64 Ubuntu 26.04 boxes
+were built and boot-tested by `.github/workflows/build-amd64.yml` in run
+[46096248123](https://github.com/dasomel/kube-ready-box/actions/runs/46096248123) on the first
+attempt. Exact archives, checksums and validation scope:
+[release evidence](docs/releases/v0.3.7-evidence.json).
+
+### Security
+
+- **Rocky 9 0.1.4 -> 0.1.5 (kernel HIGH and openssh MEDIUM)**: the shipped 0.1.4 boxes had 10
+  fixable HIGH kernel CVEs (for example CVE-2026-64458, CVE-2026-64541, CVE-2026-74302; kernel
+  `5.14.0-741.24.1.el9_9` -> `5.14.0-741.27.1.el9_9`) and 5 fixable MEDIUM `openssh` CVEs (for
+  example CVE-2026-106552, CVE-2026-106553, CVE-2026-106582; `9.9p1-16` -> `9.9p1-17`). Read in the
+  booted 0.1.5 guest: kernel `5.14.0-741.27.1.el9_9.aarch64`, `openssh-server`
+  `9.9p1-17.el9_9.rocky.0.1`, `glibc` `2.34-290.el9_9`, `openssl` `3.5.9-1.el9_9`.
+- **Ubuntu 26.04 0.3.6 -> 0.3.7 (binutils, MEDIUM)**: the shipped 26.04 0.3.6 boxes passed the
+  daily scan (no fixable HIGH/CRITICAL) but carried 10 fixable MEDIUM `binutils` CVEs (for example
+  CVE-2026-15003, CVE-2026-19548, CVE-2026-3441; `binutils` `2.46-3ubuntu2` -> `2.46-3ubuntu2.1`,
+  81 MEDIUM findings counted across 8 binary packages). Ubuntu 24.04 0.3.6 had no fixable OS-package
+  CVEs (only the `yq` finding) and was not rebuilt.
+- **Still open: `yq` v4.54.3 (Go 1.27.3) carries Go standard-library CVE-2026-97054** (`net/http`
+  server `MaxBytesReader` issue; fixed in Go 1.27.4 / 1.26.11; rated MEDIUM by Trivy). Upstream `yq`
+  has no release built with a fixed Go yet (v4.54.3 is still the latest, checked 2026-11-28), so
+  every Ubuntu 26.04 0.3.7 and Rocky 0.1.5 candidate scan reports one fixable MEDIUM finding for
+  `usr/local/bin/yq`. No scan exception was added; see `docs/build-inputs.md`.
+
 ## [0.3.6] - 2026-11-27
 
 Ubuntu-only rebuild (0.3.6) for an AppArmor setting that breaks signals inside containers on
@@ -1035,7 +1091,9 @@ vagrant up
 
 ---
 
-[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.3.5...HEAD
+[Unreleased]: https://github.com/dasomel/kube-ready-box/compare/v0.3.7...HEAD
+[0.3.7]: https://github.com/dasomel/kube-ready-box/compare/v0.3.6...v0.3.7
+[0.3.6]: https://github.com/dasomel/kube-ready-box/compare/v0.3.5...v0.3.6
 [0.3.5]: https://github.com/dasomel/kube-ready-box/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/dasomel/kube-ready-box/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/dasomel/kube-ready-box/compare/v0.3.2...v0.3.3
